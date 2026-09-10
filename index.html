@@ -60,8 +60,8 @@ function eventInstall(x){
   const raw=String(x?.details||"");
   const m=raw.match(INSTALL_RE);
   if(m)return m[1];
-  // 舊資料沒有「安裝」欄位時，僅用原本顏色做一次相容判斷；新資料不再依顏色決定上下位置。
-  return x?.color==="green"?"外包":"勝寶鼎";
+  // 完全取消以顏色判斷上下位置。舊資料沒有安裝設定時，一律先視為「勝寶鼎」顯示在虛線上方。
+  return "勝寶鼎";
 }
 function cleanEventDetails(v){return String(v||"").replace(INSTALL_RE,"")}
 function packEventDetails(v,install){const d=String(v||"").trim();return `[[INSTALL:${install||"勝寶鼎"}]]${d?"\n"+d:""}`}
