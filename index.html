@@ -128,7 +128,15 @@ async function deleteEvent(){if(profile.role!=="admin"||!currentEditId)return;if
 function openNote(){if(profile.role!=="admin")return;$("fnote").value=currentNoteRow?.note||"";$("noteDlg").showModal()}
 async function saveNote(){if(profile.role!=="admin")return;const note=$("fnote").value.trim();let error;if(currentNoteRow)({error}=await sb.from("sbd_month_notes").update({note}).eq("id",currentNoteRow.id));else({error}=await sb.from("sbd_month_notes").insert({month_start:firstDay(),note}));if(error){alert("備註儲存失敗："+error.message);return}$("noteDlg").close();await loadMonth()}
 async function logout(){await sb.auth.signOut();profile=null;currentUser=null;$("appPage").classList.add("hidden");$("loginPage").classList.remove("hidden")}
-$("loginBtn").addEventListener("click",signIn);$("loginPassword").addEventListener("keydown",e=>{if(e.key==="Enter")signIn()});$("logoutBtn").addEventListener("click",logout);$("prevBtn").addEventListener("click",()=>{view.setMonth(view.getMonth()-1);loadMonth()});$("nextBtn").addEventListener("click",()=>{view.setMonth(view.getMonth()+1);loadMonth()});$("todayBtn").addEventListener("click",()=>{view=new Date();view.setDate(1);loadMonth()});$("addBtn").addEventListener("click",openNewEvent);$("noteBtn").addEventListener("click",openNote);
+$("loginBtn").addEventListener("click",signIn);
+["loginEmail","loginPassword"].forEach(id=>{
+  $(id).addEventListener("keydown",e=>{
+    if(e.key==="Enter"){
+      e.preventDefault();
+      signIn();
+    }
+  });
+});$("logoutBtn").addEventListener("click",logout);$("prevBtn").addEventListener("click",()=>{view.setMonth(view.getMonth()-1);loadMonth()});$("nextBtn").addEventListener("click",()=>{view.setMonth(view.getMonth()+1);loadMonth()});$("todayBtn").addEventListener("click",()=>{view=new Date();view.setDate(1);loadMonth()});$("addBtn").addEventListener("click",openNewEvent);$("noteBtn").addEventListener("click",openNote);
 $("fdate").addEventListener("blur",()=>{
   const iso=normalizeDateInput($("fdate").value);
   if(iso) $("fdate").value=displayDateInput(iso);
