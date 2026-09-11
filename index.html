@@ -119,6 +119,23 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
 @media(max-width:600px){.statsBring,.statsFilter,.statsGrid{grid-template-columns:1fr}.statsGrid .span2,.statsGrid .span4{grid-column:auto}}
 </style>
 
+
+<style id="stats-mmdd-fix">
+#stOrderDate,#stInstallDate{font-variant-numeric:tabular-nums}
+</style>
+
+
+<style id="quote-final-font-rules">
+/* 只影響報價單預覽，不影響整個網頁介面 */
+.officialQuote,.officialQuote *{font-size:12px!important}
+.officialMaterial>div,
+.officialMaterial .materialValue,
+.officialMaterial .edgeCell,
+.officialMaterial .edgeNum{font-size:14px!important}
+.officialMaterial .cmUnit{font-size:12px!important}
+.officialHint{font-size:12px!important;color:#d71920!important;font-weight:700!important}
+</style>
+
 </head>
 <body>
 <div id="pullRefreshIndicator" aria-hidden="true"><div class="pull-spinner"></div></div>
@@ -153,11 +170,11 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
       <div class="officialHeader">
         <div class="case">案名：<b id="qpCaseName"></b></div><div class="number">編號：<b id="qpNo"></b></div>
         <div class="customer">客戶名稱：<b id="qpCustomer"></b></div><div class="date">日期：<b id="qpDate"></b></div>
-        <div class="telFax"><span>TEL：02-25911224</span><span>FAX：02-25911450</span></div><div class="installDate">實際安裝日期：<b id="qpInstallDate"></b></div>
+        <div></div><div class="installDate">實際安裝日期：<b id="qpInstallDate"></b></div>
         <div class="address">安裝地址：<b id="qpAddress"></b></div><div></div>
       </div>
       <div class="officialHint">此為初估計價　實際價格會依實際色號、尺寸、作法變動</div>
-      <div class="officialMaterial"><div>色 號</div><div class="materialValue" id="qpColorNo"></div><div>品 名</div><div class="materialValue" id="qpProductName"></div><div class="edgeCell">前緣 <span class="edgeNum" id="qpFrontEdge"></span> cm ／ 背牆 <span class="edgeNum" id="qpBackWall"></span> cm</div></div>
+      <div class="officialMaterial"><div>色 號</div><div class="materialValue" id="qpColorNo"></div><div>品 名</div><div class="materialValue" id="qpProductName"></div><div class="edgeCell">前緣 <span class="edgeNum" id="qpFrontEdge"></span> <span class="cmUnit">cm</span> ／ 背牆 <span class="edgeNum" id="qpBackWall"></span> <span class="cmUnit">cm</span></div></div>
       <div class="quoteItemsWrap"><table class="officialTable"><thead><tr><th>項數</th><th>名稱</th><th>加工尺寸 (CM)</th><th>總公分數</th><th>單位</th><th>單價</th><th>小計</th></tr></thead><tbody id="quotePreviewBody"></tbody><tfoot><tr><td></td><td colspan="3" class="officialRealPrice">備註：此價格為實價計價</td><td colspan="2">合計</td><td id="qpSubtotal">0</td></tr><tr><td></td><td colspan="3"></td><td colspan="2">稅金5%</td><td id="qpTax">0</td></tr><tr><td></td><td colspan="3"></td><td colspan="2">總計</td><td id="qpTotal">0</td></tr></tfoot></table></div>
       <div class="officialFixedNotes"><div>備註：</div><div><span style="display:inline-block;width:1.45em;text-align:right;margin-right:.18em">1.</span>本報價單有效期間為30天</div><div><span style="display:inline-block;width:1.45em;text-align:right;margin-right:.18em">2.</span>付款方式:月結40天，未月結客戶安裝完工收現，稅外加不扣%</div><div><span style="display:inline-block;width:1.45em;text-align:right;margin-right:.18em">3.</span>開發票為總計金額</div><div><span style="display:inline-block;width:1.45em;text-align:right;margin-right:.18em">4.</span>本公司產品款項未結清資產屬勝鈔環保科技股份有限公司所有權</div></div>
       <div class="officialSign"><div><b>勝鈔環保科技股份有限公司</b><br><br>TEL:02-26771176<br><br>FAX:02-26772076<br><br><br>業務代表簽名:</div><div>客戶簽名:</div></div>
@@ -187,8 +204,8 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
       <label>編號<input id="stJobNo" placeholder="可修改"></label>
       <label>出貨單號<input id="stShipNo"></label>
 
-      <label>接單日期<input id="stOrderDate" type="date"></label>
-      <label>安裝日期<input id="stInstallDate" type="date"></label>
+      <label>接單日期<input id="stOrderDate" type="text" inputmode="numeric" maxlength="5" placeholder="MM/DD"></label>
+      <label>安裝日期<input id="stInstallDate" type="text" inputmode="numeric" maxlength="5" placeholder="MM/DD"></label>
       <label class="span2">案名<input id="stCaseName"></label>
 
       <label>色號類別
@@ -199,7 +216,14 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
         </select>
       </label>
       <label>色號<input id="stColorNo"></label>
-      <label>型號<input id="stModel" placeholder="例如 一、L、ㄇ、一*2"></label>
+      <label>型號
+        <select id="stModel">
+          <option value="">請選擇</option>
+          <option value="一">一</option>
+          <option value="L">L</option>
+          <option value="ㄇ">ㄇ</option>
+        </select>
+      </label>
       <label>尺寸 (cm)<input id="stSizeCm" type="number" step="0.01"></label>
 
       <label>未稅金額<input id="stUntaxedAmount" type="number" step="1"></label>
@@ -448,7 +472,7 @@ function quotePrintHtml(x){
   let rows=items.map((it,i)=>`<tr><td>${i+1}</td><td class="left">${esc(fmtQName(it.name||it.description||""))}</td><td>${esc(it.process_size||"")}</td><td>${(it.total_cm??it.qty)===""?"":qMoney(it.total_cm??it.qty??0)}</td><td>${esc(it.unit||"")}</td><td>${it.price===""?"":qMoney(it.price)}</td><td>${(it.total_cm??it.qty)===""||it.price===""?"":qMoney(Number(it.total_cm??it.qty??0)*Number(it.price||0))}</td></tr>`).join("");
   for(let i=items.length;i<8;i++)rows+=`<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
   return `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>${esc(quoteDownloadBase(x))}</title><style>
-*{box-sizing:border-box}html,body{margin:0;padding:0;color:#111;background:#fff;font-family:Arial,"Microsoft JhengHei",sans-serif}.page{width:188mm;margin:0 auto;font-size:11.5px}.title{text-align:center;font-size:25px;font-weight:400;letter-spacing:.5px;line-height:1.15;margin:1mm 0 4.2mm}.header{width:94%;margin:0 auto 4mm;display:grid;grid-template-columns:64% 36%;grid-template-rows:auto auto auto auto;row-gap:3.3mm;align-items:center;line-height:1.25}.header .case{text-align:center;padding-left:12%}.header .number,.header .date,.header .install{padding-left:13%;text-align:left}.header .customer,.header .address{text-align:left}.header .telFax{display:grid;grid-template-columns:1fr 1fr;gap:5mm}.hint{text-align:center;color:#d0d0d0;font-size:11px;letter-spacing:.4px;margin:7mm 0 1.8mm}.mat{display:grid;grid-template-columns:12% 15% 11% 30% 32%;border:1.4px solid #111;border-bottom:0}.mat>div{height:8.2mm;display:flex;align-items:center;justify-content:center;padding:.8mm 1mm;border-right:.8px solid #111;white-space:nowrap}.mat>div:last-child{border-right:0}.mat .value{font-size:10.5px}.mat .edge{gap:1.2mm;white-space:nowrap}.mat .edgeNum{display:inline-block;min-width:4mm;text-align:center;font-variant-numeric:tabular-nums}
+*{box-sizing:border-box}html,body{margin:0;padding:0;color:#111;background:#fff;font-family:Arial,"Microsoft JhengHei",sans-serif}.page{width:188mm;margin:0 auto;font-size:12px}.title{text-align:center;font-size:25px;font-weight:400;letter-spacing:.5px;line-height:1.15;margin:1mm 0 4.2mm}.header{width:94%;margin:0 auto 4mm;display:grid;grid-template-columns:64% 36%;grid-template-rows:auto auto auto auto;row-gap:3.3mm;align-items:center;line-height:1.25}.header .case{text-align:center;padding-left:12%}.header .number,.header .date,.header .install{padding-left:13%;text-align:left}.header .customer,.header .address{text-align:left}.header .telFax{display:grid;grid-template-columns:1fr 1fr;gap:5mm}.hint{text-align:center;color:#d71920;font-size:12px;font-weight:700;letter-spacing:.4px;margin:7mm 0 1.8mm}.mat{display:grid;grid-template-columns:12% 15% 11% 30% 32%;border:1.4px solid #111;border-bottom:0}.mat>div{height:8.2mm;display:flex;align-items:center;justify-content:center;padding:.8mm 1mm;border-right:.8px solid #111;white-space:nowrap;font-size:14px}.mat>div:last-child{border-right:0}.mat .value{font-size:14px}.mat .edge{gap:1.2mm;white-space:nowrap;font-size:14px}.mat .edgeNum{display:inline-block;min-width:4mm;text-align:center;font-variant-numeric:tabular-nums;font-size:14px}.mat .cmUnit{font-size:12px}
 table{width:100%;border-collapse:collapse;border:1.4px solid #111;table-layout:fixed}th,td{border:.8px solid #111;text-align:center;padding:.8mm .7mm;height:7.2mm}thead th{height:7.5mm;font-weight:400}th:nth-child(1){width:6%}th:nth-child(2){width:32%}th:nth-child(3){width:17%}th:nth-child(4){width:13%}th:nth-child(5){width:7%}th:nth-child(6){width:11%}th:nth-child(7){width:14%}.left{text-align:left}tfoot td{height:6.5mm}.notes{border:1.4px solid #111;border-top:0;padding:2mm 3mm;height:36mm;line-height:1.35}.notes div{margin-bottom:2.4mm}.sign{display:grid;grid-template-columns:1.05fr .95fr;border:1.4px solid #111;border-top:0;height:37mm}.sign>div{padding:1.2mm 1mm;line-height:1.55}.sign>div+div{border-left:.8px solid #111}@page{size:A4 portrait;margin:0}@media print{html,body{width:210mm!important;min-width:210mm!important;height:297mm!important;margin:0!important;padding:0!important}body{display:flex!important;justify-content:center!important;align-items:flex-start!important}.page{box-sizing:border-box!important;width:188mm!important;max-width:188mm!important;margin:7mm auto 0!important;padding:0!important;page-break-inside:avoid;break-inside:avoid;transform:none!important}.sign,.notes,table,.mat{page-break-inside:avoid;break-inside:avoid}}
 </style>
 <style id="quote-note-align-fix">
@@ -492,7 +516,7 @@ table{width:100%;border-collapse:collapse;border:1.4px solid #111;table-layout:f
 }
 </style>
 
-</head><body><div class="page"><div class="title">勝鈔環保科技股份有限公司報價單</div><div class="header"><div class="case">案名：${esc(m.case_name||x.contact_name||"")}</div><div class="number">編號：${esc(x.quote_no||"")}</div><div class="customer">客戶名稱：${esc(x.customer_name||"")}</div><div class="date">日期：${esc(x.quote_date||"")}</div><div class="telFax"><span>TEL：02-25911224</span><span>FAX：02-25911450</span></div><div class="install">實際安裝日期：${esc(m.install_date||"")}</div><div class="address">安裝地址：${esc(x.address||"")}</div><div></div></div><div class="hint">此為初估計價　實際價格會依實際色號、尺寸、作法變動</div><div class="mat"><div>色 號</div><div class="value">${esc(m.color_no||"")}</div><div>品 名</div><div class="value">${esc(m.product_name||"")}</div><div class="edge">前緣 <span class="edgeNum">${esc(m.front_edge||"")}</span> cm ／ 背牆 <span class="edgeNum">${esc(m.back_wall||"")}</span> cm</div></div><table><thead><tr><th>項數</th><th>名稱</th><th>加工尺寸 (CM)</th><th>總公分數</th><th>單位</th><th>單價</th><th>小計</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td></td><td colspan="3" class="left">備註：此價格為實價計價</td><td colspan="2">合計</td><td>${qMoney(x.subtotal)}</td></tr><tr><td></td><td colspan="3"></td><td colspan="2">稅金5%</td><td>${qMoney(x.tax_amount)}</td></tr><tr><td></td><td colspan="3"></td><td colspan="2">總計</td><td>${qMoney(x.total_amount)}</td></tr></tfoot></table><div class="notes"><div>備註：　1.本報價單有效期間為30天</div><div style="padding-left:11mm"><span style="display:inline-block;width:1.45em;text-align:right;margin-right:.18em">2.</span>付款方式:月結40天，未月結客戶安裝完工收現，稅外加不扣%</div><div style="padding-left:11mm"><span style="display:inline-block;width:1.45em;text-align:right;margin-right:.18em">3.</span>開發票為總計金額</div><div style="padding-left:11mm"><span style="display:inline-block;width:1.45em;text-align:right;margin-right:.18em">4.</span>本公司產品款項未結清資產屬勝鈔環保科技股份有限公司所有權</div></div><div class="sign"><div>勝鈔環保科技股份有限公司<br>TEL:02-26771176<br>FAX:02-26772076<br><br><br>業務代表簽名:</div><div>客戶簽名:</div></div></div><script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`
+</head><body><div class="page"><div class="title">勝鈔環保科技股份有限公司報價單</div><div class="header"><div class="case">案名：${esc(m.case_name||x.contact_name||"")}</div><div class="number">編號：${esc(x.quote_no||"")}</div><div class="customer">客戶名稱：${esc(x.customer_name||"")}</div><div class="date">日期：${esc(x.quote_date||"")}</div><div></div><div class="install">實際安裝日期：${esc(m.install_date||"")}</div><div class="address">安裝地址：${esc(x.address||"")}</div><div></div></div><div class="hint">此為初估計價　實際價格會依實際色號、尺寸、作法變動</div><div class="mat"><div>色 號</div><div class="value">${esc(m.color_no||"")}</div><div>品 名</div><div class="value">${esc(m.product_name||"")}</div><div class="edge">前緣 <span class="edgeNum">${esc(m.front_edge||"")}</span> <span class="cmUnit">cm</span> ／ 背牆 <span class="edgeNum">${esc(m.back_wall||"")}</span> <span class="cmUnit">cm</span></div></div><table><thead><tr><th>項數</th><th>名稱</th><th>加工尺寸 (CM)</th><th>總公分數</th><th>單位</th><th>單價</th><th>小計</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td></td><td colspan="3" class="left">備註：此價格為實價計價</td><td colspan="2">合計</td><td>${qMoney(x.subtotal)}</td></tr><tr><td></td><td colspan="3"></td><td colspan="2">稅金5%</td><td>${qMoney(x.tax_amount)}</td></tr><tr><td></td><td colspan="3"></td><td colspan="2">總計</td><td>${qMoney(x.total_amount)}</td></tr></tfoot></table><div class="notes"><div>備註：　1.本報價單有效期間為30天</div><div style="padding-left:11mm"><span style="display:inline-block;width:1.45em;text-align:right;margin-right:.18em">2.</span>付款方式:月結40天，未月結客戶安裝完工收現，稅外加不扣%</div><div style="padding-left:11mm"><span style="display:inline-block;width:1.45em;text-align:right;margin-right:.18em">3.</span>開發票為總計金額</div><div style="padding-left:11mm"><span style="display:inline-block;width:1.45em;text-align:right;margin-right:.18em">4.</span>本公司產品款項未結清資產屬勝鈔環保科技股份有限公司所有權</div></div><div class="sign"><div>勝鈔環保科技股份有限公司<br>TEL:02-26771176<br>FAX:02-26772076<br><br><br>業務代表簽名:</div><div>客戶簽名:</div></div></div><script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`
 }
 function printQuote(x){const w=window.open("","_blank");if(!w){alert("瀏覽器阻擋新視窗，請允許彈出視窗");return}w.document.write(quotePrintHtml(x));w.document.close()}
 function excelQuote(x){const m=qMetaFromNote(x.note),items=Array.isArray(x.items)?x.items:[],trs=items.map((it,i)=>`<tr><td>${i+1}</td><td>${esc(fmtQName(it.name||it.description||""))}</td><td>${esc(it.process_size||"")}</td><td>${it.total_cm??it.qty??0}</td><td>${esc(it.unit||"")}</td><td>${it.price||0}</td><td>${Number(it.total_cm??it.qty??0)*Number(it.price||0)}</td></tr>`).join("");const html=`<html><head><meta charset="utf-8">
@@ -540,6 +564,30 @@ function excelQuote(x){const m=qMetaFromNote(x.note),items=Array.isArray(x.items
 </head><body><table><tr><th colspan="7">勝鈔環保科技股份有限公司報價單</th></tr><tr><td>案名</td><td colspan="2">${esc(m.case_name||x.contact_name||"")}</td><td>編號</td><td colspan="3">${esc(x.quote_no||"")}</td></tr><tr><td>客戶名稱</td><td colspan="3">${esc(x.customer_name||"")}</td><td>日期</td><td colspan="2">${esc(x.quote_date||"")}</td></tr><tr><td>安裝地址</td><td colspan="3">${esc(x.address||"")}</td><td>實際安裝日期</td><td colspan="2">${esc(m.install_date||"")}</td></tr><tr><td colspan="2">色號</td><td colspan="2">品名</td><td colspan="3">前緣 cm ／ 背牆 cm</td></tr><tr><td colspan="2">${esc(m.color_no||"")}</td><td colspan="2">${esc(m.product_name||"")}</td><td colspan="3">前緣 ${esc(m.front_edge||"")} cm ／ 背牆 ${esc(m.back_wall||"")} cm</td></tr><tr><th>項數</th><th>名稱</th><th>加工尺寸 (CM)</th><th>總公分數</th><th>單位</th><th>單價</th><th>小計</th></tr>${trs}<tr><td></td><td colspan="3">備註：此價格為實價計價</td><td colspan="2">合計</td><td>${x.subtotal||0}</td></tr><tr><td colspan="4"></td><td colspan="2">稅金5%</td><td>${x.tax_amount||0}</td></tr><tr><td colspan="4"></td><td colspan="2">總計</td><td>${x.total_amount||0}</td></tr><tr><td colspan="7">備註：1.本報價單有效期間為30天</td></tr><tr><td colspan="7">2.付款方式:月結40天，未月結客戶安裝完工收現，稅外加不扣%</td></tr><tr><td colspan="7">3.開發票為總計金額</td></tr><tr><td colspan="7">4.本公司產品款項未結清資產屬勝鈔環保科技股份有限公司所有權</td></tr><tr><td colspan="4">勝鈔環保科技股份有限公司 / TEL:02-26771176 / FAX:02-26772076 / 業務代表簽名:</td><td colspan="3">客戶簽名:</td></tr></table></body></html>`;const blob=new Blob(["\ufeff",html],{type:"application/vnd.ms-excel"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`${quoteDownloadBase(x)}.xls`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 
 
+
+function statDateToMD(v){
+  const s=String(v||"").trim();
+  const m=s.match(/^(?:\d{4}-)?(\d{2})-(\d{2})$/);
+  if(m)return `${m[1]}/${m[2]}`;
+  const m2=s.match(/^(\d{1,2})\/(\d{1,2})$/);
+  if(m2)return `${pad(Number(m2[1]))}/${pad(Number(m2[2]))}`;
+  return s;
+}
+function statMDToISO(v, fallbackYear){
+  const s=String(v||"").trim();
+  if(!s)return null;
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;
+  const m=s.match(/^(\d{1,2})\/(\d{1,2})$/);
+  if(!m)return null;
+  const y=Number(fallbackYear)||new Date().getFullYear();
+  return `${y}-${pad(Number(m[1]))}-${pad(Number(m[2]))}`;
+}
+function normalizeStatMDInput(el){
+  const raw=String(el.value||"").replace(/[^\d]/g,"").slice(0,4);
+  if(raw.length>=3)el.value=`${raw.slice(0,2)}/${raw.slice(2)}`;
+  else el.value=raw;
+}
+
 // ===== 製作安裝統計表（僅 admin）=====
 let installStatsRows=[],editingInstallStatId=null;
 
@@ -548,12 +596,10 @@ function statsTodayMonth(){
 }
 function inferStatsModel(items){
   const names=(Array.isArray(items)?items:[]).map(x=>fmtQName(x.name||x.description||""));
-  const map=[
-    ["一字型檯面","一"],["ㄇ字型檯面","ㄇ"],["L型檯面","L"],["中島型檯面","中島"],["背牆平台","背牆"]
-  ];
-  const vals=[];
-  names.forEach(n=>{for(const [key,val] of map){if(n.includes(key)){vals.push(val);break}}});
-  return [...new Set(vals)].join("+");
+  if(names.some(n=>n.includes("一字型檯面")))return "一";
+  if(names.some(n=>n.includes("L型檯面")))return "L";
+  if(names.some(n=>n.includes("ㄇ字型檯面")))return "ㄇ";
+  return "";
 }
 function statDraftFromQuote(x){
   const m=qMetaFromNote(x.note);
@@ -573,8 +619,8 @@ function setStatForm(x={}){
   $("stCustomer").value=x.customer_name||"";
   $("stJobNo").value=x.job_no||"";
   $("stShipNo").value=x.shipment_no||"";
-  $("stOrderDate").value=x.order_date||"";
-  $("stInstallDate").value=x.install_date||"";
+  $("stOrderDate").value=statDateToMD(x.order_date||"");
+  $("stInstallDate").value=statDateToMD(x.install_date||"");
   $("stCaseName").value=x.case_name||"";
   $("stColorType").value=x.color_type||"";
   $("stColorNo").value=x.color_no||"";
@@ -594,7 +640,7 @@ function getStatForm(){
   return {
     customer_code:$("stCustomerCode").value.trim(),customer_name:$("stCustomer").value.trim(),
     job_no:$("stJobNo").value.trim(),shipment_no:$("stShipNo").value.trim(),
-    order_date:$("stOrderDate").value||null,install_date:$("stInstallDate").value||null,
+    order_date:statMDToISO($("stOrderDate").value,($("stMonth").value||"").slice(0,4)),install_date:statMDToISO($("stInstallDate").value,($("stMonth").value||"").slice(0,4)),
     case_name:$("stCaseName").value.trim(),color_type:$("stColorType").value,
     color_no:$("stColorNo").value.trim(),model:$("stModel").value.trim(),
     size_cm:Number($("stSizeCm").value||0),untaxed_amount:Number($("stUntaxedAmount").value||0),
@@ -668,7 +714,7 @@ function renderInstallStats(){
   installStatsRows.forEach(x=>{
     const human=x.color_type==="human"?x.color_no||"":"",stone=x.color_type==="stone"?x.color_no||"":"";
     const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${esc(x.customer_code||"")}</td><td class="left">${esc(x.customer_name||"")}</td><td>${esc(x.job_no||"")}</td><td>${esc(x.shipment_no||"")}</td><td>${esc(x.order_date||"")}</td><td>${esc(x.install_date||"")}</td><td class="left">${esc(x.case_name||"")}</td><td>${esc(human)}</td><td>${esc(stone)}</td><td>${esc(x.model||"")}</td><td>${qMoney(x.size_cm||0)}</td><td>${qMoney(x.untaxed_amount||0)}</td><td class="left">${esc(x.note||"")}</td><td>${esc(x.floor||"")}</td><td>${esc(x.installers||"")}</td><td>${x.long_share||""}</td><td>${x.kai_share||""}</td><td>${x.self_install_share||""}</td><td>${x.fu_share||""}</td><td>${x.caotun_share||""}</td><td><div class="statsRowBtns"><button data-st="edit" data-id="${x.id}">修改</button><button class="danger" data-st="del" data-id="${x.id}">刪除</button></div></td>`;
+    tr.innerHTML=`<td>${esc(x.customer_code||"")}</td><td class="left">${esc(x.customer_name||"")}</td><td>${esc(x.job_no||"")}</td><td>${esc(x.shipment_no||"")}</td><td>${esc(statDateToMD(x.order_date||""))}</td><td>${esc(statDateToMD(x.install_date||""))}</td><td class="left">${esc(x.case_name||"")}</td><td>${esc(human)}</td><td>${esc(stone)}</td><td>${esc(x.model||"")}</td><td>${qMoney(x.size_cm||0)}</td><td>${qMoney(x.untaxed_amount||0)}</td><td class="left">${esc(x.note||"")}</td><td>${esc(x.floor||"")}</td><td>${esc(x.installers||"")}</td><td>${x.long_share||""}</td><td>${x.kai_share||""}</td><td>${x.self_install_share||""}</td><td>${x.fu_share||""}</td><td>${x.caotun_share||""}</td><td><div class="statsRowBtns"><button data-st="edit" data-id="${x.id}">修改</button><button class="danger" data-st="del" data-id="${x.id}">刪除</button></div></td>`;
     b.appendChild(tr);
   });
   b.querySelectorAll("button").forEach(btn=>btn.onclick=()=>btn.dataset.st==="edit"?editInstallStat(btn.dataset.id):deleteInstallStat(btn.dataset.id));
@@ -691,7 +737,7 @@ function exportInstallStatsExcel(){
   const month=$("stMonth").value||statsTodayMonth();
   const rows=installStatsRows.map(x=>[
     x.customer_code||"",x.customer_name||"",x.job_no||"",x.shipment_no||"",
-    x.order_date||"",x.install_date||"",x.case_name||"",
+    statDateToMD(x.order_date||""),statDateToMD(x.install_date||""),x.case_name||"",
     x.color_type==="human"?(x.color_no||""):"",x.color_type==="stone"?(x.color_no||""):"",
     x.model||"",Number(x.size_cm||0),Number(x.untaxed_amount||0),x.note||"",x.floor||"",x.installers||"",
     x.long_share||"",x.kai_share||"",x.self_install_share||"",x.fu_share||"",x.caotun_share||""
@@ -732,7 +778,7 @@ $("ftime").addEventListener("blur",()=>{
 });
 
 $("closeViewBtn").addEventListener("click",()=>$("viewDlg").close());
-$("saveEventBtn").addEventListener("click",saveEvent);$("deleteEventBtn").addEventListener("click",deleteEvent);$("saveNoteBtn").addEventListener("click",saveNote);$("calendarTabBtn").addEventListener("click",()=>showFeature("calendar"));$("quoteTabBtn").addEventListener("click",()=>showFeature("quote"));$("installStatsTabBtn").addEventListener("click",()=>showFeature("stats"));$("stBringQuoteBtn").addEventListener("click",bringSelectedQuoteToStats);$("stSaveBtn").addEventListener("click",saveInstallStat);$("stResetBtn").addEventListener("click",resetInstallStatForm);$("stLoadBtn").addEventListener("click",loadInstallStats);$("stExportBtn").addEventListener("click",exportInstallStatsExcel);$("qAddItemBtn").addEventListener("click",()=>addQuoteItem());$("qNameManageBtn")?.addEventListener("click",()=>{resetQNameEditor();renderQNameManager();$("qNameDlg").showModal()});$("qNameOptionSaveBtn")?.addEventListener("click",saveQNameOption);$("qNameOptionCancelBtn")?.addEventListener("click",resetQNameEditor);$("qNameDlgCloseBtn")?.addEventListener("click",()=>$("qNameDlg").close());$("qCustomerManageBtn")?.addEventListener("click",()=>{resetQCustomerEditor();renderQCustomerManager();$("qCustomerDlg").showModal()});$("qCustomerOptionSaveBtn")?.addEventListener("click",saveQCustomer);$("qCustomerOptionCancelBtn")?.addEventListener("click",resetQCustomerEditor);$("qCustomerDlgCloseBtn")?.addEventListener("click",()=>$("qCustomerDlg").close());$("qSaveBtn").addEventListener("click",saveQuote);$("qCancelEditBtn").addEventListener("click",resetQuoteForm);boot();
+$("saveEventBtn").addEventListener("click",saveEvent);$("deleteEventBtn").addEventListener("click",deleteEvent);$("saveNoteBtn").addEventListener("click",saveNote);$("calendarTabBtn").addEventListener("click",()=>showFeature("calendar"));$("quoteTabBtn").addEventListener("click",()=>showFeature("quote"));$("installStatsTabBtn").addEventListener("click",()=>showFeature("stats"));$("stOrderDate").addEventListener("input",e=>normalizeStatMDInput(e.target));$("stInstallDate").addEventListener("input",e=>normalizeStatMDInput(e.target));$("stBringQuoteBtn").addEventListener("click",bringSelectedQuoteToStats);$("stSaveBtn").addEventListener("click",saveInstallStat);$("stResetBtn").addEventListener("click",resetInstallStatForm);$("stLoadBtn").addEventListener("click",loadInstallStats);$("stExportBtn").addEventListener("click",exportInstallStatsExcel);$("qAddItemBtn").addEventListener("click",()=>addQuoteItem());$("qNameManageBtn")?.addEventListener("click",()=>{resetQNameEditor();renderQNameManager();$("qNameDlg").showModal()});$("qNameOptionSaveBtn")?.addEventListener("click",saveQNameOption);$("qNameOptionCancelBtn")?.addEventListener("click",resetQNameEditor);$("qNameDlgCloseBtn")?.addEventListener("click",()=>$("qNameDlg").close());$("qCustomerManageBtn")?.addEventListener("click",()=>{resetQCustomerEditor();renderQCustomerManager();$("qCustomerDlg").showModal()});$("qCustomerOptionSaveBtn")?.addEventListener("click",saveQCustomer);$("qCustomerOptionCancelBtn")?.addEventListener("click",resetQCustomerEditor);$("qCustomerDlgCloseBtn")?.addEventListener("click",()=>$("qCustomerDlg").close());$("qSaveBtn").addEventListener("click",saveQuote);$("qCancelEditBtn").addEventListener("click",resetQuoteForm);boot();
 </script>
 
 <script>
