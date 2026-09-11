@@ -14,6 +14,7 @@
 <meta name="twitter:description" content="勝寶鼎新弘股公司">
 <meta name="twitter:card" content="summary">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box} :root{--bd:#d7e0e8;--tx:#18324d;--muted:#66788a;--green:#20a95b}
 body{margin:0;font-family:"Microsoft JhengHei",Arial,sans-serif;background:#fff;color:var(--tx)} button,input,textarea,select{font:inherit}.hidden{display:none!important}
@@ -91,11 +92,38 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
 }
 </style>
 
+
+<style id="install-stats-style">
+.statsWrap{max-width:1480px;margin:10px auto 32px;padding:0 8px}
+.statsCard{background:#fff;border:1px solid #d5dee6;border-radius:12px;padding:14px;margin-bottom:12px}
+.statsTitle{font-size:20px;font-weight:900;margin:0 0 12px}
+.statsBring{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end;margin-bottom:12px}
+.statsBring label,.statsGrid label{font-size:13px;font-weight:800}
+.statsBring select,.statsGrid input,.statsGrid select,.statsFilter input{width:100%;padding:9px;border:1px solid #bdc8d2;border-radius:8px;margin-top:4px;background:#fff}
+.statsBring button,.statsActions button,.statsFilter button{padding:9px 13px;border:1px solid #cbd5de;border-radius:8px;background:#fff;font-weight:800}
+.statsActions .primary,.statsFilter .primary{background:#18324d;color:#fff;border-color:#18324d}
+.statsGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px 10px}
+.statsGrid .span2{grid-column:span 2}.statsGrid .span4{grid-column:1/-1}
+.statsActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.statsFilter{display:grid;grid-template-columns:minmax(180px,260px) auto 1fr;gap:8px;align-items:end;margin-bottom:10px}
+.statsTableWrap{overflow-x:auto}
+.statsTable{width:100%;border-collapse:collapse;min-width:1450px}
+.statsTable th,.statsTable td{border:1px solid #d8e0e7;padding:6px 5px;font-size:12px;white-space:nowrap;text-align:center}
+.statsTable th{background:#f5f8fa}
+.statsTable .left{text-align:left}
+.statsRowBtns{display:flex;gap:4px}
+.statsRowBtns button{padding:5px 7px;border:1px solid #cbd5de;border-radius:6px;background:#fff}
+.statsRowBtns .danger{background:#d62d2d!important;color:#fff!important;border-color:#d62d2d!important}
+.statsHint{font-size:12px;color:var(--muted);margin:2px 0 10px}
+@media(max-width:900px){.statsGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.statsGrid .span4{grid-column:1/-1}}
+@media(max-width:600px){.statsBring,.statsFilter,.statsGrid{grid-template-columns:1fr}.statsGrid .span2,.statsGrid .span4{grid-column:auto}}
+</style>
+
 </head>
 <body>
 <div id="pullRefreshIndicator" aria-hidden="true"><div class="pull-spinner"></div></div>
 <section id="loginPage" class="loginWrap"><div class="loginCard"><h1>勝寶鼎/新弘股公司</h1><label class="field">Email<input id="loginEmail" type="email" autocomplete="username"></label><label class="field">密碼<input id="loginPassword" type="password" autocomplete="current-password"></label><button id="loginBtn" class="loginBtn">登入</button><button id="passkeyBtn" class="loginBtn" type="button" style="margin-top:10px;background:#fff;border:1px solid #81D8D0">使用 Face ID／裝置解鎖登入</button><div id="loginErr" class="err"></div></div></section>
-<section id="appPage" class="hidden"><header><div class="toprow"><div class="brand">勝寶鼎/新弘股公司｜行事曆</div><button id="logoutBtn" class="userBtn">登出</button></div><div id="roleLine" class="roleLine"></div><div class="featureTabs"><button id="calendarTabBtn" class="active">行事曆</button><button id="quoteTabBtn" class="hidden">報價單</button></div><div class="controls" id="calendarControls"><button id="prevBtn">‹</button><div id="monthTitle" class="month"></div><button id="nextBtn">›</button><button id="todayBtn">本月</button><button id="noteBtn" class="hidden">備註</button></div><div class="legend"><span class="lg"><i class="dot" style="background:#20aa5a"></i>綠－石英石</span><span class="lg"><i class="dot" style="background:#2196f3"></i>藍－人造石</span><span class="lg"><i class="dot" style="background:#e52424"></i>紅</span><span class="lg"><i class="dot" style="background:#ff851b"></i>橘</span><span class="lg"><i class="dot" style="background:#8c35d5"></i>紫</span><span class="lg"><i class="dot" style="background:#e5b800"></i>黃</span><span class="lg"><i class="dot" style="background:#111"></i>黑</span></div></header><main>
+<section id="appPage" class="hidden"><header><div class="toprow"><div class="brand">勝寶鼎/新弘股公司｜行事曆</div><button id="logoutBtn" class="userBtn">登出</button></div><div id="roleLine" class="roleLine"></div><div class="featureTabs"><button id="calendarTabBtn" class="active">行事曆</button><button id="quoteTabBtn" class="hidden">報價單</button><button id="installStatsTabBtn" class="hidden">製作安裝統計表</button></div><div class="controls" id="calendarControls"><button id="prevBtn">‹</button><div id="monthTitle" class="month"></div><button id="nextBtn">›</button><button id="todayBtn">本月</button><button id="noteBtn" class="hidden">備註</button></div><div class="legend"><span class="lg"><i class="dot" style="background:#20aa5a"></i>綠－石英石</span><span class="lg"><i class="dot" style="background:#2196f3"></i>藍－人造石</span><span class="lg"><i class="dot" style="background:#e52424"></i>紅</span><span class="lg"><i class="dot" style="background:#ff851b"></i>橘</span><span class="lg"><i class="dot" style="background:#8c35d5"></i>紫</span><span class="lg"><i class="dot" style="background:#e5b800"></i>黃</span><span class="lg"><i class="dot" style="background:#111"></i>黑</span></div></header><main>
 <div id="calendarView"><section class="calendar"><div class="weekhead"><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div class="weekend">六</div><div class="weekend">日</div></div><div id="weeks"></div></section><div id="noteBox" class="noteBox"><div class="noteTitle">備註</div><div id="noteText" class="noteText"></div></div><div id="syncText" class="sync"></div></div>
 <section id="quoteView" class="quoteWrap hidden">
   <div class="quoteCard">
@@ -142,6 +170,76 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
     <div id="quoteEmpty" class="quoteEmpty hidden">目前沒有報價單</div>
   </div>
 </section>
+
+<section id="installStatsView" class="statsWrap hidden">
+  <div class="statsCard">
+    <h2 class="statsTitle">製作安裝統計表</h2>
+    <div class="statsBring">
+      <label>從已完成報價單帶入
+        <select id="stQuoteSelect"><option value="">請選擇報價單</option></select>
+      </label>
+      <button type="button" id="stBringQuoteBtn">帶入資料</button>
+    </div>
+    <div class="statsHint">報價單可自動帶入客戶、日期、安裝日期、案名、色號、尺寸及未稅金額；其他欄位可再補充或修改。</div>
+    <div class="statsGrid">
+      <label>客編<input id="stCustomerCode" placeholder="例如 A276"></label>
+      <label>客戶<input id="stCustomer"></label>
+      <label>編號<input id="stJobNo" placeholder="可修改"></label>
+      <label>出貨單號<input id="stShipNo"></label>
+
+      <label>接單日期<input id="stOrderDate" type="date"></label>
+      <label>安裝日期<input id="stInstallDate" type="date"></label>
+      <label class="span2">案名<input id="stCaseName"></label>
+
+      <label>色號類別
+        <select id="stColorType">
+          <option value="">請選擇</option>
+          <option value="human">人造石</option>
+          <option value="stone">石英石</option>
+        </select>
+      </label>
+      <label>色號<input id="stColorNo"></label>
+      <label>型號<input id="stModel" placeholder="例如 一、L、ㄇ、一*2"></label>
+      <label>尺寸 (cm)<input id="stSizeCm" type="number" step="0.01"></label>
+
+      <label>未稅金額<input id="stUntaxedAmount" type="number" step="1"></label>
+      <label>樓層<input id="stFloor"></label>
+      <label class="span2">安裝人員<input id="stInstallers" placeholder="例如 龍+凱"></label>
+
+      <label class="span2">備註<input id="stNote"></label>
+      <label>龍<input id="stLong" type="number" step="0.5"></label>
+      <label>凱<input id="stKai" type="number" step="0.5"></label>
+      <label>自安<input id="stSelfInstall" type="number" step="0.5"></label>
+      <label>富<input id="stFu" type="number" step="0.5"></label>
+      <label>草屯<input id="stCaotun" type="number" step="0.5"></label>
+    </div>
+    <div class="statsActions">
+      <button type="button" id="stSaveBtn" class="primary">儲存統計資料</button>
+      <button type="button" id="stResetBtn">清空</button>
+    </div>
+  </div>
+
+  <div class="statsCard">
+    <h2 class="statsTitle">統計紀錄</h2>
+    <div class="statsFilter">
+      <label>查詢月份<input id="stMonth" type="month"></label>
+      <button type="button" id="stLoadBtn">查詢</button>
+      <div style="text-align:right"><button type="button" id="stExportBtn" class="primary">下載製作安裝統計表 Excel</button></div>
+    </div>
+    <div class="statsTableWrap">
+      <table class="statsTable">
+        <thead><tr>
+          <th>客編</th><th>客戶</th><th>編號</th><th>出貨單號</th><th>接單日期</th><th>安裝日期</th>
+          <th>案名</th><th>色號-人</th><th>色號-石</th><th>型號</th><th>尺寸(cm)</th><th>未稅金額</th>
+          <th>備註</th><th>樓層</th><th>安裝人員</th><th>龍</th><th>凱</th><th>自安</th><th>富</th><th>草屯</th><th>操作</th>
+        </tr></thead>
+        <tbody id="stTableBody"></tbody>
+      </table>
+    </div>
+    <div id="stEmpty" class="quoteEmpty hidden">目前沒有統計資料</div>
+  </div>
+</section>
+
 </main></section>
 <dialog id="viewDlg">
   <div class="form">
@@ -267,7 +365,7 @@ async function passkeyLogin(){
   }catch(e){$("loginErr").textContent="Face ID／裝置解鎖未完成"}
 }
 async function signIn(){ $("loginErr").textContent="";const email=$("loginEmail").value.trim(),password=$("loginPassword").value;if(!email||!password){$("loginErr").textContent="請輸入 Email 和密碼";return}$("loginBtn").disabled=true;const {error}=await sb.auth.signInWithPassword({email,password});$("loginBtn").disabled=false;if(error){$("loginErr").textContent="登入失敗，請確認帳號或密碼";return}await boot();await ensurePasskey() }
-async function boot(){const {data:{session}}=await sb.auth.getSession();if(!session){$("loginPage").classList.remove("hidden");$("appPage").classList.add("hidden");return}currentUser=session.user;const {data,error}=await sb.from("sbd_users").select("display_name,role,active").eq("user_id",currentUser.id).maybeSingle();if(error||!data||!data.active){await sb.auth.signOut();$("loginErr").textContent="此帳號尚未開通勝寶鼎/新弘股公司權限";$("loginPage").classList.remove("hidden");$("appPage").classList.add("hidden");return}profile=data;$("loginPage").classList.add("hidden");$("appPage").classList.remove("hidden");const roleText=profile.role==="admin"?"管理者":"使用者";$("roleLine").textContent=`${profile.display_name||currentUser.email}｜${roleText}`;$("noteBtn").classList.toggle("hidden",profile.role!=="admin");$("quoteTabBtn").classList.toggle("hidden",!["admin","editor"].includes(profile.role));showFeature("calendar");await loadMonth()}
+async function boot(){const {data:{session}}=await sb.auth.getSession();if(!session){$("loginPage").classList.remove("hidden");$("appPage").classList.add("hidden");return}currentUser=session.user;const {data,error}=await sb.from("sbd_users").select("display_name,role,active").eq("user_id",currentUser.id).maybeSingle();if(error||!data||!data.active){await sb.auth.signOut();$("loginErr").textContent="此帳號尚未開通勝寶鼎/新弘股公司權限";$("loginPage").classList.remove("hidden");$("appPage").classList.add("hidden");return}profile=data;$("loginPage").classList.add("hidden");$("appPage").classList.remove("hidden");const roleText=profile.role==="admin"?"管理者":"使用者";$("roleLine").textContent=`${profile.display_name||currentUser.email}｜${roleText}`;$("noteBtn").classList.toggle("hidden",profile.role!=="admin");$("quoteTabBtn").classList.toggle("hidden",!["admin","editor"].includes(profile.role));$("installStatsTabBtn").classList.toggle("hidden",profile.role!=="admin");showFeature("calendar");await loadMonth()}
 async function loadMonth(){ $("syncText").textContent="讀取中…";const {data:e,error:ee}=await sb.from("sbd_calendar_events").select("id,event_date,event_time,title,details,color,created_at").gte("event_date",firstDay()).lt("event_date",nextMonthFirst()).order("event_date").order("event_time",{ascending:true,nullsFirst:true});if(ee){$("syncText").textContent="讀取行程失敗";return}events=e||[];const {data:n,error:ne}=await sb.from("sbd_month_notes").select("id,month_start,note").eq("month_start",firstDay()).maybeSingle();currentNoteRow=ne?null:n;render();$("syncText").textContent="資料已同步" }
 function render(){const y=view.getFullYear(),m=view.getMonth()+1;$("monthTitle").textContent=`${y} 年 ${m} 月`;const last=new Date(y,m,0).getDate(),first=(new Date(y,m-1,1).getDay()+6)%7,h=holidayMap(y,m);let out="";for(let r=0;r<6;r++){out+='<div class="week">';for(let c=0;c<7;c++){const n=r*7+c-first+1;if(n<1||n>last){out+='<div class="day blank"></div>';continue}const key=`${ym()}-${pad(n)}`,a=events.filter(x=>x.event_date===key),upper=a.filter(x=>eventInstall(x)==="勝寶鼎"),lower=a.filter(x=>eventInstall(x)==="外包"),isRed=!!h[n]||c>=5;const chip=x=>{const t=(x.event_time?x.event_time.slice(0,5)+" ":"")+esc(x.title);return `<div class="event ${esc(x.color)} adminEvent" data-id="${x.id}">${t}</div>`};const canAdd=["admin","editor"].includes(profile.role);out+=`<div class="day${isRed?" holiday":""}" data-date="${key}"><div class="dateLine${canAdd?" canAdd":""}"${canAdd?` data-date="${key}" role="button" tabindex="0" aria-label="新增 ${key} 行程"`:""}><div class="date">${n}${h[n]?`<span class="holidayName">${esc(h[n])}</span>`:""}</div>${canAdd?`<span class="dayAdd">＋</span>`:""}</div>${upper.map(chip).join("")}<div class="split"></div>${lower.map(chip).join("")}</div>`}out+='</div>'}$("weeks").innerHTML=out;$("weeks").querySelectorAll(".adminEvent").forEach(el=>el.addEventListener("click",ev=>{ev.stopPropagation();if(["admin","editor"].includes(profile.role))openEditEvent(el.dataset.id);else openViewEvent(el.dataset.id)}));$("weeks").querySelectorAll(".dateLine.canAdd").forEach(el=>{el.addEventListener("click",ev=>{ev.stopPropagation();openNewEvent(el.dataset.date)});el.addEventListener("keydown",ev=>{if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();openNewEvent(el.dataset.date)}})});const note=(currentNoteRow?.note||"").trim();$("noteText").textContent=note;$("noteBox").classList.toggle("show",!!note)}
 function openNewEvent(dateOverride){if(!["admin","editor"].includes(profile.role))return;currentEditId=null;$("eventDlgTitle").textContent="新增行程";$("deleteEventBtn").classList.add("hidden");$("installField").classList.toggle("hidden",!["admin","editor"].includes(profile.role));$("fdate").value=displayDateInput(dateOverride||`${ym()}-01`);$("ftime").value="";$("ftitle").value="";$("fdetail").value="";$("fcolor").value="blue";$("finstall").value="勝寶鼎";$("eventDlg").showModal()}
@@ -317,7 +415,19 @@ function qToday(){const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth
 function makeQuoteNo(){const d=new Date(),ds=`${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`,ts=`${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;return `Q${ds}-${ts}`}
 function qMetaFromNote(note){try{const o=JSON.parse(String(note||""));return o&&typeof o==="object"?o:{}}catch(e){return {}}}
 function qMeta(){return {case_name:$("qCaseName").value.trim(),install_date:$("qInstallDate").value,color_no:$("qColorNo").value.trim(),product_name:$("qProductName").value.trim(),front_edge:$("qFrontEdge").value.trim(),back_wall:$("qBackWall").value.trim(),file_address:$("qFileAddress")?.value.trim()||""}}
-function showFeature(name){const quote=name==="quote";$("calendarView").classList.toggle("hidden",quote);$("quoteView").classList.toggle("hidden",!quote);$("calendarControls").classList.toggle("hidden",quote);$("calendarTabBtn").classList.toggle("active",!quote);$("quoteTabBtn").classList.toggle("active",quote);if(quote&&["admin","editor"].includes(profile?.role)){resetQuoteForm();loadQuoteOptions();loadQuotes()}}
+function showFeature(name){
+  const quote=name==="quote", stats=name==="stats";
+  if(stats&&profile?.role!=="admin")return;
+  $("calendarView").classList.toggle("hidden",quote||stats);
+  $("quoteView").classList.toggle("hidden",!quote);
+  $("installStatsView").classList.toggle("hidden",!stats);
+  $("calendarControls").classList.toggle("hidden",quote||stats);
+  $("calendarTabBtn").classList.toggle("active",name==="calendar");
+  $("quoteTabBtn").classList.toggle("active",quote);
+  $("installStatsTabBtn").classList.toggle("active",stats);
+  if(quote&&["admin","editor"].includes(profile?.role)){resetQuoteForm();loadQuoteOptions();loadQuotes()}
+  if(stats&&profile?.role==="admin"){loadQuotesForStats();loadInstallStats()}
+}
 function addQuoteItem(item={}){const tr=document.createElement("tr");const totalCm=item.total_cm??item.qty??0;tr.innerHTML=`<td class="qidx"></td><td><input class="qname" list="qNameOptionsList" placeholder="選擇或直接輸入" value="${esc(fmtQName(item.name||item.description||""))}"></td><td><input class="qsize" value="${esc(item.process_size||"")}"></td><td><input class="qcm" type="number" min="0" step="0.01" value="${Number(totalCm||0)}"></td><td><input class="qunit" value="${esc(item.unit||"")}"></td><td><input class="qprice" type="number" min="0" step="0.01" value="${Number(item.price||0)}"></td><td class="qamount">0</td><td><button type="button" class="qremove">刪</button></td>`;$("qItemsBody").appendChild(tr);tr.querySelectorAll("input").forEach(i=>i.addEventListener("input",calcQuote));const qi=tr.querySelector(".qname");qi?.addEventListener("blur",()=>{qi.value=fmtQName(qi.value);calcQuote()});tr.querySelector(".qremove").addEventListener("click",()=>{tr.remove();renumberQuoteItems();calcQuote()});renumberQuoteItems();calcQuote()}
 function renumberQuoteItems(){[...$("qItemsBody").children].forEach((tr,i)=>tr.querySelector(".qidx").textContent=i+1)}
 function getQuoteItems(){return [...$("qItemsBody").children].map(tr=>({name:fmtQName(tr.querySelector(".qname").value),process_size:tr.querySelector(".qsize").value.trim(),total_cm:Number(tr.querySelector(".qcm").value||0),unit:tr.querySelector(".qunit").value.trim(),price:Number(tr.querySelector(".qprice").value||0)})).filter(x=>x.name||x.process_size||x.total_cm||x.price)}
@@ -329,7 +439,7 @@ function previewQuoteExcel(){excelQuote(currentQuoteDraft())}
 function resetQuoteForm(){editingQuoteId=null;$("quoteFormTitle").textContent="新增報價單";$("qCaseName").value="";$("qNo").value=makeQuoteNo();$("qCustomer").value="";$("qDate").value=qToday();$("qInstallDate").value="";$("qAddress").value="";$("qFileAddress").value="";$("qColorNo").value="";$("qProductName").value="";$("qFrontEdge").value="";$("qBackWall").value="";$("qItemsBody").innerHTML="";addQuoteItem();$("qCancelEditBtn").classList.add("hidden");calcQuote()}
 async function saveQuote(){if(!["admin","editor"].includes(profile.role))return;const no=$("qNo").value.trim(),date=$("qDate").value,customer=$("qCustomer").value.trim(),items=getQuoteItems();if(!no||!date||!customer){alert("請輸入編號、日期、客戶名稱");return}if(!items.length){alert("請至少輸入一個報價項目");return}const c=calcQuote(),meta=qMeta(),payload={quote_no:no,quote_date:date,customer_name:customer,contact_name:meta.case_name||null,phone:null,address:$("qAddress").value.trim()||null,items,subtotal:c.sub,tax_rate:5,tax_amount:c.tax,total_amount:c.total,note:JSON.stringify(meta)};let r;if(editingQuoteId)r=await sb.from("sbd_quotes").update(payload).eq("id",editingQuoteId);else r=await sb.from("sbd_quotes").insert(payload);if(r.error){alert("報價單儲存失敗："+r.error.message);return}resetQuoteForm();await loadQuotes()}
 async function loadQuotes(){if(!["admin","editor"].includes(profile.role))return;const {data,error}=await sb.from("sbd_quotes").select("*").order("quote_date",{ascending:false}).order("created_at",{ascending:false});if(error){$("quoteEmpty").textContent="讀取報價單失敗："+error.message;$("quoteEmpty").classList.remove("hidden");return}quoteRows=data||[];renderQuoteList()}
-function renderQuoteList(){const body=$("quoteListBody");body.innerHTML="";$("quoteEmpty").classList.toggle("hidden",quoteRows.length>0);quoteRows.forEach(x=>{const tr=document.createElement("tr"),del=profile.role==="admin"?`<button type="button" class="danger" data-act="delete" data-id="${x.id}">刪除</button>`:"";tr.innerHTML=`<td>${esc(x.quote_date||"")}</td><td>${esc(x.quote_no||"")}</td><td>${esc(x.customer_name||"")}</td><td>${qMoney(x.total_amount)}</td><td><div class="quoteListBtns"><button type="button" data-act="edit" data-id="${x.id}">修改</button><button type="button" data-act="pdf" data-id="${x.id}">PDF</button><button type="button" data-act="excel" data-id="${x.id}">Excel</button>${del}</div></td>`;body.appendChild(tr)});body.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{const x=quoteRows.find(q=>String(q.id)===String(b.dataset.id));if(!x)return;if(b.dataset.act==="edit")editQuote(x);if(b.dataset.act==="pdf")printQuote(x);if(b.dataset.act==="excel")excelQuote(x);if(b.dataset.act==="delete")deleteQuote(x.id)}))}
+function renderQuoteList(){const body=$("quoteListBody");body.innerHTML="";$("quoteEmpty").classList.toggle("hidden",quoteRows.length>0);quoteRows.forEach(x=>{const tr=document.createElement("tr"),del=profile.role==="admin"?`<button type="button" class="danger" data-act="delete" data-id="${x.id}">刪除</button>`:"",stats=profile.role==="admin"?`<button type="button" data-act="stats" data-id="${x.id}">製作安裝</button>`:"";tr.innerHTML=`<td>${esc(x.quote_date||"")}</td><td>${esc(x.quote_no||"")}</td><td>${esc(x.customer_name||"")}</td><td>${qMoney(x.total_amount)}</td><td><div class="quoteListBtns"><button type="button" data-act="edit" data-id="${x.id}">修改</button><button type="button" data-act="pdf" data-id="${x.id}">PDF</button><button type="button" data-act="excel" data-id="${x.id}">Excel</button>${stats}${del}</div></td>`;body.appendChild(tr)});body.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{const x=quoteRows.find(q=>String(q.id)===String(b.dataset.id));if(!x)return;if(b.dataset.act==="edit")editQuote(x);if(b.dataset.act==="pdf")printQuote(x);if(b.dataset.act==="excel")excelQuote(x);if(b.dataset.act==="stats")openStatsFromQuote(x);if(b.dataset.act==="delete")deleteQuote(x.id)}))}
 function editQuote(x){if(!["admin","editor"].includes(profile.role))return;const m=qMetaFromNote(x.note);editingQuoteId=x.id;$("quoteFormTitle").textContent="修改報價單";$("qCaseName").value=m.case_name||x.contact_name||"";$("qNo").value=x.quote_no||"";$("qCustomer").value=x.customer_name||"";$("qDate").value=x.quote_date||qToday();$("qInstallDate").value=m.install_date||"";$("qAddress").value=x.address||"";$("qFileAddress").value=m.file_address||"";$("qColorNo").value=m.color_no||"";$("qProductName").value=m.product_name||"";$("qFrontEdge").value=m.front_edge||"";$("qBackWall").value=m.back_wall||"";$("qItemsBody").innerHTML="";(Array.isArray(x.items)?x.items:[]).forEach(addQuoteItem);if(!$("qItemsBody").children.length)addQuoteItem();$("qCancelEditBtn").classList.remove("hidden");calcQuote();$("quoteView").scrollIntoView({behavior:"smooth",block:"start"})}
 async function deleteQuote(id){if(profile.role!=="admin")return;if(!confirm("確定刪除這張報價單？"))return;const {error}=await sb.from("sbd_quotes").delete().eq("id",id);if(error){alert("刪除失敗："+error.message);return}await loadQuotes()}
 function quoteDownloadBase(x){const m=qMetaFromNote(x.note),parts=[String(x.quote_no||"報價單").trim(),String(x.customer_name||"").trim()].filter(Boolean);let base=parts.join(" ");const fa=String(m.file_address||"").trim();if(fa)base+="-"+fa;return base.replace(/[\\/:*?"<>|]/g,"-").replace(/\s+/g," ").trim()}
@@ -429,6 +539,178 @@ function excelQuote(x){const m=qMetaFromNote(x.note),items=Array.isArray(x.items
 
 </head><body><table><tr><th colspan="7">勝鈔環保科技股份有限公司報價單</th></tr><tr><td>案名</td><td colspan="2">${esc(m.case_name||x.contact_name||"")}</td><td>編號</td><td colspan="3">${esc(x.quote_no||"")}</td></tr><tr><td>客戶名稱</td><td colspan="3">${esc(x.customer_name||"")}</td><td>日期</td><td colspan="2">${esc(x.quote_date||"")}</td></tr><tr><td>安裝地址</td><td colspan="3">${esc(x.address||"")}</td><td>實際安裝日期</td><td colspan="2">${esc(m.install_date||"")}</td></tr><tr><td colspan="2">色號</td><td colspan="2">品名</td><td colspan="3">前緣 cm ／ 背牆 cm</td></tr><tr><td colspan="2">${esc(m.color_no||"")}</td><td colspan="2">${esc(m.product_name||"")}</td><td colspan="3">前緣 ${esc(m.front_edge||"")} cm ／ 背牆 ${esc(m.back_wall||"")} cm</td></tr><tr><th>項數</th><th>名稱</th><th>加工尺寸 (CM)</th><th>總公分數</th><th>單位</th><th>單價</th><th>小計</th></tr>${trs}<tr><td></td><td colspan="3">備註：此價格為實價計價</td><td colspan="2">合計</td><td>${x.subtotal||0}</td></tr><tr><td colspan="4"></td><td colspan="2">稅金5%</td><td>${x.tax_amount||0}</td></tr><tr><td colspan="4"></td><td colspan="2">總計</td><td>${x.total_amount||0}</td></tr><tr><td colspan="7">備註：1.本報價單有效期間為30天</td></tr><tr><td colspan="7">2.付款方式:月結40天，未月結客戶安裝完工收現，稅外加不扣%</td></tr><tr><td colspan="7">3.開發票為總計金額</td></tr><tr><td colspan="7">4.本公司產品款項未結清資產屬勝鈔環保科技股份有限公司所有權</td></tr><tr><td colspan="4">勝鈔環保科技股份有限公司 / TEL:02-26771176 / FAX:02-26772076 / 業務代表簽名:</td><td colspan="3">客戶簽名:</td></tr></table></body></html>`;const blob=new Blob(["\ufeff",html],{type:"application/vnd.ms-excel"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`${quoteDownloadBase(x)}.xls`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 
+
+// ===== 製作安裝統計表（僅 admin）=====
+let installStatsRows=[],editingInstallStatId=null;
+
+function statsTodayMonth(){
+  const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}`;
+}
+function inferStatsModel(items){
+  const names=(Array.isArray(items)?items:[]).map(x=>fmtQName(x.name||x.description||""));
+  const map=[
+    ["一字型檯面","一"],["ㄇ字型檯面","ㄇ"],["L型檯面","L"],["中島型檯面","中島"],["背牆平台","背牆"]
+  ];
+  const vals=[];
+  names.forEach(n=>{for(const [key,val] of map){if(n.includes(key)){vals.push(val);break}}});
+  return [...new Set(vals)].join("+");
+}
+function statDraftFromQuote(x){
+  const m=qMetaFromNote(x.note);
+  const items=Array.isArray(x.items)?x.items:[];
+  const size=items.reduce((s,it)=>s+Number(it.total_cm??it.qty??0),0);
+  return {
+    quote_id:x.id, customer_code:"", customer_name:x.customer_name||"", job_no:x.quote_no||"",
+    shipment_no:"", order_date:x.quote_date||"", install_date:m.install_date||"",
+    case_name:m.case_name||x.contact_name||x.address||"", color_type:"",
+    color_no:m.color_no||"", model:inferStatsModel(items), size_cm:size||0,
+    untaxed_amount:Number(x.subtotal||0), note:"", floor:"", installers:"",
+    long_share:0,kai_share:0,self_install_share:0,fu_share:0,caotun_share:0
+  };
+}
+function setStatForm(x={}){
+  $("stCustomerCode").value=x.customer_code||"";
+  $("stCustomer").value=x.customer_name||"";
+  $("stJobNo").value=x.job_no||"";
+  $("stShipNo").value=x.shipment_no||"";
+  $("stOrderDate").value=x.order_date||"";
+  $("stInstallDate").value=x.install_date||"";
+  $("stCaseName").value=x.case_name||"";
+  $("stColorType").value=x.color_type||"";
+  $("stColorNo").value=x.color_no||"";
+  $("stModel").value=x.model||"";
+  $("stSizeCm").value=x.size_cm??"";
+  $("stUntaxedAmount").value=x.untaxed_amount??"";
+  $("stNote").value=x.note||"";
+  $("stFloor").value=x.floor||"";
+  $("stInstallers").value=x.installers||"";
+  $("stLong").value=x.long_share??"";
+  $("stKai").value=x.kai_share??"";
+  $("stSelfInstall").value=x.self_install_share??"";
+  $("stFu").value=x.fu_share??"";
+  $("stCaotun").value=x.caotun_share??"";
+}
+function getStatForm(){
+  return {
+    customer_code:$("stCustomerCode").value.trim(),customer_name:$("stCustomer").value.trim(),
+    job_no:$("stJobNo").value.trim(),shipment_no:$("stShipNo").value.trim(),
+    order_date:$("stOrderDate").value||null,install_date:$("stInstallDate").value||null,
+    case_name:$("stCaseName").value.trim(),color_type:$("stColorType").value,
+    color_no:$("stColorNo").value.trim(),model:$("stModel").value.trim(),
+    size_cm:Number($("stSizeCm").value||0),untaxed_amount:Number($("stUntaxedAmount").value||0),
+    note:$("stNote").value.trim(),floor:$("stFloor").value.trim(),installers:$("stInstallers").value.trim(),
+    long_share:Number($("stLong").value||0),kai_share:Number($("stKai").value||0),
+    self_install_share:Number($("stSelfInstall").value||0),fu_share:Number($("stFu").value||0),
+    caotun_share:Number($("stCaotun").value||0)
+  };
+}
+function resetInstallStatForm(){
+  editingInstallStatId=null;
+  setStatForm({});
+  $("stQuoteSelect").value="";
+  $("stSaveBtn").textContent="儲存統計資料";
+}
+async function loadQuotesForStats(){
+  if(profile?.role!=="admin")return;
+  if(!quoteRows.length){
+    const {data,error}=await sb.from("sbd_quotes").select("*").order("quote_date",{ascending:false}).order("created_at",{ascending:false});
+    if(!error)quoteRows=data||[];
+  }
+  const s=$("stQuoteSelect");
+  s.innerHTML='<option value="">請選擇報價單</option>'+quoteRows.map(x=>`<option value="${x.id}">${esc(x.quote_date||"")}｜${esc(x.quote_no||"")}｜${esc(x.customer_name||"")}</option>`).join("");
+}
+function bringSelectedQuoteToStats(){
+  if(profile?.role!=="admin")return;
+  const x=quoteRows.find(q=>String(q.id)===String($("stQuoteSelect").value));
+  if(!x)return alert("請先選擇報價單");
+  editingInstallStatId=null;
+  setStatForm(statDraftFromQuote(x));
+  $("stSaveBtn").textContent="儲存統計資料";
+}
+function openStatsFromQuote(x){
+  if(profile?.role!=="admin")return;
+  showFeature("stats");
+  setTimeout(()=>{
+    $("stQuoteSelect").value=String(x.id);
+    editingInstallStatId=null;
+    setStatForm(statDraftFromQuote(x));
+  },0);
+}
+async function saveInstallStat(){
+  if(profile?.role!=="admin")return;
+  const payload=getStatForm();
+  payload.quote_id=$("stQuoteSelect").value||null;
+  if(!payload.customer_name&&!payload.case_name)return alert("請至少輸入客戶或案名");
+  let r;
+  if(editingInstallStatId)r=await sb.from("sbd_install_stats").update(payload).eq("id",editingInstallStatId);
+  else r=await sb.from("sbd_install_stats").insert(payload);
+  if(r.error)return alert("儲存失敗："+r.error.message);
+  resetInstallStatForm();await loadInstallStats();
+}
+async function loadInstallStats(){
+  if(profile?.role!=="admin")return;
+  if(!$("stMonth").value)$("stMonth").value=statsTodayMonth();
+  const month=$("stMonth").value;
+  let q=sb.from("sbd_install_stats").select("*").order("install_date",{ascending:true,nullsFirst:true}).order("created_at",{ascending:true});
+  if(month){
+    const [y,m]=month.split("-").map(Number);
+    const start=`${y}-${pad(m)}-01`;
+    const d=new Date(y,m,1),end=`${d.getFullYear()}-${pad(d.getMonth()+1)}-01`;
+    q=q.gte("install_date",start).lt("install_date",end);
+  }
+  const {data,error}=await q;
+  if(error){$("stEmpty").textContent="讀取失敗："+error.message;$("stEmpty").classList.remove("hidden");return}
+  installStatsRows=data||[];renderInstallStats();
+}
+function renderInstallStats(){
+  const b=$("stTableBody");b.innerHTML="";
+  $("stEmpty").classList.toggle("hidden",installStatsRows.length>0);
+  installStatsRows.forEach(x=>{
+    const human=x.color_type==="human"?x.color_no||"":"",stone=x.color_type==="stone"?x.color_no||"":"";
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${esc(x.customer_code||"")}</td><td class="left">${esc(x.customer_name||"")}</td><td>${esc(x.job_no||"")}</td><td>${esc(x.shipment_no||"")}</td><td>${esc(x.order_date||"")}</td><td>${esc(x.install_date||"")}</td><td class="left">${esc(x.case_name||"")}</td><td>${esc(human)}</td><td>${esc(stone)}</td><td>${esc(x.model||"")}</td><td>${qMoney(x.size_cm||0)}</td><td>${qMoney(x.untaxed_amount||0)}</td><td class="left">${esc(x.note||"")}</td><td>${esc(x.floor||"")}</td><td>${esc(x.installers||"")}</td><td>${x.long_share||""}</td><td>${x.kai_share||""}</td><td>${x.self_install_share||""}</td><td>${x.fu_share||""}</td><td>${x.caotun_share||""}</td><td><div class="statsRowBtns"><button data-st="edit" data-id="${x.id}">修改</button><button class="danger" data-st="del" data-id="${x.id}">刪除</button></div></td>`;
+    b.appendChild(tr);
+  });
+  b.querySelectorAll("button").forEach(btn=>btn.onclick=()=>btn.dataset.st==="edit"?editInstallStat(btn.dataset.id):deleteInstallStat(btn.dataset.id));
+}
+function editInstallStat(id){
+  if(profile?.role!=="admin")return;
+  const x=installStatsRows.find(v=>String(v.id)===String(id));if(!x)return;
+  editingInstallStatId=x.id;setStatForm(x);$("stQuoteSelect").value=x.quote_id?String(x.quote_id):"";
+  $("stSaveBtn").textContent="儲存修改";window.scrollTo({top:0,behavior:"smooth"});
+}
+async function deleteInstallStat(id){
+  if(profile?.role!=="admin")return;
+  if(!confirm("確定刪除這筆製作安裝統計資料？"))return;
+  const {error}=await sb.from("sbd_install_stats").delete().eq("id",id);
+  if(error)return alert("刪除失敗："+error.message);await loadInstallStats();
+}
+function exportInstallStatsExcel(){
+  if(profile?.role!=="admin")return;
+  if(typeof XLSX==="undefined")return alert("Excel 元件尚未載入，請重新整理後再試");
+  const month=$("stMonth").value||statsTodayMonth();
+  const rows=installStatsRows.map(x=>[
+    x.customer_code||"",x.customer_name||"",x.job_no||"",x.shipment_no||"",
+    x.order_date||"",x.install_date||"",x.case_name||"",
+    x.color_type==="human"?(x.color_no||""):"",x.color_type==="stone"?(x.color_no||""):"",
+    x.model||"",Number(x.size_cm||0),Number(x.untaxed_amount||0),x.note||"",x.floor||"",x.installers||"",
+    x.long_share||"",x.kai_share||"",x.self_install_share||"",x.fu_share||"",x.caotun_share||""
+  ]);
+  const aoa=[
+    [`${month.replace("-","/")} 加工出貨統計表`],
+    ["客編","客戶","編號","出貨單號","接單日期","安裝日期","案名","色號-人","色號-石","型號","尺寸(cm)","未稅金額","備註","樓層","安裝人員","龍","凱","自安","富","草屯"],
+    ...rows
+  ];
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws["!merges"]=[{s:{r:0,c:0},e:{r:0,c:19}}];
+  ws["!cols"]=[
+    {wch:10},{wch:14},{wch:16},{wch:13},{wch:12},{wch:12},{wch:22},{wch:12},{wch:12},{wch:16},
+    {wch:11},{wch:13},{wch:22},{wch:8},{wch:14},{wch:6},{wch:6},{wch:6},{wch:6},{wch:7}
+  ];
+  const wb2=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb2,ws,month.slice(5)+"月");
+  XLSX.writeFile(wb2,`製作安裝統計表_${month}.xlsx`);
+}
+
 ["qCaseName","qNo","qCustomer","qDate","qInstallDate","qAddress","qFileAddress","qColorNo","qProductName","qFrontEdge","qBackWall"].forEach(id=>$(id)?.addEventListener("input",()=>renderQuotePreview()));$("qDate")?.addEventListener("change",()=>renderQuotePreview());$("qInstallDate")?.addEventListener("change",()=>renderQuotePreview());$("qPreviewPdfBtn")?.addEventListener("click",previewQuotePdf);$("qPreviewExcelBtn")?.addEventListener("click",previewQuoteExcel);
 async function logout(){await sb.auth.signOut();profile=null;currentUser=null;$("appPage").classList.add("hidden");$("loginPage").classList.remove("hidden")}
 $("loginBtn").addEventListener("click",signIn);$("passkeyBtn").addEventListener("click",passkeyLogin);
@@ -450,7 +732,7 @@ $("ftime").addEventListener("blur",()=>{
 });
 
 $("closeViewBtn").addEventListener("click",()=>$("viewDlg").close());
-$("saveEventBtn").addEventListener("click",saveEvent);$("deleteEventBtn").addEventListener("click",deleteEvent);$("saveNoteBtn").addEventListener("click",saveNote);$("calendarTabBtn").addEventListener("click",()=>showFeature("calendar"));$("quoteTabBtn").addEventListener("click",()=>showFeature("quote"));$("qAddItemBtn").addEventListener("click",()=>addQuoteItem());$("qNameManageBtn")?.addEventListener("click",()=>{resetQNameEditor();renderQNameManager();$("qNameDlg").showModal()});$("qNameOptionSaveBtn")?.addEventListener("click",saveQNameOption);$("qNameOptionCancelBtn")?.addEventListener("click",resetQNameEditor);$("qNameDlgCloseBtn")?.addEventListener("click",()=>$("qNameDlg").close());$("qCustomerManageBtn")?.addEventListener("click",()=>{resetQCustomerEditor();renderQCustomerManager();$("qCustomerDlg").showModal()});$("qCustomerOptionSaveBtn")?.addEventListener("click",saveQCustomer);$("qCustomerOptionCancelBtn")?.addEventListener("click",resetQCustomerEditor);$("qCustomerDlgCloseBtn")?.addEventListener("click",()=>$("qCustomerDlg").close());$("qSaveBtn").addEventListener("click",saveQuote);$("qCancelEditBtn").addEventListener("click",resetQuoteForm);boot();
+$("saveEventBtn").addEventListener("click",saveEvent);$("deleteEventBtn").addEventListener("click",deleteEvent);$("saveNoteBtn").addEventListener("click",saveNote);$("calendarTabBtn").addEventListener("click",()=>showFeature("calendar"));$("quoteTabBtn").addEventListener("click",()=>showFeature("quote"));$("installStatsTabBtn").addEventListener("click",()=>showFeature("stats"));$("stBringQuoteBtn").addEventListener("click",bringSelectedQuoteToStats);$("stSaveBtn").addEventListener("click",saveInstallStat);$("stResetBtn").addEventListener("click",resetInstallStatForm);$("stLoadBtn").addEventListener("click",loadInstallStats);$("stExportBtn").addEventListener("click",exportInstallStatsExcel);$("qAddItemBtn").addEventListener("click",()=>addQuoteItem());$("qNameManageBtn")?.addEventListener("click",()=>{resetQNameEditor();renderQNameManager();$("qNameDlg").showModal()});$("qNameOptionSaveBtn")?.addEventListener("click",saveQNameOption);$("qNameOptionCancelBtn")?.addEventListener("click",resetQNameEditor);$("qNameDlgCloseBtn")?.addEventListener("click",()=>$("qNameDlg").close());$("qCustomerManageBtn")?.addEventListener("click",()=>{resetQCustomerEditor();renderQCustomerManager();$("qCustomerDlg").showModal()});$("qCustomerOptionSaveBtn")?.addEventListener("click",saveQCustomer);$("qCustomerOptionCancelBtn")?.addEventListener("click",resetQCustomerEditor);$("qCustomerDlgCloseBtn")?.addEventListener("click",()=>$("qCustomerDlg").close());$("qSaveBtn").addEventListener("click",saveQuote);$("qCancelEditBtn").addEventListener("click",resetQuoteForm);boot();
 </script>
 
 <script>
