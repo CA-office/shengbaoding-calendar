@@ -13,7 +13,13 @@
 <meta name="twitter:title" content="勝寶鼎新弘股公司">
 <meta name="twitter:description" content="勝寶鼎新弘股公司">
 <meta name="twitter:card" content="summary">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+["stCustomerCode","stCustomer","stJobNo","stShipNo","stOrderDate","stInstallDate","stCaseName","stColorType","stColorNo","stModel","stSizeCm","stUntaxedAmount","stNote","stFloor","stInstallers","stLong","stKai","stSelfInstall","stFu","stCaotun"].forEach(id=>{
+  $(id)?.addEventListener("input",updateInstallStatsPreview);
+  $(id)?.addEventListener("change",updateInstallStatsPreview);
+});
+
+</script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box} :root{--bd:#d7e0e8;--tx:#18324d;--muted:#66788a;--green:#20a95b}
@@ -136,11 +142,22 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
 .officialHint{font-size:12px!important;color:#d71920!important;font-weight:700!important}
 </style>
 
+
+<style id="install-stats-live-preview">
+.statsPreviewCard{background:#fff;border:1px solid #d5dee6;border-radius:12px;padding:14px;margin-bottom:12px}
+.statsPreviewTitle{font-size:20px;font-weight:900;margin:0 0 10px}
+.statsPreviewWrap{overflow-x:auto}
+.statsPreviewTable{width:100%;border-collapse:collapse;min-width:1350px}
+.statsPreviewTable th,.statsPreviewTable td{border:1px solid #cfd8e1;padding:6px 5px;font-size:12px;white-space:nowrap;text-align:center}
+.statsPreviewTable th{background:#f5f8fa}
+.statsPreviewTable td.left{text-align:left}
+</style>
+
 </head>
 <body>
 <div id="pullRefreshIndicator" aria-hidden="true"><div class="pull-spinner"></div></div>
 <section id="loginPage" class="loginWrap"><div class="loginCard"><h1>勝寶鼎/新弘股公司</h1><label class="field">Email<input id="loginEmail" type="email" autocomplete="username"></label><label class="field">密碼<input id="loginPassword" type="password" autocomplete="current-password"></label><button id="loginBtn" class="loginBtn">登入</button><button id="passkeyBtn" class="loginBtn" type="button" style="margin-top:10px;background:#fff;border:1px solid #81D8D0">使用 Face ID／裝置解鎖登入</button><div id="loginErr" class="err"></div></div></section>
-<section id="appPage" class="hidden"><header><div class="toprow"><div class="brand">勝寶鼎/新弘股公司｜行事曆</div><button id="logoutBtn" class="userBtn">登出</button></div><div id="roleLine" class="roleLine"></div><div class="featureTabs"><button id="calendarTabBtn" class="active">行事曆</button><button id="quoteTabBtn" class="hidden">報價單</button><button id="installStatsTabBtn" class="hidden">製作安裝統計表</button></div><div class="controls" id="calendarControls"><button id="prevBtn">‹</button><div id="monthTitle" class="month"></div><button id="nextBtn">›</button><button id="todayBtn">本月</button><button id="noteBtn" class="hidden">備註</button></div><div class="legend"><span class="lg"><i class="dot" style="background:#20aa5a"></i>綠－石英石</span><span class="lg"><i class="dot" style="background:#2196f3"></i>藍－人造石</span><span class="lg"><i class="dot" style="background:#e52424"></i>紅</span><span class="lg"><i class="dot" style="background:#ff851b"></i>橘</span><span class="lg"><i class="dot" style="background:#8c35d5"></i>紫</span><span class="lg"><i class="dot" style="background:#e5b800"></i>黃</span><span class="lg"><i class="dot" style="background:#111"></i>黑</span></div></header><main>
+<section id="appPage" class="hidden"><header><div class="toprow"><div class="brand">勝寶鼎/新弘股公司｜行事曆</div><button id="logoutBtn" class="userBtn">登出</button></div><div id="roleLine" class="roleLine"></div><div class="featureTabs"><button id="calendarTabBtn" class="active">行事曆</button><button id="quoteTabBtn" class="hidden">報價單</button><button id="installStatsTabBtn" class="hidden">安裝統計表</button></div><div class="controls" id="calendarControls"><button id="prevBtn">‹</button><div id="monthTitle" class="month"></div><button id="nextBtn">›</button><button id="todayBtn">本月</button><button id="noteBtn" class="hidden">備註</button></div><div class="legend"><span class="lg"><i class="dot" style="background:#20aa5a"></i>綠－石英石</span><span class="lg"><i class="dot" style="background:#2196f3"></i>藍－人造石</span><span class="lg"><i class="dot" style="background:#e52424"></i>紅</span><span class="lg"><i class="dot" style="background:#ff851b"></i>橘</span><span class="lg"><i class="dot" style="background:#8c35d5"></i>紫</span><span class="lg"><i class="dot" style="background:#e5b800"></i>黃</span><span class="lg"><i class="dot" style="background:#111"></i>黑</span></div></header><main>
 <div id="calendarView"><section class="calendar"><div class="weekhead"><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div class="weekend">六</div><div class="weekend">日</div></div><div id="weeks"></div></section><div id="noteBox" class="noteBox"><div class="noteTitle">備註</div><div id="noteText" class="noteText"></div></div><div id="syncText" class="sync"></div></div>
 <section id="quoteView" class="quoteWrap hidden">
   <div class="quoteCard">
@@ -190,14 +207,8 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
 
 <section id="installStatsView" class="statsWrap hidden">
   <div class="statsCard">
-    <h2 class="statsTitle">製作安裝統計表</h2>
-    <div class="statsBring">
-      <label>從已完成報價單帶入
-        <select id="stQuoteSelect"><option value="">請選擇報價單</option></select>
-      </label>
-      <button type="button" id="stBringQuoteBtn">帶入資料</button>
-    </div>
-    <div class="statsHint">報價單可自動帶入客戶、日期、安裝日期、案名、色號、尺寸及未稅金額；其他欄位可再補充或修改。</div>
+    <h2 class="statsTitle">安裝統計表</h2>
+    
     <div class="statsGrid">
       <label>客編<input id="stCustomerCode" placeholder="例如 A276"></label>
       <label>客戶<input id="stCustomer"></label>
@@ -237,9 +248,26 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
       <label>富<input id="stFu" type="number" step="0.5"></label>
       <label>草屯<input id="stCaotun" type="number" step="0.5"></label>
     </div>
-    <div class="statsActions">
-      <button type="button" id="stSaveBtn" class="primary">儲存統計資料</button>
-      <button type="button" id="stResetBtn">清空</button>
+    
+  </div>
+
+  <div class="statsPreviewCard">
+    <h2 class="statsPreviewTitle">製作安裝統計表</h2>
+    <div class="statsPreviewWrap">
+      <table class="statsPreviewTable">
+        <thead><tr>
+          <th>客編</th><th>客戶</th><th>編號</th><th>出貨單號</th><th>接單日期</th><th>安裝日期</th>
+          <th>案名</th><th>色號-人</th><th>色號-石</th><th>型號</th><th>尺寸(cm)</th><th>未稅金額</th>
+          <th>備註</th><th>樓層</th><th>安裝人員</th><th>龍</th><th>凱</th><th>自安</th><th>富</th><th>草屯</th>
+        </tr></thead>
+        <tbody><tr id="stPreviewRow">
+          <td id="spCustomerCode"></td><td id="spCustomer" class="left"></td><td id="spJobNo"></td><td id="spShipNo"></td>
+          <td id="spOrderDate"></td><td id="spInstallDate"></td><td id="spCaseName" class="left"></td>
+          <td id="spColorHuman"></td><td id="spColorStone"></td><td id="spModel"></td><td id="spSizeCm"></td>
+          <td id="spUntaxedAmount"></td><td id="spNote" class="left"></td><td id="spFloor"></td><td id="spInstallers"></td>
+          <td id="spLong"></td><td id="spKai"></td><td id="spSelfInstall"></td><td id="spFu"></td><td id="spCaotun"></td>
+        </tr></tbody>
+      </table>
     </div>
   </div>
 
@@ -588,6 +616,33 @@ function normalizeStatMDInput(el){
   else el.value=raw;
 }
 
+
+function updateInstallStatsPreview(){
+  if(!$("spCustomerCode"))return;
+  const colorType=$("stColorType")?.value||"";
+  const colorNo=$("stColorNo")?.value.trim()||"";
+  $("spCustomerCode").textContent=$("stCustomerCode")?.value.trim()||"";
+  $("spCustomer").textContent=$("stCustomer")?.value.trim()||"";
+  $("spJobNo").textContent=$("stJobNo")?.value.trim()||"";
+  $("spShipNo").textContent=$("stShipNo")?.value.trim()||"";
+  $("spOrderDate").textContent=$("stOrderDate")?.value.trim()||"";
+  $("spInstallDate").textContent=$("stInstallDate")?.value.trim()||"";
+  $("spCaseName").textContent=$("stCaseName")?.value.trim()||"";
+  $("spColorHuman").textContent=colorType==="human"?colorNo:"";
+  $("spColorStone").textContent=colorType==="stone"?colorNo:"";
+  $("spModel").textContent=$("stModel")?.value||"";
+  $("spSizeCm").textContent=$("stSizeCm")?.value||"";
+  $("spUntaxedAmount").textContent=$("stUntaxedAmount")?.value?Number($("stUntaxedAmount").value).toLocaleString("zh-TW"):"";
+  $("spNote").textContent=$("stNote")?.value.trim()||"";
+  $("spFloor").textContent=$("stFloor")?.value.trim()||"";
+  $("spInstallers").textContent=$("stInstallers")?.value.trim()||"";
+  $("spLong").textContent=$("stLong")?.value||"";
+  $("spKai").textContent=$("stKai")?.value||"";
+  $("spSelfInstall").textContent=$("stSelfInstall")?.value||"";
+  $("spFu").textContent=$("stFu")?.value||"";
+  $("spCaotun").textContent=$("stCaotun")?.value||"";
+}
+
 // ===== 製作安裝統計表（僅 admin）=====
 let installStatsRows=[],editingInstallStatId=null;
 
@@ -635,6 +690,7 @@ function setStatForm(x={}){
   $("stSelfInstall").value=x.self_install_share??"";
   $("stFu").value=x.fu_share??"";
   $("stCaotun").value=x.caotun_share??"";
+  updateInstallStatsPreview();
 }
 function getStatForm(){
   return {
@@ -653,8 +709,8 @@ function getStatForm(){
 function resetInstallStatForm(){
   editingInstallStatId=null;
   setStatForm({});
-  $("stQuoteSelect").value="";
-  $("stSaveBtn").textContent="儲存統計資料";
+  if($("stQuoteSelect"))$("stQuoteSelect").value="";
+  if($("stSaveBtn"))$("stSaveBtn").textContent="儲存統計資料";
 }
 async function loadQuotesForStats(){
   if(profile?.role!=="admin")return;
@@ -663,6 +719,7 @@ async function loadQuotesForStats(){
     if(!error)quoteRows=data||[];
   }
   const s=$("stQuoteSelect");
+  if(!s)return;
   s.innerHTML='<option value="">請選擇報價單</option>'+quoteRows.map(x=>`<option value="${x.id}">${esc(x.quote_date||"")}｜${esc(x.quote_no||"")}｜${esc(x.customer_name||"")}</option>`).join("");
 }
 function bringSelectedQuoteToStats(){
@@ -671,7 +728,7 @@ function bringSelectedQuoteToStats(){
   if(!x)return alert("請先選擇報價單");
   editingInstallStatId=null;
   setStatForm(statDraftFromQuote(x));
-  $("stSaveBtn").textContent="儲存統計資料";
+  if($("stSaveBtn"))$("stSaveBtn").textContent="儲存統計資料";
 }
 function openStatsFromQuote(x){
   if(profile?.role!=="admin")return;
@@ -685,7 +742,7 @@ function openStatsFromQuote(x){
 async function saveInstallStat(){
   if(profile?.role!=="admin")return;
   const payload=getStatForm();
-  payload.quote_id=$("stQuoteSelect").value||null;
+  payload.quote_id=$("stQuoteSelect")?.value||null;
   if(!payload.customer_name&&!payload.case_name)return alert("請至少輸入客戶或案名");
   let r;
   if(editingInstallStatId)r=await sb.from("sbd_install_stats").update(payload).eq("id",editingInstallStatId);
@@ -722,8 +779,8 @@ function renderInstallStats(){
 function editInstallStat(id){
   if(profile?.role!=="admin")return;
   const x=installStatsRows.find(v=>String(v.id)===String(id));if(!x)return;
-  editingInstallStatId=x.id;setStatForm(x);$("stQuoteSelect").value=x.quote_id?String(x.quote_id):"";
-  $("stSaveBtn").textContent="儲存修改";window.scrollTo({top:0,behavior:"smooth"});
+  editingInstallStatId=x.id;setStatForm(x);if($("stQuoteSelect"))$("stQuoteSelect").value=x.quote_id?String(x.quote_id):"";
+  if($("stSaveBtn"))$("stSaveBtn").textContent="儲存修改";window.scrollTo({top:0,behavior:"smooth"});
 }
 async function deleteInstallStat(id){
   if(profile?.role!=="admin")return;
@@ -778,7 +835,7 @@ $("ftime").addEventListener("blur",()=>{
 });
 
 $("closeViewBtn").addEventListener("click",()=>$("viewDlg").close());
-$("saveEventBtn").addEventListener("click",saveEvent);$("deleteEventBtn").addEventListener("click",deleteEvent);$("saveNoteBtn").addEventListener("click",saveNote);$("calendarTabBtn").addEventListener("click",()=>showFeature("calendar"));$("quoteTabBtn").addEventListener("click",()=>showFeature("quote"));$("installStatsTabBtn").addEventListener("click",()=>showFeature("stats"));$("stOrderDate").addEventListener("input",e=>normalizeStatMDInput(e.target));$("stInstallDate").addEventListener("input",e=>normalizeStatMDInput(e.target));$("stBringQuoteBtn").addEventListener("click",bringSelectedQuoteToStats);$("stSaveBtn").addEventListener("click",saveInstallStat);$("stResetBtn").addEventListener("click",resetInstallStatForm);$("stLoadBtn").addEventListener("click",loadInstallStats);$("stExportBtn").addEventListener("click",exportInstallStatsExcel);$("qAddItemBtn").addEventListener("click",()=>addQuoteItem());$("qNameManageBtn")?.addEventListener("click",()=>{resetQNameEditor();renderQNameManager();$("qNameDlg").showModal()});$("qNameOptionSaveBtn")?.addEventListener("click",saveQNameOption);$("qNameOptionCancelBtn")?.addEventListener("click",resetQNameEditor);$("qNameDlgCloseBtn")?.addEventListener("click",()=>$("qNameDlg").close());$("qCustomerManageBtn")?.addEventListener("click",()=>{resetQCustomerEditor();renderQCustomerManager();$("qCustomerDlg").showModal()});$("qCustomerOptionSaveBtn")?.addEventListener("click",saveQCustomer);$("qCustomerOptionCancelBtn")?.addEventListener("click",resetQCustomerEditor);$("qCustomerDlgCloseBtn")?.addEventListener("click",()=>$("qCustomerDlg").close());$("qSaveBtn").addEventListener("click",saveQuote);$("qCancelEditBtn").addEventListener("click",resetQuoteForm);boot();
+$("saveEventBtn").addEventListener("click",saveEvent);$("deleteEventBtn").addEventListener("click",deleteEvent);$("saveNoteBtn").addEventListener("click",saveNote);$("calendarTabBtn").addEventListener("click",()=>showFeature("calendar"));$("quoteTabBtn").addEventListener("click",()=>showFeature("quote"));$("installStatsTabBtn").addEventListener("click",()=>showFeature("stats"));$("stOrderDate").addEventListener("input",e=>normalizeStatMDInput(e.target));$("stInstallDate").addEventListener("input",e=>normalizeStatMDInput(e.target));$("stBringQuoteBtn")?.addEventListener("click",bringSelectedQuoteToStats);$("stSaveBtn")?.addEventListener("click",saveInstallStat);$("stResetBtn")?.addEventListener("click",resetInstallStatForm);$("stLoadBtn").addEventListener("click",loadInstallStats);$("stExportBtn").addEventListener("click",exportInstallStatsExcel);$("qAddItemBtn").addEventListener("click",()=>addQuoteItem());$("qNameManageBtn")?.addEventListener("click",()=>{resetQNameEditor();renderQNameManager();$("qNameDlg").showModal()});$("qNameOptionSaveBtn")?.addEventListener("click",saveQNameOption);$("qNameOptionCancelBtn")?.addEventListener("click",resetQNameEditor);$("qNameDlgCloseBtn")?.addEventListener("click",()=>$("qNameDlg").close());$("qCustomerManageBtn")?.addEventListener("click",()=>{resetQCustomerEditor();renderQCustomerManager();$("qCustomerDlg").showModal()});$("qCustomerOptionSaveBtn")?.addEventListener("click",saveQCustomer);$("qCustomerOptionCancelBtn")?.addEventListener("click",resetQCustomerEditor);$("qCustomerDlgCloseBtn")?.addEventListener("click",()=>$("qCustomerDlg").close());$("qSaveBtn").addEventListener("click",saveQuote);$("qCancelEditBtn").addEventListener("click",resetQuoteForm);boot();
 </script>
 
 <script>
