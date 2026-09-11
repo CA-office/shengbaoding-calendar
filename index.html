@@ -13,13 +13,7 @@
 <meta name="twitter:title" content="勝寶鼎新弘股公司">
 <meta name="twitter:description" content="勝寶鼎新弘股公司">
 <meta name="twitter:card" content="summary">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
-["stCustomerCode","stCustomer","stJobNo","stShipNo","stOrderDate","stInstallDate","stCaseName","stColorType","stColorNo","stModel","stSizeCm","stUntaxedAmount","stNote","stFloor","stInstallers","stLong","stKai","stSelfInstall","stFu","stCaotun"].forEach(id=>{
-  $(id)?.addEventListener("input",updateInstallStatsPreview);
-  $(id)?.addEventListener("change",updateInstallStatsPreview);
-});
-
-</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box} :root{--bd:#d7e0e8;--tx:#18324d;--muted:#66788a;--green:#20a95b}
@@ -251,28 +245,8 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
     
   </div>
 
-  <div class="statsPreviewCard">
-    <h2 class="statsPreviewTitle">製作安裝統計表</h2>
-    <div class="statsPreviewWrap">
-      <table class="statsPreviewTable">
-        <thead><tr>
-          <th>客編</th><th>客戶</th><th>編號</th><th>出貨單號</th><th>接單日期</th><th>安裝日期</th>
-          <th>案名</th><th>色號-人</th><th>色號-石</th><th>型號</th><th>尺寸(cm)</th><th>未稅金額</th>
-          <th>備註</th><th>樓層</th><th>安裝人員</th><th>龍</th><th>凱</th><th>自安</th><th>富</th><th>草屯</th>
-        </tr></thead>
-        <tbody><tr id="stPreviewRow">
-          <td id="spCustomerCode"></td><td id="spCustomer" class="left"></td><td id="spJobNo"></td><td id="spShipNo"></td>
-          <td id="spOrderDate"></td><td id="spInstallDate"></td><td id="spCaseName" class="left"></td>
-          <td id="spColorHuman"></td><td id="spColorStone"></td><td id="spModel"></td><td id="spSizeCm"></td>
-          <td id="spUntaxedAmount"></td><td id="spNote" class="left"></td><td id="spFloor"></td><td id="spInstallers"></td>
-          <td id="spLong"></td><td id="spKai"></td><td id="spSelfInstall"></td><td id="spFu"></td><td id="spCaotun"></td>
-        </tr></tbody>
-      </table>
-    </div>
-  </div>
-
   <div class="statsCard">
-    <h2 class="statsTitle">統計紀錄</h2>
+    <h2 class="statsTitle">製作安裝統計表</h2>
     <div class="statsFilter">
       <label>查詢月份<input id="stMonth" type="month"></label>
       <button type="button" id="stLoadBtn">查詢</button>
@@ -281,9 +255,9 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
     <div class="statsTableWrap">
       <table class="statsTable">
         <thead><tr>
-          <th>客編</th><th>客戶</th><th>編號</th><th>出貨單號</th><th>接單日期</th><th>安裝日期</th>
+          <th>操作</th><th>客編</th><th>客戶</th><th>編號</th><th>出貨單號</th><th>接單日期</th><th>安裝日期</th>
           <th>案名</th><th>色號-人</th><th>色號-石</th><th>型號</th><th>尺寸(cm)</th><th>未稅金額</th>
-          <th>備註</th><th>樓層</th><th>安裝人員</th><th>龍</th><th>凱</th><th>自安</th><th>富</th><th>草屯</th><th>操作</th>
+          <th>備註</th><th>樓層</th><th>安裝人員</th><th>龍</th><th>凱</th><th>自安</th><th>富</th><th>草屯</th>
         </tr></thead>
         <tbody id="stTableBody"></tbody>
       </table>
@@ -643,6 +617,43 @@ function updateInstallStatsPreview(){
   $("spCaotun").textContent=$("stCaotun")?.value||"";
 }
 
+
+function renderStatsEditingPreviewRow(){
+  const body=$("stTableBody"); if(!body)return;
+  body.querySelector(".statsEditingPreview")?.remove();
+
+  const hasAny=["stCustomerCode","stCustomer","stJobNo","stShipNo","stOrderDate","stInstallDate","stCaseName","stColorNo","stModel","stSizeCm","stUntaxedAmount","stNote","stFloor","stInstallers","stLong","stKai","stSelfInstall","stFu","stCaotun"]
+    .some(id=>String($(id)?.value||"").trim()!=="");
+  if(!hasAny)return;
+
+  const colorType=$("stColorType")?.value||"", colorNo=$("stColorNo")?.value.trim()||"";
+  const tr=document.createElement("tr");
+  tr.className="statsEditingPreview";
+  tr.style.background="#fffdf2";
+  tr.innerHTML=`<td><div class="statsRowBtns"><button type="button" disabled>修改中</button></div></td>
+    <td>${esc($("stCustomerCode")?.value.trim()||"")}</td>
+    <td class="left">${esc($("stCustomer")?.value.trim()||"")}</td>
+    <td>${esc($("stJobNo")?.value.trim()||"")}</td>
+    <td>${esc($("stShipNo")?.value.trim()||"")}</td>
+    <td>${esc($("stOrderDate")?.value.trim()||"")}</td>
+    <td>${esc($("stInstallDate")?.value.trim()||"")}</td>
+    <td class="left">${esc($("stCaseName")?.value.trim()||"")}</td>
+    <td>${esc(colorType==="human"?colorNo:"")}</td>
+    <td>${esc(colorType==="stone"?colorNo:"")}</td>
+    <td>${esc($("stModel")?.value||"")}</td>
+    <td>${esc($("stSizeCm")?.value||"")}</td>
+    <td>${$("stUntaxedAmount")?.value?Number($("stUntaxedAmount").value).toLocaleString("zh-TW"):""}</td>
+    <td class="left">${esc($("stNote")?.value.trim()||"")}</td>
+    <td>${esc($("stFloor")?.value.trim()||"")}</td>
+    <td>${esc($("stInstallers")?.value.trim()||"")}</td>
+    <td>${esc($("stLong")?.value||"")}</td>
+    <td>${esc($("stKai")?.value||"")}</td>
+    <td>${esc($("stSelfInstall")?.value||"")}</td>
+    <td>${esc($("stFu")?.value||"")}</td>
+    <td>${esc($("stCaotun")?.value||"")}</td>`;
+  body.prepend(tr);
+}
+
 // ===== 製作安裝統計表（僅 admin）=====
 let installStatsRows=[],editingInstallStatId=null;
 
@@ -771,10 +782,10 @@ function renderInstallStats(){
   installStatsRows.forEach(x=>{
     const human=x.color_type==="human"?x.color_no||"":"",stone=x.color_type==="stone"?x.color_no||"":"";
     const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${esc(x.customer_code||"")}</td><td class="left">${esc(x.customer_name||"")}</td><td>${esc(x.job_no||"")}</td><td>${esc(x.shipment_no||"")}</td><td>${esc(statDateToMD(x.order_date||""))}</td><td>${esc(statDateToMD(x.install_date||""))}</td><td class="left">${esc(x.case_name||"")}</td><td>${esc(human)}</td><td>${esc(stone)}</td><td>${esc(x.model||"")}</td><td>${qMoney(x.size_cm||0)}</td><td>${qMoney(x.untaxed_amount||0)}</td><td class="left">${esc(x.note||"")}</td><td>${esc(x.floor||"")}</td><td>${esc(x.installers||"")}</td><td>${x.long_share||""}</td><td>${x.kai_share||""}</td><td>${x.self_install_share||""}</td><td>${x.fu_share||""}</td><td>${x.caotun_share||""}</td><td><div class="statsRowBtns"><button data-st="edit" data-id="${x.id}">修改</button><button class="danger" data-st="del" data-id="${x.id}">刪除</button></div></td>`;
+    tr.innerHTML=`<td><div class="statsRowBtns"><button data-st="edit" data-id="${x.id}">修改</button><button class="danger" data-st="del" data-id="${x.id}">刪除</button></div></td><td>${esc(x.customer_code||"")}</td><td class="left">${esc(x.customer_name||"")}</td><td>${esc(x.job_no||"")}</td><td>${esc(x.shipment_no||"")}</td><td>${esc(statDateToMD(x.order_date||""))}</td><td>${esc(statDateToMD(x.install_date||""))}</td><td class="left">${esc(x.case_name||"")}</td><td>${esc(human)}</td><td>${esc(stone)}</td><td>${esc(x.model||"")}</td><td>${qMoney(x.size_cm||0)}</td><td>${qMoney(x.untaxed_amount||0)}</td><td class="left">${esc(x.note||"")}</td><td>${esc(x.floor||"")}</td><td>${esc(x.installers||"")}</td><td>${x.long_share||""}</td><td>${x.kai_share||""}</td><td>${x.self_install_share||""}</td><td>${x.fu_share||""}</td><td>${x.caotun_share||""}</td>`;
     b.appendChild(tr);
   });
-  b.querySelectorAll("button").forEach(btn=>btn.onclick=()=>btn.dataset.st==="edit"?editInstallStat(btn.dataset.id):deleteInstallStat(btn.dataset.id));
+  b.querySelectorAll("button").forEach(btn=>btn.onclick=()=>btn.dataset.st==="edit"?editInstallStat(btn.dataset.id):deleteInstallStat(btn.dataset.id));renderStatsEditingPreviewRow();
 }
 function editInstallStat(id){
   if(profile?.role!=="admin")return;
@@ -835,7 +846,11 @@ $("ftime").addEventListener("blur",()=>{
 });
 
 $("closeViewBtn").addEventListener("click",()=>$("viewDlg").close());
-$("saveEventBtn").addEventListener("click",saveEvent);$("deleteEventBtn").addEventListener("click",deleteEvent);$("saveNoteBtn").addEventListener("click",saveNote);$("calendarTabBtn").addEventListener("click",()=>showFeature("calendar"));$("quoteTabBtn").addEventListener("click",()=>showFeature("quote"));$("installStatsTabBtn").addEventListener("click",()=>showFeature("stats"));$("stOrderDate").addEventListener("input",e=>normalizeStatMDInput(e.target));$("stInstallDate").addEventListener("input",e=>normalizeStatMDInput(e.target));$("stBringQuoteBtn")?.addEventListener("click",bringSelectedQuoteToStats);$("stSaveBtn")?.addEventListener("click",saveInstallStat);$("stResetBtn")?.addEventListener("click",resetInstallStatForm);$("stLoadBtn").addEventListener("click",loadInstallStats);$("stExportBtn").addEventListener("click",exportInstallStatsExcel);$("qAddItemBtn").addEventListener("click",()=>addQuoteItem());$("qNameManageBtn")?.addEventListener("click",()=>{resetQNameEditor();renderQNameManager();$("qNameDlg").showModal()});$("qNameOptionSaveBtn")?.addEventListener("click",saveQNameOption);$("qNameOptionCancelBtn")?.addEventListener("click",resetQNameEditor);$("qNameDlgCloseBtn")?.addEventListener("click",()=>$("qNameDlg").close());$("qCustomerManageBtn")?.addEventListener("click",()=>{resetQCustomerEditor();renderQCustomerManager();$("qCustomerDlg").showModal()});$("qCustomerOptionSaveBtn")?.addEventListener("click",saveQCustomer);$("qCustomerOptionCancelBtn")?.addEventListener("click",resetQCustomerEditor);$("qCustomerDlgCloseBtn")?.addEventListener("click",()=>$("qCustomerDlg").close());$("qSaveBtn").addEventListener("click",saveQuote);$("qCancelEditBtn").addEventListener("click",resetQuoteForm);boot();
+$("saveEventBtn").addEventListener("click",saveEvent);$("deleteEventBtn").addEventListener("click",deleteEvent);$("saveNoteBtn").addEventListener("click",saveNote);$("calendarTabBtn").addEventListener("click",()=>showFeature("calendar"));$("quoteTabBtn").addEventListener("click",()=>showFeature("quote"));$("installStatsTabBtn").addEventListener("click",()=>showFeature("stats"));$("stOrderDate").addEventListener("input",e=>normalizeStatMDInput(e.target));$("stInstallDate").addEventListener("input",e=>normalizeStatMDInput(e.target));$("stBringQuoteBtn")?.addEventListener("click",bringSelectedQuoteToStats);$("stSaveBtn")?.addEventListener("click",saveInstallStat);$("stResetBtn")?.addEventListener("click",resetInstallStatForm);$("stLoadBtn").addEventListener("click",loadInstallStats);$("stExportBtn").addEventListener("click",exportInstallStatsExcel);$("qAddItemBtn").addEventListener("click",()=>addQuoteItem());$("qNameManageBtn")?.addEventListener("click",()=>{resetQNameEditor();renderQNameManager();$("qNameDlg").showModal()});$("qNameOptionSaveBtn")?.addEventListener("click",saveQNameOption);$("qNameOptionCancelBtn")?.addEventListener("click",resetQNameEditor);$("qNameDlgCloseBtn")?.addEventListener("click",()=>$("qNameDlg").close());$("qCustomerManageBtn")?.addEventListener("click",()=>{resetQCustomerEditor();renderQCustomerManager();$("qCustomerDlg").showModal()});$("qCustomerOptionSaveBtn")?.addEventListener("click",saveQCustomer);$("qCustomerOptionCancelBtn")?.addEventListener("click",resetQCustomerEditor);$("qCustomerDlgCloseBtn")?.addEventListener("click",()=>$("qCustomerDlg").close());$("qSaveBtn").addEventListener("click",saveQuote);$("qCancelEditBtn").addEventListener("click",resetQuoteForm);["stCustomerCode","stCustomer","stJobNo","stShipNo","stOrderDate","stInstallDate","stCaseName","stColorType","stColorNo","stModel","stSizeCm","stUntaxedAmount","stNote","stFloor","stInstallers","stLong","stKai","stSelfInstall","stFu","stCaotun"].forEach(id=>{
+  $(id)?.addEventListener("input",renderStatsEditingPreviewRow);
+  $(id)?.addEventListener("change",renderStatsEditingPreviewRow);
+});
+renderStatsEditingPreviewRow();boot();
 </script>
 
 <script>
