@@ -136,15 +136,28 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
 </style>
 
 
+
 <style id="quote-final-font-rules">
 /* 只影響報價單預覽 */
 .officialQuote,.officialQuote *{font-size:14px!important}
+.officialQuote .officialTitle{font-size:20px!important}
 .officialMaterial>div,
 .officialMaterial .materialValue,
 .officialMaterial .edgeCell,
-.officialMaterial .edgeNum{font-size:16px!important}
+.officialMaterial .edgeNum{font-size:18px!important}
 .officialMaterial .cmUnit{font-size:14px!important}
 .officialHint{font-size:14px!important;color:#d71920!important;font-weight:700!important}
+</style>
+
+
+<style id="quote-title-warning-force">
+/* 報價單預覽最終指定 */
+#quotePreview .officialQuote > h1,
+#quotePreview .officialQuote > .title,
+#quotePreview .quoteTitle,
+.officialQuote .title{font-size:20px!important}
+#quotePreview .officialHint,
+.officialQuote .officialHint{color:#d71920!important}
 </style>
 
 </head>
@@ -519,14 +532,13 @@ table{width:100%;border-collapse:collapse;border:1.4px solid #111;table-layout:f
 
 /* ===== PDF 字體最終強制規則 ===== */
 .page,.page *{font-size:14px!important}
+.page .title{font-size:20px!important}
 .page .mat>div,
 .page .mat .value,
 .page .mat .edge,
-.page .mat .edgeNum{font-size:16px!important}
+.page .mat .edgeNum{font-size:18px!important}
 .page .mat .cmUnit{font-size:14px!important}
 .page .hint{font-size:14px!important;color:#d71920!important;font-weight:700!important}
-.page .title{font-size:14px!important}
-
 </style>
 
 </head><body><div class="page"><div class="title">勝鈔環保科技股份有限公司報價單</div><div class="header"><div class="case">案名：${esc(m.case_name||x.contact_name||"")}</div><div class="number">編號：${esc(x.quote_no||"")}</div><div class="customer">客戶名稱：${esc(x.customer_name||"")}</div><div class="date">日期：${esc(x.quote_date||"")}</div><div></div><div class="install">實際安裝日期：${esc(m.install_date||"")}</div><div class="address">安裝地址：${esc(x.address||"")}</div><div></div></div><div class="hint">此為初估計價　實際價格會依實際色號、尺寸、作法變動</div><div class="mat"><div>色 號</div><div class="value">${esc(m.color_no||"")}</div><div>品 名</div><div class="value">${esc(m.product_name||"")}</div><div class="edge">前緣 <span class="edgeNum">${esc(m.front_edge||"")}</span> <span class="cmUnit">cm</span> ／ 背牆 <span class="edgeNum">${esc(m.back_wall||"")}</span> <span class="cmUnit">cm</span></div></div><table><thead><tr><th>項數</th><th>名稱</th><th>加工尺寸 (CM)</th><th>總公分數</th><th>單位</th><th>單價</th><th>小計</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td></td><td colspan="3" class="left">備註：此價格為實價計價</td><td colspan="2">合計</td><td>${qMoney(x.subtotal)}</td></tr><tr><td></td><td colspan="3"></td><td colspan="2">稅金5%</td><td>${qMoney(x.tax_amount)}</td></tr><tr><td></td><td colspan="3"></td><td colspan="2">總計</td><td>${qMoney(x.total_amount)}</td></tr></tfoot></table><div class="notes"><div>備註：　1.本報價單有效期間為30天</div><div style="padding-left:11mm"><span style="display:inline-block;width:1.45em;text-align:right;margin-right:.18em">2.</span>付款方式:月結40天，未月結客戶安裝完工收現，稅外加不扣%</div><div style="padding-left:11mm"><span style="display:inline-block;width:1.45em;text-align:right;margin-right:.18em">3.</span>開發票為總計金額</div><div style="padding-left:11mm"><span style="display:inline-block;width:1.45em;text-align:right;margin-right:.18em">4.</span>本公司產品款項未結清資產屬勝鈔環保科技股份有限公司所有權</div></div><div class="sign"><div>勝鈔環保科技股份有限公司<br>TEL:02-26771176<br>FAX:02-26772076<br><br><br>業務代表簽名:</div><div>客戶簽名:</div></div></div><script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`
@@ -576,7 +588,7 @@ function excelQuote(x){const m=qMetaFromNote(x.note),items=Array.isArray(x.items
 
 <style>
 table,td,th{font-size:14pt!important;font-family:"Microsoft JhengHei",Arial,sans-serif}
-.invMaterialLabel,.invMaterialValue,.invEdge{font-size:16pt!important}
+.invMaterialLabel,.invMaterialValue,.invEdge{font-size:18pt!important}
 .invEdge .cmUnit{font-size:14pt!important}
 .invHint{font-size:14pt!important;color:#d71920!important;font-weight:bold!important}
 </style>
