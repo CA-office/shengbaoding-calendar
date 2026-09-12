@@ -14,7 +14,7 @@
 <meta name="twitter:description" content="勝寶鼎新弘股公司">
 <meta name="twitter:card" content="summary">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <style>
 *{box-sizing:border-box} :root{--bd:#d7e0e8;--tx:#18324d;--muted:#66788a;--green:#20a95b}
 body{margin:0;font-family:"Microsoft JhengHei",Arial,sans-serif;background:#fff;color:var(--tx)} button,input,textarea,select{font:inherit}.hidden{display:none!important}
@@ -176,6 +176,12 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
 }
 </style>
 
+
+<style id="stats-operation-fix">
+.statsRowBtns{justify-content:center}
+.statsTable th,.statsTable td{text-align:center!important}
+</style>
+
 </head>
 <body>
 <div id="pullRefreshIndicator" aria-hidden="true"><div class="pull-spinner"></div></div>
@@ -258,9 +264,9 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
           <option value="ㄇ">ㄇ</option>
         </select>
       </label>
-      <label>尺寸 (cm)<input id="stSizeCm" type="number" step="0.01"></label>
+      <label>尺寸 (cm)<input id="stSizeCm" type="text" inputmode="decimal" placeholder="可輸入 =45+95"></label>
 
-      <label>未稅金額<input id="stUntaxedAmount" type="number" step="1"></label>
+      <label>未稅金額<input id="stUntaxedAmount" type="text" inputmode="decimal" placeholder="可輸入 =45+95"></label>
       <label>樓層<input id="stFloor"></label>
       <label class="span2">安裝人員<input id="stInstallers" placeholder="例如 龍+凱"></label>
 
@@ -560,57 +566,180 @@ table{width:100%;border-collapse:collapse;border:1.4px solid #111;table-layout:f
 </head><body><div class="page"><div class="title">勝鈔環保科技股份有限公司報價單</div><div class="header"><div class="case">案名：${esc(m.case_name||x.contact_name||"")}</div><div class="number">編號：${esc(x.quote_no||"")}</div><div class="customer">客戶名稱：${esc(x.customer_name||"")}</div><div class="date">日期：${esc(x.quote_date||"")}</div><div></div><div class="install">實際安裝日期：${esc(m.install_date||"")}</div><div class="address">安裝地址：${esc(x.address||"")}</div><div></div></div><div class="hint" style="color:#ff0000 !important;font-size:14px !important;font-weight:700 !important;">此為初估計價　實際價格會依實際色號、尺寸、作法變動</div><div class="mat"><div>色 號</div><div class="value">${esc(m.color_no||"")}</div><div>品 名</div><div class="value">${esc(m.product_name||"")}</div><div class="edge">前緣 <span class="edgeNum">${esc(m.front_edge||"")}</span> <span class="cmUnit">cm</span> ／ 背牆 <span class="edgeNum">${esc(m.back_wall||"")}</span> <span class="cmUnit">cm</span></div></div><table><thead><tr><th>項數</th><th>名稱</th><th>加工尺寸 (CM)</th><th>總公分數</th><th>單位</th><th>單價</th><th>小計</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td></td><td colspan="3" class="left">備註：此價格為實價計價</td><td colspan="2">合計</td><td>${qMoney(x.subtotal)}</td></tr><tr><td></td><td colspan="3"></td><td colspan="2">稅金5%</td><td>${qMoney(x.tax_amount)}</td></tr><tr><td></td><td colspan="3"></td><td colspan="2">總計</td><td>${qMoney(x.total_amount)}</td></tr></tfoot></table><div class="notes"><div>備註：　1.本報價單有效期間為30天</div><div style="padding-left:11mm"><span style="display:inline-block;width:1.45em;text-align:right;margin-right:.18em">2.</span>付款方式:月結40天，未月結客戶安裝完工收現，稅外加不扣%</div><div style="padding-left:11mm"><span style="display:inline-block;width:1.45em;text-align:right;margin-right:.18em">3.</span>開發票為總計金額</div><div style="padding-left:11mm"><span style="display:inline-block;width:1.45em;text-align:right;margin-right:.18em">4.</span>本公司產品款項未結清資產屬勝鈔環保科技股份有限公司所有權</div></div><div class="sign"><div>勝鈔環保科技股份有限公司<br>TEL:02-26771176<br>FAX:02-26772076<br><br><br>業務代表簽名:</div><div>客戶簽名:</div></div></div><script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`
 }
 function printQuote(x){const w=window.open("","_blank");if(!w){alert("瀏覽器阻擋新視窗，請允許彈出視窗");return}w.document.write(quotePrintHtml(x));w.document.close()}
-function excelQuote(x){const m=qMetaFromNote(x.note),items=Array.isArray(x.items)?x.items:[],trs=items.map((it,i)=>`<tr><td>${i+1}</td><td>${esc(fmtQName(it.name||it.description||""))}</td><td>${esc(it.process_size||"")}</td><td>${it.total_cm??it.qty??0}</td><td>${esc(it.unit||"")}</td><td>${it.price||0}</td><td>${Number(it.total_cm??it.qty??0)*Number(it.price||0)}</td></tr>`).join("");const html=`<html><head><meta charset="utf-8">
-<style id="quote-note-align-fix">
-/* 固定備註 1~4：數字起點與文字起點整齊一致 */
-.pdfFixedNotes ol,
-.quoteFixedNotes ol,
-.quote-paper .fixed-notes ol,
-.quotePaper .fixed-notes ol {
-  margin: 0 !important;
-  padding-left: 0 !important;
-  list-style: none !important;
-  counter-reset: quote-note;
-}
-.pdfFixedNotes ol > li,
-.quoteFixedNotes ol > li,
-.quote-paper .fixed-notes ol > li,
-.quotePaper .fixed-notes ol > li {
-  counter-increment: quote-note;
-  display: grid !important;
-  grid-template-columns: 1.45em 1fr !important;
-  column-gap: .18em !important;
-  align-items: start !important;
-  margin: 0 0 5px 0 !important;
-  padding: 0 !important;
-  text-indent: 0 !important;
-}
-.pdfFixedNotes ol > li::before,
-.quoteFixedNotes ol > li::before,
-.quote-paper .fixed-notes ol > li::before,
-.quotePaper .fixed-notes ol > li::before {
-  content: counter(quote-note) "." !important;
-  text-align: right !important;
-}
-@media print {
-  .pdfFixedNotes ol > li,
-  .quoteFixedNotes ol > li,
-  .quote-paper .fixed-notes ol > li,
-  .quotePaper .fixed-notes ol > li {
-    margin-bottom: 4px !important;
+function excelQuote(x){
+  if(typeof XLSX==="undefined"){alert("Excel 元件尚未載入，請重新整理後再試");return}
+  const m=qMetaFromNote(x.note),items=Array.isArray(x.items)?x.items:[];
+  const wb=XLSX.utils.book_new();
+
+  // 固定至少 8 個品項列，與報價單版面一致
+  const itemRows=[];
+  for(let i=0;i<Math.max(8,items.length);i++){
+    const it=items[i]||{};
+    const qty=(it.total_cm??it.qty)===""?"":Number(it.total_cm??it.qty??0);
+    const price=it.price===""?"":Number(it.price||0);
+    const amount=(qty===""||price==="")?"":qty*price;
+    itemRows.push([
+      i<items.length?i+1:"",
+      i<items.length?fmtQName(it.name||it.description||""):"",
+      i<items.length?(it.process_size||""):"",
+      i<items.length?qty:"",
+      i<items.length?(it.unit||""):"",
+      i<items.length?price:"",
+      i<items.length?amount:""
+    ]);
   }
+
+  const rows=[
+    ["勝鈔環保科技股份有限公司報價單","","","","","",""],
+    ["案名",m.case_name||x.contact_name||"","","","編號",x.quote_no||"",""],
+    ["客戶名稱",x.customer_name||"","","","日期",x.quote_date||"",""],
+    ["安裝地址",x.address||"","","","實際安裝日期",m.install_date||"",""],
+    ["此為初估計價　實際價格會依實際色號、尺寸、作法變動","","","","","",""],
+    ["色號","", "品名","", "前緣","cm / 背牆","cm"],
+    [m.color_no||"","",m.product_name||"","",m.front_edge||""," / "+(m.back_wall||""),""],
+    ["項數","名稱","加工尺寸 (CM)","總公分數","單位","單價","小計"],
+    ...itemRows,
+    ["","備註：此價格為實價計價","","","合計","",Number(x.subtotal||0)],
+    ["","","","","稅金5%","",Number(x.tax_amount||0)],
+    ["","","","","總計","",Number(x.total_amount||0)],
+    ["備註：","","","","","",""],
+    ["1. 本報價單有效期間為30天","","","","","",""],
+    ["2. 付款方式:月結40天，未月結客戶安裝完工收現，稅外加不扣%","","","","","",""],
+    ["3. 開發票為總計金額","","","","","",""],
+    ["4. 本公司產品款項未結清資產屬勝鈔環保科技股份有限公司所有權","","","","","",""],
+    ["勝鈔環保科技股份有限公司","","","","客戶簽名:","",""],
+    ["TEL:02-26771176","","","","","",""],
+    ["FAX:02-26772076","","","","","",""],
+    ["業務代表簽名:","","","","","",""]
+  ];
+
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  const nItems=Math.max(8,items.length);
+  const summaryStart=8+nItems; // 0-based row index
+  const noteStart=summaryStart+3;
+  const signStart=noteStart+5;
+
+  ws["!merges"]=[
+    {s:{r:0,c:0},e:{r:0,c:6}},
+    {s:{r:1,c:1},e:{r:1,c:3}},
+    {s:{r:1,c:5},e:{r:1,c:6}},
+    {s:{r:2,c:1},e:{r:2,c:3}},
+    {s:{r:2,c:5},e:{r:2,c:6}},
+    {s:{r:3,c:1},e:{r:3,c:3}},
+    {s:{r:3,c:5},e:{r:3,c:6}},
+    {s:{r:4,c:0},e:{r:4,c:6}},
+    {s:{r:5,c:0},e:{r:5,c:1}},
+    {s:{r:5,c:2},e:{r:5,c:3}},
+    {s:{r:6,c:0},e:{r:6,c:1}},
+    {s:{r:6,c:2},e:{r:6,c:3}},
+    {s:{r:summaryStart,c:1},e:{r:summaryStart,c:3}},
+    {s:{r:summaryStart,c:4},e:{r:summaryStart,c:5}},
+    {s:{r:summaryStart+1,c:0},e:{r:summaryStart+1,c:3}},
+    {s:{r:summaryStart+1,c:4},e:{r:summaryStart+1,c:5}},
+    {s:{r:summaryStart+2,c:0},e:{r:summaryStart+2,c:3}},
+    {s:{r:summaryStart+2,c:4},e:{r:summaryStart+2,c:5}},
+    {s:{r:noteStart,c:0},e:{r:noteStart,c:6}},
+    {s:{r:noteStart+1,c:0},e:{r:noteStart+1,c:6}},
+    {s:{r:noteStart+2,c:0},e:{r:noteStart+2,c:6}},
+    {s:{r:noteStart+3,c:0},e:{r:noteStart+3,c:6}},
+    {s:{r:noteStart+4,c:0},e:{r:noteStart+4,c:6}},
+    {s:{r:signStart,c:0},e:{r:signStart,c:3}},
+    {s:{r:signStart,c:4},e:{r:signStart+3,c:6}},
+    {s:{r:signStart+1,c:0},e:{r:signStart+1,c:3}},
+    {s:{r:signStart+2,c:0},e:{r:signStart+2,c:3}},
+    {s:{r:signStart+3,c:0},e:{r:signStart+3,c:3}}
+  ];
+
+  ws["!cols"]=[
+    {wch:8},{wch:28},{wch:19},{wch:14},{wch:10},{wch:14},{wch:15}
+  ];
+
+  ws["!rows"]=rows.map((_,i)=>({hpt:
+    i===0?32:
+    i===4?24:
+    i===5||i===6?26:
+    i===7?24:
+    (i>=8&&i<summaryStart)?24:
+    (i>=noteStart&&i<signStart)?23:
+    22
+  }));
+
+  const thin={style:"thin",color:{rgb:"000000"}};
+  const borderAll={top:thin,bottom:thin,left:thin,right:thin};
+  const baseFont={name:"Microsoft JhengHei",sz:14,color:{rgb:"000000"}};
+  const center={horizontal:"center",vertical:"center"};
+  const left={horizontal:"left",vertical:"center"};
+  const red={rgb:"FF0000"};
+
+  const ref=ws["!ref"];
+  const range=XLSX.utils.decode_range(ref);
+  for(let R=range.s.r;R<=range.e.r;R++){
+    for(let C=range.s.c;C<=range.e.c;C++){
+      const addr=XLSX.utils.encode_cell({r:R,c:C});
+      if(!ws[addr])ws[addr]={t:"s",v:""};
+      ws[addr].s={font:{...baseFont},alignment:{...center},border:borderAll};
+    }
+  }
+
+  // 標題 30pt
+  ws["A1"].s={font:{name:"Microsoft JhengHei",sz:30,bold:false,color:{rgb:"000000"}},alignment:center};
+
+  // 上方資料靠左
+  ["A2","B2","E2","F2","A3","B3","E3","F3","A4","B4","E4","F4"].forEach(a=>{
+    if(ws[a])ws[a].s={...(ws[a].s||{}),font:{...baseFont},alignment:left};
+  });
+
+  // 警語：14pt 紅字
+  ws["A5"].s={font:{name:"Microsoft JhengHei",sz:14,bold:true,color:red},alignment:center};
+
+  // 色號／品名／前緣／背牆：18pt；cm 14pt
+  ["A6","C6","E6"].forEach(a=>ws[a].s={...(ws[a].s||{}),font:{name:"Microsoft JhengHei",sz:18,color:{rgb:"000000"}},alignment:center});
+  ws["F6"].s={...(ws["F6"].s||{}),font:{name:"Microsoft JhengHei",sz:14,color:{rgb:"000000"}},alignment:center};
+  ws["G6"].s={...(ws["G6"].s||{}),font:{name:"Microsoft JhengHei",sz:14,color:{rgb:"000000"}},alignment:center};
+  ["A7","C7","E7"].forEach(a=>ws[a].s={...(ws[a].s||{}),font:{name:"Microsoft JhengHei",sz:18,color:{rgb:"000000"}},alignment:center});
+  ws["F7"].s={...(ws["F7"].s||{}),font:{name:"Microsoft JhengHei",sz:14,color:{rgb:"000000"}},alignment:center};
+
+  // 表頭粗體
+  for(let C=0;C<7;C++){
+    const a=XLSX.utils.encode_cell({r:7,c:C});
+    ws[a].s={...(ws[a].s||{}),font:{name:"Microsoft JhengHei",sz:14,bold:true,color:{rgb:"000000"}},alignment:center};
+  }
+
+  // 品項名稱靠左；金額欄使用千分位
+  for(let R=8;R<summaryStart;R++){
+    const b=XLSX.utils.encode_cell({r:R,c:1});
+    ws[b].s={...(ws[b].s||{}),alignment:left};
+    [3,5,6].forEach(C=>{
+      const a=XLSX.utils.encode_cell({r:R,c:C});
+      if(ws[a])ws[a].z='#,##0.##';
+    });
+  }
+  [summaryStart,summaryStart+1,summaryStart+2].forEach(R=>{
+    const a=XLSX.utils.encode_cell({r:R,c:6});
+    ws[a].z='#,##0';
+  });
+
+  // 備註區靠左
+  for(let R=noteStart;R<signStart;R++){
+    const a=XLSX.utils.encode_cell({r:R,c:0});
+    ws[a].s={...(ws[a].s||{}),alignment:left};
+  }
+  // 簽名區靠左
+  for(let R=signStart;R<=signStart+3;R++){
+    const a=XLSX.utils.encode_cell({r:R,c:0});
+    if(ws[a])ws[a].s={...(ws[a].s||{}),alignment:left};
+  }
+  ws[XLSX.utils.encode_cell({r:signStart,c:4})].s={
+    ...(ws[XLSX.utils.encode_cell({r:signStart,c:4})].s||{}),alignment:left
+  };
+
+  // 列印設定
+  ws["!margins"]={left:0.25,right:0.25,top:0.3,bottom:0.3,header:0,footer:0};
+  ws["!pageSetup"]={orientation:"portrait",paperSize:9,fitToWidth:1,fitToHeight:1};
+
+  XLSX.utils.book_append_sheet(wb,ws,"報價單");
+  XLSX.writeFile(wb,`${quoteDownloadBase(x)}.xlsx`,{bookType:"xlsx"});
 }
-</style>
-
-<style>
-table,td,th{font-size:14pt!important;font-family:"Microsoft JhengHei",Arial,sans-serif}
-.invMaterialLabel,.invMaterialValue,.invEdge{font-size:18pt!important}
-.invEdge .cmUnit{font-size:14pt!important}
-.invHint{font-size:14pt!important;color:#d71920!important;font-weight:bold!important}
-</style>
-
-</head><body><table><tr><th colspan="7">勝鈔環保科技股份有限公司報價單</th></tr><tr><td>案名</td><td colspan="2">${esc(m.case_name||x.contact_name||"")}</td><td>編號</td><td colspan="3">${esc(x.quote_no||"")}</td></tr><tr><td>客戶名稱</td><td colspan="3">${esc(x.customer_name||"")}</td><td>日期</td><td colspan="2">${esc(x.quote_date||"")}</td></tr><tr><td>安裝地址</td><td colspan="3">${esc(x.address||"")}</td><td>實際安裝日期</td><td colspan="2">${esc(m.install_date||"")}</td></tr><tr><td colspan="7" class="invHint">此為初估計價　實際價格會依實際色號、尺寸、作法變動</td></tr><tr><td colspan="2">色號</td><td colspan="2">品名</td><td colspan="3">前緣 cm ／ 背牆 cm</td></tr><tr><td colspan="2">${esc(m.color_no||"")}</td><td colspan="2">${esc(m.product_name||"")}</td><td colspan="3">前緣 ${esc(m.front_edge||"")} cm ／ 背牆 ${esc(m.back_wall||"")} cm</td></tr><tr><th>項數</th><th>名稱</th><th>加工尺寸 (CM)</th><th>總公分數</th><th>單位</th><th>單價</th><th>小計</th></tr>${trs}<tr><td></td><td colspan="3">備註：此價格為實價計價</td><td colspan="2">合計</td><td>${x.subtotal||0}</td></tr><tr><td colspan="4"></td><td colspan="2">稅金5%</td><td>${x.tax_amount||0}</td></tr><tr><td colspan="4"></td><td colspan="2">總計</td><td>${x.total_amount||0}</td></tr><tr><td colspan="7">備註：1.本報價單有效期間為30天</td></tr><tr><td colspan="7">2.付款方式:月結40天，未月結客戶安裝完工收現，稅外加不扣%</td></tr><tr><td colspan="7">3.開發票為總計金額</td></tr><tr><td colspan="7">4.本公司產品款項未結清資產屬勝鈔環保科技股份有限公司所有權</td></tr><tr><td colspan="4">勝鈔環保科技股份有限公司 / TEL:02-26771176 / FAX:02-26772076 / 業務代表簽名:</td><td colspan="3">客戶簽名:</td></tr></table></body></html>`;const blob=new Blob(["\ufeff",html],{type:"application/vnd.ms-excel"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`${quoteDownloadBase(x)}.xls`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
-
 
 
 function statDateToMD(v){
@@ -670,26 +799,29 @@ function renderStatsEditingPreviewRow(){
 
   const hasAny=["stCustomerCode","stCustomer","stJobNo","stShipNo","stOrderDate","stInstallDate","stCaseName","stColorNo","stModel","stSizeCm","stUntaxedAmount","stNote","stFloor","stInstallers","stLong","stKai","stSelfInstall","stFu","stCaotun"]
     .some(id=>String($(id)?.value||"").trim()!=="");
-  if(!hasAny)return;
+  if(!hasAny){
+    if($("stEmpty"))$("stEmpty").classList.toggle("hidden",installStatsRows.length>0);
+    return;
+  }
 
   const colorType=$("stColorType")?.value||"", colorNo=$("stColorNo")?.value.trim()||"";
   const tr=document.createElement("tr");
   tr.className="statsEditingPreview";
   tr.style.background="#fffdf2";
-  tr.innerHTML=`<td><div class="statsRowBtns"><button type="button" disabled>修改中</button></div></td>
+  tr.innerHTML=`<td><div class="statsRowBtns"><button type="button" onclick="focusStatsDraft()">修改</button><button type="button" class="danger" onclick="clearStatsDraft()">刪除</button></div></td>
     <td>${esc($("stCustomerCode")?.value.trim()||"")}</td>
-    <td class="left">${esc($("stCustomer")?.value.trim()||"")}</td>
+    <td>${esc($("stCustomer")?.value.trim()||"")}</td>
     <td>${esc($("stJobNo")?.value.trim()||"")}</td>
     <td>${esc($("stShipNo")?.value.trim()||"")}</td>
     <td>${esc($("stOrderDate")?.value.trim()||"")}</td>
     <td>${esc($("stInstallDate")?.value.trim()||"")}</td>
-    <td class="left">${esc($("stCaseName")?.value.trim()||"")}</td>
+    <td>${esc($("stCaseName")?.value.trim()||"")}</td>
     <td>${esc(colorType==="human"?colorNo:"")}</td>
     <td>${esc(colorType==="stone"?colorNo:"")}</td>
     <td>${esc($("stModel")?.value||"")}</td>
     <td>${esc($("stSizeCm")?.value||"")}</td>
     <td>${$("stUntaxedAmount")?.value?Number($("stUntaxedAmount").value).toLocaleString("zh-TW"):""}</td>
-    <td class="left">${esc($("stNote")?.value.trim()||"")}</td>
+    <td>${esc($("stNote")?.value.trim()||"")}</td>
     <td>${esc($("stFloor")?.value.trim()||"")}</td>
     <td>${esc($("stInstallers")?.value.trim()||"")}</td>
     <td>${esc($("stLong")?.value||"")}</td>
@@ -698,6 +830,37 @@ function renderStatsEditingPreviewRow(){
     <td>${esc($("stFu")?.value||"")}</td>
     <td>${esc($("stCaotun")?.value||"")}</td>`;
   body.prepend(tr);
+  $("stEmpty")?.classList.add("hidden");
+}
+
+
+function calcExcelLikeInput(el){
+  const raw=String(el?.value||"").trim();
+  if(!raw.startsWith("="))return;
+  const expr=raw.slice(1).trim();
+  if(!expr || !/^[0-9+\-*/().\s]+$/.test(expr)){
+    alert("公式只能使用數字及 + - * / ( )");
+    return;
+  }
+  try{
+    const result=Function('"use strict";return ('+expr+')')();
+    if(!Number.isFinite(result))throw new Error();
+    el.value=String(Math.round((result+Number.EPSILON)*100)/100);
+    renderStatsEditingPreviewRow();
+  }catch(e){
+    alert("公式格式不正確，請重新輸入");
+  }
+}
+
+function focusStatsDraft(){
+  $("stCustomerCode")?.focus();
+  document.getElementById("installStatsView")?.scrollIntoView({behavior:"smooth",block:"start"});
+}
+function clearStatsDraft(){
+  if(!confirm("確定清除目前這筆尚未儲存的資料？"))return;
+  editingInstallStatId=null;
+  setStatForm({});
+  renderStatsEditingPreviewRow();
 }
 
 // ===== 製作安裝統計表（僅 admin）=====
@@ -828,7 +991,7 @@ function renderInstallStats(){
   installStatsRows.forEach(x=>{
     const human=x.color_type==="human"?x.color_no||"":"",stone=x.color_type==="stone"?x.color_no||"":"";
     const tr=document.createElement("tr");
-    tr.innerHTML=`<td><div class="statsRowBtns"><button data-st="edit" data-id="${x.id}">修改</button><button class="danger" data-st="del" data-id="${x.id}">刪除</button></div></td><td>${esc(x.customer_code||"")}</td><td class="left">${esc(x.customer_name||"")}</td><td>${esc(x.job_no||"")}</td><td>${esc(x.shipment_no||"")}</td><td>${esc(statDateToMD(x.order_date||""))}</td><td>${esc(statDateToMD(x.install_date||""))}</td><td class="left">${esc(x.case_name||"")}</td><td>${esc(human)}</td><td>${esc(stone)}</td><td>${esc(x.model||"")}</td><td>${qMoney(x.size_cm||0)}</td><td>${qMoney(x.untaxed_amount||0)}</td><td class="left">${esc(x.note||"")}</td><td>${esc(x.floor||"")}</td><td>${esc(x.installers||"")}</td><td>${x.long_share||""}</td><td>${x.kai_share||""}</td><td>${x.self_install_share||""}</td><td>${x.fu_share||""}</td><td>${x.caotun_share||""}</td>`;
+    tr.innerHTML=`<td><div class="statsRowBtns"><button data-st="edit" data-id="${x.id}">修改</button><button class="danger" data-st="del" data-id="${x.id}">刪除</button></div></td><td>${esc(x.customer_code||"")}</td><td>${esc(x.customer_name||"")}</td><td>${esc(x.job_no||"")}</td><td>${esc(x.shipment_no||"")}</td><td>${esc(statDateToMD(x.order_date||""))}</td><td>${esc(statDateToMD(x.install_date||""))}</td><td>${esc(x.case_name||"")}</td><td>${esc(human)}</td><td>${esc(stone)}</td><td>${esc(x.model||"")}</td><td>${qMoney(x.size_cm||0)}</td><td>${qMoney(x.untaxed_amount||0)}</td><td>${esc(x.note||"")}</td><td>${esc(x.floor||"")}</td><td>${esc(x.installers||"")}</td><td>${x.long_share||""}</td><td>${x.kai_share||""}</td><td>${x.self_install_share||""}</td><td>${x.fu_share||""}</td><td>${x.caotun_share||""}</td>`;
     b.appendChild(tr);
   });
   b.querySelectorAll("button").forEach(btn=>btn.onclick=()=>btn.dataset.st==="edit"?editInstallStat(btn.dataset.id):deleteInstallStat(btn.dataset.id));renderStatsEditingPreviewRow();
@@ -896,6 +1059,18 @@ $("saveEventBtn").addEventListener("click",saveEvent);$("deleteEventBtn").addEve
   $(id)?.addEventListener("input",renderStatsEditingPreviewRow);
   $(id)?.addEventListener("change",renderStatsEditingPreviewRow);
 });
+
+["stSizeCm","stUntaxedAmount"].forEach(id=>{
+  $(id)?.addEventListener("keydown",e=>{
+    if(e.key==="Enter"){
+      e.preventDefault();
+      calcExcelLikeInput(e.target);
+      e.target.blur();
+    }
+  });
+  $(id)?.addEventListener("blur",e=>calcExcelLikeInput(e.target));
+});
+
 renderStatsEditingPreviewRow();boot();
 </script>
 
