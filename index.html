@@ -188,6 +188,68 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
 #stMasterTableBody th{text-align:center!important}
 </style>
 
+
+<style id="installer-picker-style">
+.installerRow{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 86px;
+  gap:8px;
+  align-items:end;
+  margin-top:4px;
+}
+.installerPicker{position:relative;min-width:0}
+.installerSelectBtn,.installerAddBtn{
+  width:100%;
+  min-height:43px;
+  border:1px solid #bdc8d2;
+  border-radius:8px;
+  background:#fff;
+  padding:9px 12px;
+  color:#18324d;
+  font-weight:400;
+}
+.installerSelectBtn{text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.installerAddBtn{font-weight:800;cursor:pointer}
+.installerMenu{
+  position:absolute;
+  left:0;right:0;top:calc(100% + 4px);
+  z-index:80;
+  background:#fff;
+  border:1px solid #bdc8d2;
+  border-radius:9px;
+  box-shadow:0 8px 24px rgba(24,50,77,.16);
+  max-height:240px;
+  overflow:auto;
+  padding:5px;
+}
+.installerOption{
+  display:grid;
+  grid-template-columns:24px minmax(0,1fr) 28px;
+  gap:6px;
+  align-items:center;
+  padding:7px 6px;
+  border-radius:7px;
+}
+.installerOption:hover{background:#f4f7fa}
+.installerOption input{width:16px!important;height:16px;margin:0!important}
+.installerOptionName{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.installerDelete{
+  border:0;
+  background:transparent;
+  color:#d62d2d;
+  font-size:18px;
+  line-height:1;
+  padding:2px;
+  cursor:pointer;
+  border-radius:5px;
+}
+.installerDelete:hover{background:#fff0f0}
+@media(max-width:600px){
+  .installerRow{grid-template-columns:minmax(0,1fr) 72px}
+  .installerSelectBtn,.installerAddBtn{min-height:42px;padding:8px 10px}
+}
+</style>
+
 </head>
 <body>
 <div id="pullRefreshIndicator" aria-hidden="true"><div class="pull-spinner"></div></div>
@@ -274,7 +336,16 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
 
       <label>未稅金額<input id="stUntaxedAmount" type="text" inputmode="decimal" placeholder="可輸入 =45+95"></label>
       <label>樓層<input id="stFloor"></label>
-      <label class="span2">安裝人員<input id="stInstallers" placeholder="例如 龍+凱"></label>
+      <label class="span2">安裝人員
+        <div class="installerRow">
+          <div class="installerPicker" id="installerPicker">
+            <button type="button" class="installerSelectBtn" id="installerSelectBtn">請選擇安裝人員</button>
+            <div class="installerMenu hidden" id="installerMenu"></div>
+          </div>
+          <button type="button" class="installerAddBtn" id="installerAddBtn">新增</button>
+        </div>
+        <input id="stInstallers" type="hidden">
+      </label>
 
       <label class="span2">備註<input id="stNote"></label>
       <label>龍<input id="stLong" type="number" step="0.5"></label>
@@ -989,6 +1060,127 @@ function exportMasterInstallSummaryExcel(){
   XLSX.writeFile(wb,`師傅的安裝總數表_${month}.xlsx`);
 }
 
+
+const INSTALLER_STORAGE_KEY="sbd_installer_options_v1";
+const DEFAULT_INSTALLERS=["龍","凱","自安","富","草屯"];
+
+function loadInstallerOptions(){
+  try{
+    const saved=JSON.parse(localStorage.getItem(INSTALLER_STORAGE_KEY)||"null");
+    if(Array.isArray(saved)) return saved.filter(x=>String(x||"").trim()).map(x=>String(x).trim());
+  }catch(e){}
+  localStorage.setItem(INSTALLER_STORAGE_KEY,JSON.stringify(DEFAULT_INSTALLERS));
+  return [...DEFAULT_INSTALLERS];
+}
+
+function saveInstallerOptions(list){
+  const clean=[...new Set((list||[]).map(x=>String(x||"").trim()).filter(Boolean))];
+  localStorage.setItem(INSTALLER_STORAGE_KEY,JSON.stringify(clean));
+  return clean;
+}
+
+function selectedInstallerNames(){
+  return String($("stInstallers")?.value||"").split("+").map(x=>x.trim()).filter(Boolean);
+}
+
+function syncInstallerPickerLabel(){
+  const names=selectedInstallerNames();
+  if($("installerSelectBtn"))$("installerSelectBtn").textContent=names.length?names.join("+"):"請選擇安裝人員";
+}
+
+function setInstallersValue(names){
+  const value=[...new Set((names||[]).map(x=>String(x||"").trim()).filter(Boolean))].join("+");
+  if($("stInstallers")){
+    $("stInstallers").value=value;
+    $("stInstallers").dispatchEvent(new Event("input",{bubbles:true}));
+    $("stInstallers").dispatchEvent(new Event("change",{bubbles:true}));
+  }
+  syncInstallerPickerLabel();
+  renderInstallerMenu();
+}
+
+function renderInstallerMenu(){
+  const menu=$("installerMenu");
+  if(!menu)return;
+  const options=loadInstallerOptions();
+  const selected=new Set(selectedInstallerNames());
+  if(!options.length){
+    menu.innerHTML='<div style="padding:10px;color:#66788a;text-align:center">尚未新增人員</div>';
+    return;
+  }
+  menu.innerHTML=options.map((name,i)=>`
+    <div class="installerOption">
+      <input type="checkbox" data-inst-check="${i}" ${selected.has(name)?"checked":""}>
+      <span class="installerOptionName">${esc(name)}</span>
+      <button type="button" class="installerDelete" data-inst-del="${i}" title="刪除 ${esc(name)}">×</button>
+    </div>`).join("");
+
+  menu.querySelectorAll("[data-inst-check]").forEach(chk=>{
+    chk.addEventListener("change",()=>{
+      const opts=loadInstallerOptions();
+      const names=[...menu.querySelectorAll("[data-inst-check]:checked")]
+        .map(el=>opts[Number(el.dataset.instCheck)])
+        .filter(Boolean);
+      setInstallersValue(names);
+      menu.classList.remove("hidden");
+    });
+  });
+
+  menu.querySelectorAll("[data-inst-del]").forEach(btn=>{
+    btn.addEventListener("click",e=>{
+      e.stopPropagation();
+      const idx=Number(btn.dataset.instDel);
+      const opts=loadInstallerOptions();
+      const name=opts[idx];
+      if(!name)return;
+      if(!confirm(`確定刪除「${name}」？刪除後不會再出現在下拉選單。`))return;
+      opts.splice(idx,1);
+      saveInstallerOptions(opts);
+      const remain=selectedInstallerNames().filter(x=>x!==name);
+      setInstallersValue(remain);
+      $("installerMenu")?.classList.remove("hidden");
+    });
+  });
+}
+
+function openInstallerMenu(){
+  renderInstallerMenu();
+  $("installerMenu")?.classList.toggle("hidden");
+}
+
+function addInstallerOption(){
+  const name=prompt("請輸入要新增的安裝人員姓名");
+  if(name===null)return;
+  const clean=String(name).trim();
+  if(!clean)return alert("請輸入姓名");
+  const opts=loadInstallerOptions();
+  if(opts.includes(clean))return alert("這位人員已經在下拉選單裡");
+  opts.push(clean);
+  saveInstallerOptions(opts);
+  renderInstallerMenu();
+  $("installerMenu")?.classList.remove("hidden");
+}
+
+function initInstallerPicker(){
+  loadInstallerOptions();
+  syncInstallerPickerLabel();
+  renderInstallerMenu();
+  $("installerSelectBtn")?.addEventListener("click",e=>{
+    e.stopPropagation();
+    openInstallerMenu();
+  });
+  $("installerAddBtn")?.addEventListener("click",e=>{
+    e.stopPropagation();
+    addInstallerOption();
+  });
+  document.addEventListener("click",e=>{
+    const picker=$("installerPicker");
+    if(picker && !picker.contains(e.target) && e.target!==$("installerAddBtn")){
+      $("installerMenu")?.classList.add("hidden");
+    }
+  });
+}
+
 // ===== 製作安裝統計表（僅 admin）=====
 let installStatsRows=[],editingInstallStatId=null;
 
@@ -1031,6 +1223,7 @@ function setStatForm(x={}){
   $("stNote").value=x.note||"";
   $("stFloor").value=x.floor||"";
   $("stInstallers").value=x.installers||"";
+  syncInstallerPickerLabel();
   $("stLong").value=x.long_share??"";
   $("stKai").value=x.kai_share??"";
   $("stSelfInstall").value=x.self_install_share??"";
@@ -1246,7 +1439,7 @@ $("stMasterMonth")?.addEventListener("change",()=>{
 $("stMonth")?.addEventListener("change",()=>{
   if($("stMasterMonth"))$("stMasterMonth").value=$("stMonth").value;
 });
-renderStatsEditingPreviewRow();renderMasterInstallSummary();boot();
+initInstallerPicker();renderStatsEditingPreviewRow();renderMasterInstallSummary();boot();
 </script>
 
 <script>
