@@ -189,30 +189,57 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
 </style>
 
 
-<style id="installer-picker-style">
+
+<style id="installer-picker-flat-style">
 .installerRow{
   display:grid;
   grid-template-columns:minmax(0,1fr) 86px;
   gap:8px;
-  align-items:end;
+  align-items:center;
   margin-top:4px;
 }
-.installerPicker{position:relative;min-width:0}
-.installerSelectBtn,.installerAddBtn{
+.installerPicker{
+  position:relative;
+  min-width:0;
+  border:0!important;
+  background:transparent!important;
+}
+.installerSelectBtn{
   width:100%;
-  min-height:43px;
+  min-height:42px;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  padding:8px 4px!important;
+  color:#18324d;
+  text-align:left;
+  font-weight:400;
+  cursor:pointer;
+  box-shadow:none!important;
+}
+.installerSelectBtn:hover{
+  background:#f4f7fa!important;
+}
+.installerSelectBtn:focus{
+  outline:0;
+  background:#f4f7fa!important;
+}
+.installerAddBtn{
+  width:100%;
+  min-height:42px;
   border:1px solid #bdc8d2;
   border-radius:8px;
   background:#fff;
-  padding:9px 12px;
+  padding:8px 10px;
   color:#18324d;
-  font-weight:400;
+  font-weight:800;
+  cursor:pointer;
 }
-.installerSelectBtn{text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.installerAddBtn{font-weight:800;cursor:pointer}
 .installerMenu{
   position:absolute;
-  left:0;right:0;top:calc(100% + 4px);
+  left:0;
+  right:0;
+  top:calc(100% + 2px);
   z-index:80;
   background:#fff;
   border:1px solid #bdc8d2;
@@ -227,8 +254,9 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
   grid-template-columns:24px minmax(0,1fr) 28px;
   gap:6px;
   align-items:center;
-  padding:7px 6px;
+  padding:8px 6px;
   border-radius:7px;
+  cursor:pointer;
 }
 .installerOption:hover{background:#f4f7fa}
 .installerOption input{width:16px!important;height:16px;margin:0!important}
@@ -246,7 +274,7 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
 .installerDelete:hover{background:#fff0f0}
 @media(max-width:600px){
   .installerRow{grid-template-columns:minmax(0,1fr) 72px}
-  .installerSelectBtn,.installerAddBtn{min-height:42px;padding:8px 10px}
+  .installerSelectBtn,.installerAddBtn{min-height:40px}
 }
 </style>
 
@@ -1109,7 +1137,7 @@ function renderInstallerMenu(){
     return;
   }
   menu.innerHTML=options.map((name,i)=>`
-    <div class="installerOption">
+    <div class="installerOption" data-inst-row="${i}">
       <input type="checkbox" data-inst-check="${i}" ${selected.has(name)?"checked":""}>
       <span class="installerOptionName">${esc(name)}</span>
       <button type="button" class="installerDelete" data-inst-del="${i}" title="刪除 ${esc(name)}">×</button>
@@ -1123,6 +1151,17 @@ function renderInstallerMenu(){
         .filter(Boolean);
       setInstallersValue(names);
       menu.classList.remove("hidden");
+    });
+  });
+
+  
+  menu.querySelectorAll("[data-inst-row]").forEach(row=>{
+    row.addEventListener("click",e=>{
+      if(e.target.closest("[data-inst-del]") || e.target.matches("[data-inst-check]")) return;
+      const chk=row.querySelector("[data-inst-check]");
+      if(!chk)return;
+      chk.checked=!chk.checked;
+      chk.dispatchEvent(new Event("change",{bubbles:true}));
     });
   });
 
