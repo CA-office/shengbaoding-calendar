@@ -182,6 +182,12 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
 .statsTable th,.statsTable td{text-align:center!important}
 </style>
 
+
+<style id="master-install-summary-style">
+#stMasterTableBody td,
+#stMasterTableBody th{text-align:center!important}
+</style>
+
 </head>
 <body>
 <div id="pullRefreshIndicator" aria-hidden="true"><div class="pull-spinner"></div></div>
@@ -298,6 +304,24 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
       </table>
     </div>
     <div id="stEmpty" class="quoteEmpty hidden">目前沒有統計資料</div>
+  </div>
+
+  <div class="statsCard">
+    <h2 class="statsTitle">師傅的安裝總數表</h2>
+    <div class="statsFilter">
+      <label>查詢月份<input id="stMasterMonth" type="month"></label>
+      <button type="button" id="stMasterLoadBtn">查詢</button>
+      <div style="text-align:right"><button type="button" id="stMasterExportBtn" class="primary">下載師傅的安裝總數表 Excel</button></div>
+    </div>
+    <div class="statsTableWrap">
+      <table class="statsTable" style="min-width:900px">
+        <thead><tr>
+          <th>備註</th><th>樓層</th><th>安裝人員</th><th>龍</th><th>凱</th><th>自安</th><th>富</th><th>草屯</th>
+        </tr></thead>
+        <tbody id="stMasterTableBody"></tbody>
+      </table>
+    </div>
+    <div id="stMasterEmpty" class="quoteEmpty hidden">目前沒有安裝統計資料</div>
   </div>
 </section>
 
@@ -801,6 +825,7 @@ function renderStatsEditingPreviewRow(){
     .some(id=>String($(id)?.value||"").trim()!=="");
   if(!hasAny){
     if($("stEmpty"))$("stEmpty").classList.toggle("hidden",installStatsRows.length>0);
+    renderMasterInstallSummary();
     return;
   }
 
@@ -831,6 +856,7 @@ function renderStatsEditingPreviewRow(){
     <td>${esc($("stCaotun")?.value||"")}</td>`;
   body.prepend(tr);
   $("stEmpty")?.classList.add("hidden");
+  renderMasterInstallSummary();
 }
 
 
@@ -861,6 +887,106 @@ function clearStatsDraft(){
   editingInstallStatId=null;
   setStatForm({});
   renderStatsEditingPreviewRow();
+}
+
+
+function currentStatsDraftForMaster(){
+  const hasAny=["stCustomerCode","stCustomer","stJobNo","stShipNo","stOrderDate","stInstallDate","stCaseName","stColorNo","stModel","stSizeCm","stUntaxedAmount","stNote","stFloor","stInstallers","stLong","stKai","stSelfInstall","stFu","stCaotun"]
+    .some(id=>String($(id)?.value||"").trim()!=="");
+  return hasAny?getStatForm():null;
+}
+
+function getMasterInstallRows(){
+  let rows=[...installStatsRows];
+  const draft=currentStatsDraftForMaster();
+
+  if(draft){
+    if(editingInstallStatId){
+      const idx=rows.findIndex(x=>String(x.id)===String(editingInstallStatId));
+      if(idx>=0) rows[idx]={...rows[idx],...draft};
+      else rows.unshift(draft);
+    }else{
+      rows.unshift(draft);
+    }
+  }
+  return rows;
+}
+
+function renderMasterInstallSummary(){
+  const body=$("stMasterTableBody");
+  if(!body)return;
+  body.innerHTML="";
+
+  const rows=getMasterInstallRows();
+  $("stMasterEmpty")?.classList.toggle("hidden",rows.length>0);
+
+  rows.forEach(x=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`
+      <td>${esc(x.note||"")}</td>
+      <td>${esc(x.floor||"")}</td>
+      <td>${esc(x.installers||"")}</td>
+      <td>${x.long_share||""}</td>
+      <td>${x.kai_share||""}</td>
+      <td>${x.self_install_share||""}</td>
+      <td>${x.fu_share||""}</td>
+      <td>${x.caotun_share||""}</td>`;
+    body.appendChild(tr);
+  });
+}
+
+async function loadMasterInstallSummary(){
+  if(profile?.role!=="admin")return;
+  const month=$("stMasterMonth")?.value||statsTodayMonth();
+  if($("stMonth"))$("stMonth").value=month;
+  await loadInstallStats();
+  if($("stMasterMonth"))$("stMasterMonth").value=$("stMonth").value;
+  renderMasterInstallSummary();
+}
+
+function exportMasterInstallSummaryExcel(){
+  if(profile?.role!=="admin")return;
+  if(typeof XLSX==="undefined")return alert("Excel 元件尚未載入，請重新整理後再試");
+
+  const month=$("stMasterMonth")?.value||$("stMonth")?.value||statsTodayMonth();
+  const rows=getMasterInstallRows();
+
+  if(!rows.length)return alert("目前沒有可下載的安裝統計資料");
+
+  const aoa=[
+    [`${month.replace("-","/")} 師傅的安裝總數表`],
+    ["備註","樓層","安裝人員","龍","凱","自安","富","草屯"],
+    ...rows.map(x=>[
+      x.note||"",
+      x.floor||"",
+      x.installers||"",
+      x.long_share||"",
+      x.kai_share||"",
+      x.self_install_share||"",
+      x.fu_share||"",
+      x.caotun_share||""
+    ])
+  ];
+
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws["!merges"]=[{s:{r:0,c:0},e:{r:0,c:7}}];
+  ws["!cols"]=[
+    {wch:22},{wch:10},{wch:18},{wch:8},{wch:8},{wch:8},{wch:8},{wch:8}
+  ];
+
+  const range=XLSX.utils.decode_range(ws["!ref"]);
+  for(let R=0;R<=range.e.r;R++){
+    for(let C=0;C<=range.e.c;C++){
+      const a=XLSX.utils.encode_cell({r:R,c:C});
+      if(!ws[a])continue;
+      ws[a].s=ws[a].s||{};
+      ws[a].s.alignment={horizontal:"center",vertical:"center"};
+    }
+  }
+
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"師傅安裝總數");
+  XLSX.writeFile(wb,`師傅的安裝總數表_${month}.xlsx`);
 }
 
 // ===== 製作安裝統計表（僅 admin）=====
@@ -974,6 +1100,7 @@ async function loadInstallStats(){
   if(profile?.role!=="admin")return;
   if(!$("stMonth").value)$("stMonth").value=statsTodayMonth();
   const month=$("stMonth").value;
+  if($("stMasterMonth"))$("stMasterMonth").value=month;
   let q=sb.from("sbd_install_stats").select("*").order("install_date",{ascending:true,nullsFirst:true}).order("created_at",{ascending:true});
   if(month){
     const [y,m]=month.split("-").map(Number);
@@ -994,7 +1121,7 @@ function renderInstallStats(){
     tr.innerHTML=`<td><div class="statsRowBtns"><button data-st="edit" data-id="${x.id}">修改</button><button class="danger" data-st="del" data-id="${x.id}">刪除</button></div></td><td>${esc(x.customer_code||"")}</td><td>${esc(x.customer_name||"")}</td><td>${esc(x.job_no||"")}</td><td>${esc(x.shipment_no||"")}</td><td>${esc(statDateToMD(x.order_date||""))}</td><td>${esc(statDateToMD(x.install_date||""))}</td><td>${esc(x.case_name||"")}</td><td>${esc(human)}</td><td>${esc(stone)}</td><td>${esc(x.model||"")}</td><td>${qMoney(x.size_cm||0)}</td><td>${qMoney(x.untaxed_amount||0)}</td><td>${esc(x.note||"")}</td><td>${esc(x.floor||"")}</td><td>${esc(x.installers||"")}</td><td>${x.long_share||""}</td><td>${x.kai_share||""}</td><td>${x.self_install_share||""}</td><td>${x.fu_share||""}</td><td>${x.caotun_share||""}</td>`;
     b.appendChild(tr);
   });
-  b.querySelectorAll("button").forEach(btn=>btn.onclick=()=>btn.dataset.st==="edit"?editInstallStat(btn.dataset.id):deleteInstallStat(btn.dataset.id));renderStatsEditingPreviewRow();
+  b.querySelectorAll("button").forEach(btn=>btn.onclick=()=>btn.dataset.st==="edit"?editInstallStat(btn.dataset.id):deleteInstallStat(btn.dataset.id));renderStatsEditingPreviewRow();renderMasterInstallSummary();
 }
 function editInstallStat(id){
   if(profile?.role!=="admin")return;
@@ -1011,26 +1138,66 @@ async function deleteInstallStat(id){
 function exportInstallStatsExcel(){
   if(profile?.role!=="admin")return;
   if(typeof XLSX==="undefined")return alert("Excel 元件尚未載入，請重新整理後再試");
+
   const month=$("stMonth").value||statsTodayMonth();
-  const rows=installStatsRows.map(x=>[
+
+  // 目前畫面正在輸入的這一筆，也要一起輸出
+  const draftHasAny=["stCustomerCode","stCustomer","stJobNo","stShipNo","stOrderDate","stInstallDate","stCaseName","stColorNo","stModel","stSizeCm","stUntaxedAmount","stNote","stFloor","stInstallers","stLong","stKai","stSelfInstall","stFu","stCaotun"]
+    .some(id=>String($(id)?.value||"").trim()!=="");
+
+  const draft=draftHasAny?getStatForm():null;
+
+  // 若正在修改既有資料：Excel 用目前畫面內容取代舊資料，不重複一列
+  let exportRows=[...installStatsRows];
+  if(draft){
+    if(editingInstallStatId){
+      const idx=exportRows.findIndex(x=>String(x.id)===String(editingInstallStatId));
+      if(idx>=0)exportRows[idx]={...exportRows[idx],...draft};
+      else exportRows.unshift(draft);
+    }else{
+      exportRows.unshift(draft);
+    }
+  }
+
+  const rows=exportRows.map(x=>[
     x.customer_code||"",x.customer_name||"",x.job_no||"",x.shipment_no||"",
     statDateToMD(x.order_date||""),statDateToMD(x.install_date||""),x.case_name||"",
     x.color_type==="human"?(x.color_no||""):"",x.color_type==="stone"?(x.color_no||""):"",
-    x.model||"",Number(x.size_cm||0),Number(x.untaxed_amount||0),x.note||"",x.floor||"",x.installers||"",
+    x.model||"",
+    x.size_cm===""?"":Number(x.size_cm||0),
+    x.untaxed_amount===""?"":Number(x.untaxed_amount||0),
+    x.note||"",x.floor||"",x.installers||"",
     x.long_share||"",x.kai_share||"",x.self_install_share||"",x.fu_share||"",x.caotun_share||""
   ]);
+
+  if(!rows.length)return alert("目前沒有可下載的統計資料");
+
   const aoa=[
-    [`${month.replace("-","/")} 加工出貨統計表`],
+    [`${month.replace("-","/")} 製作安裝統計表`],
     ["客編","客戶","編號","出貨單號","接單日期","安裝日期","案名","色號-人","色號-石","型號","尺寸(cm)","未稅金額","備註","樓層","安裝人員","龍","凱","自安","富","草屯"],
     ...rows
   ];
+
   const ws=XLSX.utils.aoa_to_sheet(aoa);
   ws["!merges"]=[{s:{r:0,c:0},e:{r:0,c:19}}];
   ws["!cols"]=[
-    {wch:10},{wch:14},{wch:16},{wch:13},{wch:12},{wch:12},{wch:22},{wch:12},{wch:12},{wch:16},
+    {wch:10},{wch:14},{wch:16},{wch:13},{wch:12},{wch:12},{wch:22},{wch:12},{wch:12},{wch:10},
     {wch:11},{wch:13},{wch:22},{wch:8},{wch:14},{wch:6},{wch:6},{wch:6},{wch:6},{wch:7}
   ];
-  const wb2=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb2,ws,month.slice(5)+"月");
+
+  // 置中顯示
+  const range=XLSX.utils.decode_range(ws["!ref"]);
+  for(let R=0;R<=range.e.r;R++){
+    for(let C=0;C<=range.e.c;C++){
+      const a=XLSX.utils.encode_cell({r:R,c:C});
+      if(!ws[a])continue;
+      ws[a].s=ws[a].s||{};
+      ws[a].s.alignment={horizontal:"center",vertical:"center"};
+    }
+  }
+
+  const wb2=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb2,ws,month.slice(5)+"月");
   XLSX.writeFile(wb2,`製作安裝統計表_${month}.xlsx`);
 }
 
@@ -1055,7 +1222,12 @@ $("ftime").addEventListener("blur",()=>{
 });
 
 $("closeViewBtn").addEventListener("click",()=>$("viewDlg").close());
-$("saveEventBtn").addEventListener("click",saveEvent);$("deleteEventBtn").addEventListener("click",deleteEvent);$("saveNoteBtn").addEventListener("click",saveNote);$("calendarTabBtn").addEventListener("click",()=>showFeature("calendar"));$("quoteTabBtn").addEventListener("click",()=>showFeature("quote"));$("installStatsTabBtn").addEventListener("click",()=>showFeature("stats"));$("stOrderDate").addEventListener("input",e=>normalizeStatMDInput(e.target));$("stInstallDate").addEventListener("input",e=>normalizeStatMDInput(e.target));$("stBringQuoteBtn")?.addEventListener("click",bringSelectedQuoteToStats);$("stSaveBtn")?.addEventListener("click",saveInstallStat);$("stResetBtn")?.addEventListener("click",resetInstallStatForm);$("stLoadBtn").addEventListener("click",loadInstallStats);$("stExportBtn").addEventListener("click",exportInstallStatsExcel);$("qAddItemBtn").addEventListener("click",()=>addQuoteItem());$("qNameManageBtn")?.addEventListener("click",()=>{resetQNameEditor();renderQNameManager();$("qNameDlg").showModal()});$("qNameOptionSaveBtn")?.addEventListener("click",saveQNameOption);$("qNameOptionCancelBtn")?.addEventListener("click",resetQNameEditor);$("qNameDlgCloseBtn")?.addEventListener("click",()=>$("qNameDlg").close());$("qCustomerManageBtn")?.addEventListener("click",()=>{resetQCustomerEditor();renderQCustomerManager();$("qCustomerDlg").showModal()});$("qCustomerOptionSaveBtn")?.addEventListener("click",saveQCustomer);$("qCustomerOptionCancelBtn")?.addEventListener("click",resetQCustomerEditor);$("qCustomerDlgCloseBtn")?.addEventListener("click",()=>$("qCustomerDlg").close());$("qSaveBtn").addEventListener("click",saveQuote);$("qCancelEditBtn").addEventListener("click",resetQuoteForm);["stCustomerCode","stCustomer","stJobNo","stShipNo","stOrderDate","stInstallDate","stCaseName","stColorType","stColorNo","stModel","stSizeCm","stUntaxedAmount","stNote","stFloor","stInstallers","stLong","stKai","stSelfInstall","stFu","stCaotun"].forEach(id=>{
+$("saveEventBtn").addEventListener("click",saveEvent);$("deleteEventBtn").addEventListener("click",deleteEvent);$("saveNoteBtn").addEventListener("click",saveNote);$("calendarTabBtn").addEventListener("click",()=>showFeature("calendar"));$("quoteTabBtn").addEventListener("click",()=>showFeature("quote"));$("installStatsTabBtn").addEventListener("click",()=>showFeature("stats"));$("stOrderDate").addEventListener("input",e=>normalizeStatMDInput(e.target));$("stInstallDate").addEventListener("input",e=>normalizeStatMDInput(e.target));$("stBringQuoteBtn")?.addEventListener("click",bringSelectedQuoteToStats);$("stSaveBtn")?.addEventListener("click",saveInstallStat);$("stResetBtn")?.addEventListener("click",resetInstallStatForm);$("stLoadBtn").addEventListener("click",loadInstallStats);$("stExportBtn").addEventListener("click",exportInstallStatsExcel);
+$("stMasterLoadBtn")?.addEventListener("click",loadMasterInstallSummary);
+$("stMasterExportBtn")?.addEventListener("click",exportMasterInstallSummaryExcel);
+$("stMasterMonth")?.addEventListener("change",()=>{
+  if($("stMonth"))$("stMonth").value=$("stMasterMonth").value;
+});$("qAddItemBtn").addEventListener("click",()=>addQuoteItem());$("qNameManageBtn")?.addEventListener("click",()=>{resetQNameEditor();renderQNameManager();$("qNameDlg").showModal()});$("qNameOptionSaveBtn")?.addEventListener("click",saveQNameOption);$("qNameOptionCancelBtn")?.addEventListener("click",resetQNameEditor);$("qNameDlgCloseBtn")?.addEventListener("click",()=>$("qNameDlg").close());$("qCustomerManageBtn")?.addEventListener("click",()=>{resetQCustomerEditor();renderQCustomerManager();$("qCustomerDlg").showModal()});$("qCustomerOptionSaveBtn")?.addEventListener("click",saveQCustomer);$("qCustomerOptionCancelBtn")?.addEventListener("click",resetQCustomerEditor);$("qCustomerDlgCloseBtn")?.addEventListener("click",()=>$("qCustomerDlg").close());$("qSaveBtn").addEventListener("click",saveQuote);$("qCancelEditBtn").addEventListener("click",resetQuoteForm);["stCustomerCode","stCustomer","stJobNo","stShipNo","stOrderDate","stInstallDate","stCaseName","stColorType","stColorNo","stModel","stSizeCm","stUntaxedAmount","stNote","stFloor","stInstallers","stLong","stKai","stSelfInstall","stFu","stCaotun"].forEach(id=>{
   $(id)?.addEventListener("input",renderStatsEditingPreviewRow);
   $(id)?.addEventListener("change",renderStatsEditingPreviewRow);
 });
@@ -1071,7 +1243,10 @@ $("saveEventBtn").addEventListener("click",saveEvent);$("deleteEventBtn").addEve
   $(id)?.addEventListener("blur",e=>calcExcelLikeInput(e.target));
 });
 
-renderStatsEditingPreviewRow();boot();
+$("stMonth")?.addEventListener("change",()=>{
+  if($("stMasterMonth"))$("stMasterMonth").value=$("stMonth").value;
+});
+renderStatsEditingPreviewRow();renderMasterInstallSummary();boot();
 </script>
 
 <script>
