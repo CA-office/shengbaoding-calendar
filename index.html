@@ -278,6 +278,60 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
 }
 </style>
 
+
+<style id="sbd-two-sticky-headers">
+/* 勝寶鼎：指定兩區表格標題凍結（手機版＋電腦版） */
+
+/* 1. 報價單紀錄 */
+.quoteListWrap{
+  max-height:65vh;
+  overflow:auto;
+  position:relative;
+  -webkit-overflow-scrolling:touch;
+}
+.quoteListWrap .quoteList thead th{
+  position:sticky;
+  top:0;
+  z-index:30;
+  background:#f6f8fa;
+  box-shadow:0 1px 0 #d9e0e6;
+}
+
+/* 2. 製作安裝統計表：只鎖定第一張統計表，不影響下方師傅總數表 */
+#stTableBody{
+  position:relative;
+}
+.statsTableWrap:has(#stTableBody){
+  max-height:65vh;
+  overflow:auto;
+  position:relative;
+  -webkit-overflow-scrolling:touch;
+}
+.statsTableWrap:has(#stTableBody) .statsTable thead th{
+  position:sticky;
+  top:0;
+  z-index:30;
+  background:#f5f8fa;
+  box-shadow:0 1px 0 #d9e0e6;
+}
+
+@media(max-width:700px){
+  .quoteListWrap,
+  .statsTableWrap:has(#stTableBody){
+    max-height:62vh;
+    overflow:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  .quoteListWrap .quoteList thead th,
+  .statsTableWrap:has(#stTableBody) .statsTable thead th{
+    position:sticky!important;
+    top:0!important;
+    z-index:35!important;
+  }
+}
+</style>
+
 </head>
 <body>
 <div id="pullRefreshIndicator" aria-hidden="true"><div class="pull-spinner"></div></div>
