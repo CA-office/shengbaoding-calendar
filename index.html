@@ -789,7 +789,7 @@ function excelQuote(x){
 
   const thin={style:"thin",color:{rgb:"000000"}};
   const borderAll={top:thin,bottom:thin,left:thin,right:thin};
-  const baseFont={name:"Microsoft JhengHei",sz:14,color:{rgb:"000000"}};
+  const baseFont={name:"Noto Sans HK",sz:14,color:{rgb:"000000"}};
   const center={horizontal:"center",vertical:"center"};
   const left={horizontal:"left",vertical:"center"};
   const red={rgb:"FF0000"};
@@ -805,7 +805,7 @@ function excelQuote(x){
   }
 
   // 標題 30pt
-  ws["A1"].s={font:{name:"Microsoft JhengHei",sz:30,bold:false,color:{rgb:"000000"}},alignment:center};
+  ws["A1"].s={font:{name:"Noto Sans HK",sz:30,bold:false,color:{rgb:"000000"}},alignment:center};
 
   // 上方資料靠左
   ["A2","B2","E2","F2","A3","B3","E3","F3","A4","B4","E4","F4"].forEach(a=>{
@@ -813,19 +813,19 @@ function excelQuote(x){
   });
 
   // 警語：14pt 紅字
-  ws["A5"].s={font:{name:"Microsoft JhengHei",sz:14,bold:true,color:red},alignment:center};
+  ws["A5"].s={font:{name:"Noto Sans HK",sz:14,bold:true,color:red},alignment:center};
 
   // 色號／品名／前緣／背牆：18pt；cm 14pt
-  ["A6","C6","E6"].forEach(a=>ws[a].s={...(ws[a].s||{}),font:{name:"Microsoft JhengHei",sz:18,color:{rgb:"000000"}},alignment:center});
-  ws["F6"].s={...(ws["F6"].s||{}),font:{name:"Microsoft JhengHei",sz:14,color:{rgb:"000000"}},alignment:center};
-  ws["G6"].s={...(ws["G6"].s||{}),font:{name:"Microsoft JhengHei",sz:14,color:{rgb:"000000"}},alignment:center};
-  ["A7","C7","E7"].forEach(a=>ws[a].s={...(ws[a].s||{}),font:{name:"Microsoft JhengHei",sz:18,color:{rgb:"000000"}},alignment:center});
-  ws["F7"].s={...(ws["F7"].s||{}),font:{name:"Microsoft JhengHei",sz:14,color:{rgb:"000000"}},alignment:center};
+  ["A6","C6","E6"].forEach(a=>ws[a].s={...(ws[a].s||{}),font:{name:"Noto Sans HK",sz:18,color:{rgb:"000000"}},alignment:center});
+  ws["F6"].s={...(ws["F6"].s||{}),font:{name:"Noto Sans HK",sz:14,color:{rgb:"000000"}},alignment:center};
+  ws["G6"].s={...(ws["G6"].s||{}),font:{name:"Noto Sans HK",sz:14,color:{rgb:"000000"}},alignment:center};
+  ["A7","C7","E7"].forEach(a=>ws[a].s={...(ws[a].s||{}),font:{name:"Noto Sans HK",sz:18,color:{rgb:"000000"}},alignment:center});
+  ws["F7"].s={...(ws["F7"].s||{}),font:{name:"Noto Sans HK",sz:14,color:{rgb:"000000"}},alignment:center};
 
   // 表頭粗體
   for(let C=0;C<7;C++){
     const a=XLSX.utils.encode_cell({r:7,c:C});
-    ws[a].s={...(ws[a].s||{}),font:{name:"Microsoft JhengHei",sz:14,bold:true,color:{rgb:"000000"}},alignment:center};
+    ws[a].s={...(ws[a].s||{}),font:{name:"Noto Sans HK",sz:14,bold:true,color:{rgb:"000000"}},alignment:center};
   }
 
   // 品項名稱靠左；金額欄使用千分位
@@ -1079,6 +1079,7 @@ function exportMasterInstallSummaryExcel(){
       const a=XLSX.utils.encode_cell({r:R,c:C});
       if(!ws[a])continue;
       ws[a].s=ws[a].s||{};
+      ws[a].s.font={name:"Noto Sans HK",sz:11};
       ws[a].s.alignment={horizontal:"center",vertical:"center"};
     }
   }
@@ -1424,6 +1425,7 @@ function exportInstallStatsExcel(){
       const a=XLSX.utils.encode_cell({r:R,c:C});
       if(!ws[a])continue;
       ws[a].s=ws[a].s||{};
+      ws[a].s.font={name:"Noto Sans HK",sz:11};
       ws[a].s.alignment={horizontal:"center",vertical:"center"};
     }
   }
