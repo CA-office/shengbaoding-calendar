@@ -1138,7 +1138,7 @@ function renderFinalInstallSummary(){
   if(!row)return;
   const month=$("stMasterMonth")?.value||$("stMonth")?.value||statsTodayMonth();
   const mm=month&&month.includes("-")?String(Number(month.split("-")[1])).padStart(2,"0"):"";
-  if($("stFinalSummaryTitle"))$("stFinalSummaryTitle").textContent=`${mm?mm+"月 ":""}安裝及製作統計`;
+  if($("stFinalSummaryTitle"))$("stFinalSummaryTitle").textContent="安裝及製作統計";
   const totals=finalInstallerTotals();
   row.innerHTML=totals.map(x=>`<td>${qMoney(x.total)}</td>`).join("");
 }
@@ -1150,7 +1150,7 @@ function exportFinalInstallSummaryExcel(){
   const mm=month&&month.includes("-")?String(Number(month.split("-")[1])).padStart(2,"0"):"";
   const totals=finalInstallerTotals();
   const aoa=[
-    [`${mm?mm+"月 ":""}安裝及製作統計`,"","","",""],
+    ["安裝及製作統計","","","",""],
     totals.map(x=>x.name),
     totals.map(x=>x.total)
   ];
