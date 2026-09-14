@@ -367,11 +367,22 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
 @media(max-width:900px){.masterStatsFilter{grid-template-columns:repeat(2,minmax(0,1fr))}.masterStatsFilter>div{grid-column:1/-1;text-align:left!important}}
 @media(max-width:600px){.masterStatsFilter{grid-template-columns:1fr}.masterStatsFilter>div{grid-column:auto}}
 </style>
+
+<style id="quote-quick-note-style">
+.quoteQuickNoteHead{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.quoteQuickNoteHead .quoteTitle{margin:0}
+.quoteQuickNoteActions{display:flex;gap:8px;flex-wrap:wrap}
+.quoteQuickNoteActions button{padding:8px 12px;border:1px solid #cbd5de;border-radius:8px;background:#fff;font-weight:800;color:var(--tx)}
+.quoteQuickNoteActions .primary{background:#18324d;color:#fff;border-color:#18324d}
+.quoteQuickNoteBody{margin-top:12px}
+#qQuickNoteText{width:100%;min-height:190px;resize:vertical;padding:12px 14px;border:1px solid #bdc8d2;border-radius:9px;background:#fbfcfd;color:#18324d;font:700 15px/1.8 "Microsoft JhengHei",Arial,sans-serif;white-space:pre-wrap}
+@media(max-width:600px){#qQuickNoteText{min-height:220px;font-size:14px}.quoteQuickNoteActions{width:100%}.quoteQuickNoteActions button{flex:1}}
+</style>
 </head>
 <body>
 <div id="pullRefreshIndicator" aria-hidden="true"><div class="pull-spinner"></div></div>
 <section id="loginPage" class="loginWrap"><div class="loginCard"><h1>勝寶鼎/新弘股公司</h1><label class="field">Email<input id="loginEmail" type="email" autocomplete="username"></label><label class="field">密碼<input id="loginPassword" type="password" autocomplete="current-password"></label><button id="loginBtn" class="loginBtn">登入</button><button id="passkeyBtn" class="loginBtn" type="button" style="margin-top:10px;background:#fff;border:1px solid #81D8D0">使用 Face ID／裝置解鎖登入</button><div id="loginErr" class="err"></div></div></section>
-<section id="appPage" class="hidden"><header><div class="toprow"><div class="brand">勝寶鼎/新弘股公司｜行事曆</div><button id="logoutBtn" class="userBtn">登出</button></div><div id="roleLine" class="roleLine"></div><div class="featureTabs"><button id="calendarTabBtn" class="active">行事曆</button><button id="quoteTabBtn" class="hidden">報價單</button><button id="installStatsTabBtn" class="hidden">安裝統計表</button></div><div class="controls" id="calendarControls"><button id="prevBtn">‹</button><div id="monthTitle" class="month"></div><button id="nextBtn">›</button><button id="todayBtn">本月</button><button id="noteBtn" class="hidden">備註</button></div><div class="legend"><span class="lg"><i class="dot" style="background:#20aa5a"></i>綠－石英石</span><span class="lg"><i class="dot" style="background:#2196f3"></i>藍－人造石</span><span class="lg"><i class="dot" style="background:#e52424"></i>紅</span><span class="lg"><i class="dot" style="background:#ff851b"></i>橘</span><span class="lg"><i class="dot" style="background:#8c35d5"></i>紫</span><span class="lg"><i class="dot" style="background:#e5b800"></i>黃</span><span class="lg"><i class="dot" style="background:#111"></i>黑</span><span class="lg symbolLegend">☑</span><span class="lg symbolLegend">☒</span><span class="lg symbolLegend">➜</span><span class="lg symbolLegend">●</span><span class="lg symbolLegend">▲</span><span class="lg symbolLegend">✔</span><span class="lg symbolLegend">✘</span></div></header><main>
+<section id="appPage" class="hidden"><header><div class="toprow"><div class="brand">勝寶鼎/新弘股公司｜行事曆</div><button id="logoutBtn" class="userBtn">登出</button></div><div id="roleLine" class="roleLine"></div><div class="featureTabs"><button id="calendarTabBtn" class="active">行事曆</button><button id="quoteTabBtn" class="hidden">報價單</button><button id="quoteQuickNoteHeaderBtn" class="hidden">記事本／複製</button><button id="installStatsTabBtn" class="hidden">安裝統計表</button></div><div class="controls" id="calendarControls"><button id="prevBtn">‹</button><div id="monthTitle" class="month"></div><button id="nextBtn">›</button><button id="todayBtn">本月</button><button id="noteBtn" class="hidden">備註</button></div><div class="legend"><span class="lg"><i class="dot" style="background:#20aa5a"></i>綠－石英石</span><span class="lg"><i class="dot" style="background:#2196f3"></i>藍－人造石</span><span class="lg"><i class="dot" style="background:#e52424"></i>紅－維修</span><span class="lg"><i class="dot" style="background:#ff851b"></i>橘－浤富代裝石英</span><span class="lg"><i class="dot" style="background:#8c35d5"></i>紫</span><span class="lg"><i class="dot" style="background:#e5b800"></i>黃</span><span class="lg"><i class="dot" style="background:#111"></i>黑</span><span class="lg symbolLegend">☑</span><span class="lg symbolLegend">☒</span><span class="lg symbolLegend">➜</span><span class="lg symbolLegend">●</span><span class="lg symbolLegend">▲</span><span class="lg symbolLegend">✔</span><span class="lg symbolLegend">✘</span></div></header><main>
 <div id="calendarView"><section class="calendar"><div class="weekhead"><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div class="weekend">六</div><div class="weekend">日</div></div><div id="weeks"></div></section><div id="noteBox" class="noteBox"><div class="noteTitle">備註</div><div id="noteText" class="noteText"></div></div><div id="syncText" class="sync"></div></div>
 <section id="quoteView" class="quoteWrap hidden">
   <div class="quoteCard">
@@ -416,6 +427,19 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
     <h2 class="quoteTitle">報價單紀錄</h2>
     <div class="quoteListWrap"><table class="quoteList"><thead><tr><th>日期</th><th>編號</th><th>客戶</th><th>總計</th><th>操作</th></tr></thead><tbody id="quoteListBody"></tbody></table></div>
     <div id="quoteEmpty" class="quoteEmpty hidden">目前沒有報價單</div>
+  </div>
+
+  <div class="quoteCard" id="quoteQuickNoteCard">
+    <div class="quoteQuickNoteHead">
+      <h2 class="quoteTitle">記事本</h2>
+      <div class="quoteQuickNoteActions">
+        <button type="button" id="qQuickNoteToggleBtn">展開記事本</button>
+        <button type="button" id="qQuickNoteCopyBtn" class="primary hidden">複製內容</button>
+      </div>
+    </div>
+    <div id="qQuickNoteBody" class="quoteQuickNoteBody hidden">
+      <textarea id="qQuickNoteText" readonly spellcheck="false"></textarea>
+    </div>
   </div>
 </section>
 
@@ -646,7 +670,7 @@ async function passkeyLogin(){
   }catch(e){$("loginErr").textContent="Face ID／裝置解鎖未完成"}
 }
 async function signIn(){ $("loginErr").textContent="";const email=$("loginEmail").value.trim(),password=$("loginPassword").value;if(!email||!password){$("loginErr").textContent="請輸入 Email 和密碼";return}$("loginBtn").disabled=true;const {error}=await sb.auth.signInWithPassword({email,password});$("loginBtn").disabled=false;if(error){$("loginErr").textContent="登入失敗，請確認帳號或密碼";return}await boot();await ensurePasskey() }
-async function boot(){const {data:{session}}=await sb.auth.getSession();if(!session){$("loginPage").classList.remove("hidden");$("appPage").classList.add("hidden");return}currentUser=session.user;const {data,error}=await sb.from("sbd_users").select("display_name,role,active").eq("user_id",currentUser.id).maybeSingle();if(error||!data||!data.active){await sb.auth.signOut();$("loginErr").textContent="此帳號尚未開通勝寶鼎/新弘股公司權限";$("loginPage").classList.remove("hidden");$("appPage").classList.add("hidden");return}profile=data;$("loginPage").classList.add("hidden");$("appPage").classList.remove("hidden");const roleText=profile.role==="admin"?"管理者":"使用者";$("roleLine").textContent=`${profile.display_name||currentUser.email}｜${roleText}`;$("noteBtn").classList.toggle("hidden",profile.role!=="admin");$("quoteTabBtn").classList.toggle("hidden",!["admin","editor"].includes(profile.role));$("installStatsTabBtn").classList.toggle("hidden",profile.role!=="admin");showFeature("calendar");await loadMonth()}
+async function boot(){const {data:{session}}=await sb.auth.getSession();if(!session){$("loginPage").classList.remove("hidden");$("appPage").classList.add("hidden");return}currentUser=session.user;const {data,error}=await sb.from("sbd_users").select("display_name,role,active").eq("user_id",currentUser.id).maybeSingle();if(error||!data||!data.active){await sb.auth.signOut();$("loginErr").textContent="此帳號尚未開通勝寶鼎/新弘股公司權限";$("loginPage").classList.remove("hidden");$("appPage").classList.add("hidden");return}profile=data;$("loginPage").classList.add("hidden");$("appPage").classList.remove("hidden");const roleText=profile.role==="admin"?"管理者":"使用者";$("roleLine").textContent=`${profile.display_name||currentUser.email}｜${roleText}`;$("noteBtn").classList.toggle("hidden",profile.role!=="admin");$("quoteTabBtn").classList.toggle("hidden",!["admin","editor"].includes(profile.role));$("quoteQuickNoteHeaderBtn")?.classList.toggle("hidden",!["admin","editor"].includes(profile.role));$("installStatsTabBtn").classList.toggle("hidden",profile.role!=="admin");showFeature("calendar");await loadMonth()}
 async function loadMonth(){ $("syncText").textContent="讀取中…";const {data:e,error:ee}=await sb.from("sbd_calendar_events").select("id,event_date,event_time,title,details,color,created_at").gte("event_date",firstDay()).lt("event_date",nextMonthFirst()).order("event_date").order("event_time",{ascending:true,nullsFirst:true});if(ee){$("syncText").textContent="讀取行程失敗";return}events=e||[];const {data:n,error:ne}=await sb.from("sbd_month_notes").select("id,month_start,note").eq("month_start",firstDay()).maybeSingle();currentNoteRow=ne?null:n;render();$("syncText").textContent="資料已同步" }
 function render(){const y=view.getFullYear(),m=view.getMonth()+1;$("monthTitle").textContent=`${y} 年 ${m} 月`;const last=new Date(y,m,0).getDate(),first=(new Date(y,m-1,1).getDay()+6)%7,h=holidayMap(y,m);let out="";for(let r=0;r<6;r++){out+='<div class="week">';for(let c=0;c<7;c++){const n=r*7+c-first+1;if(n<1||n>last){out+='<div class="day blank"></div>';continue}const key=`${ym()}-${pad(n)}`,a=events.filter(x=>x.event_date===key),upper=a.filter(x=>eventInstall(x)==="勝寶鼎"),lower=a.filter(x=>eventInstall(x)==="外包"),isRed=!!h[n]||c>=5;const chip=x=>{const t=(x.event_time?x.event_time.slice(0,5)+" ":"")+esc(x.title);return `<div class="event ${esc(x.color)} adminEvent" data-id="${x.id}">${t}</div>`};const canAdd=["admin","editor"].includes(profile.role);out+=`<div class="day${isRed?" holiday":""}" data-date="${key}"><div class="dateLine${canAdd?" canAdd":""}"${canAdd?` data-date="${key}" role="button" tabindex="0" aria-label="新增 ${key} 行程"`:""}><div class="date">${n}${h[n]?`<span class="holidayName">${esc(h[n])}</span>`:""}</div>${canAdd?`<span class="dayAdd">＋</span>`:""}</div>${upper.map(chip).join("")}<div class="split"></div>${lower.map(chip).join("")}</div>`}out+='</div>'}$("weeks").innerHTML=out;$("weeks").querySelectorAll(".adminEvent").forEach(el=>el.addEventListener("click",ev=>{ev.stopPropagation();if(["admin","editor"].includes(profile.role))openEditEvent(el.dataset.id);else openViewEvent(el.dataset.id)}));$("weeks").querySelectorAll(".dateLine.canAdd").forEach(el=>{el.addEventListener("click",ev=>{ev.stopPropagation();openNewEvent(el.dataset.date)});el.addEventListener("keydown",ev=>{if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();openNewEvent(el.dataset.date)}})});const note=(currentNoteRow?.note||"").trim();$("noteText").textContent=note;$("noteBox").classList.toggle("show",!!note)}
 function openNewEvent(dateOverride){if(!["admin","editor"].includes(profile.role))return;currentEditId=null;$("eventDlgTitle").textContent="新增行程";$("deleteEventBtn").classList.add("hidden");$("installField").classList.toggle("hidden",!["admin","editor"].includes(profile.role));$("fdate").value=displayDateInput(dateOverride||`${ym()}-01`);$("ftime").value="";$("ftitle").value="";$("fdetail").value="";$("fcolor").value="blue";$("finstall").value="勝寶鼎";$("eventDlg").showModal()}
@@ -712,7 +736,41 @@ function showFeature(name){
 function addQuoteItem(item={}){const tr=document.createElement("tr");const totalCm=item.total_cm??item.qty??0;tr.innerHTML=`<td class="qidx"></td><td><input class="qname" list="qNameOptionsList" placeholder="選擇或直接輸入" value="${esc(fmtQName(item.name||item.description||""))}"></td><td><input class="qsize" value="${esc(item.process_size||"")}"></td><td><input class="qcm" type="number" min="0" step="0.01" value="${Number(totalCm||0)}"></td><td><input class="qunit" value="${esc(item.unit||"")}"></td><td><input class="qprice" type="number" min="0" step="0.01" value="${Number(item.price||0)}"></td><td class="qamount">0</td><td><button type="button" class="qremove">刪</button></td>`;$("qItemsBody").appendChild(tr);tr.querySelectorAll("input").forEach(i=>i.addEventListener("input",calcQuote));const qi=tr.querySelector(".qname");qi?.addEventListener("blur",()=>{qi.value=fmtQName(qi.value);calcQuote()});tr.querySelector(".qremove").addEventListener("click",()=>{tr.remove();renumberQuoteItems();calcQuote()});renumberQuoteItems();calcQuote()}
 function renumberQuoteItems(){[...$("qItemsBody").children].forEach((tr,i)=>tr.querySelector(".qidx").textContent=i+1)}
 function getQuoteItems(){return [...$("qItemsBody").children].map(tr=>({name:fmtQName(tr.querySelector(".qname").value),process_size:tr.querySelector(".qsize").value.trim(),total_cm:Number(tr.querySelector(".qcm").value||0),unit:tr.querySelector(".qunit").value.trim(),price:Number(tr.querySelector(".qprice").value||0)})).filter(x=>x.name||x.process_size||x.total_cm||x.price)}
-function calcQuote(){let sub=0;[...$("qItemsBody").children].forEach(tr=>{const a=Number(tr.querySelector(".qcm").value||0)*Number(tr.querySelector(".qprice").value||0);tr.querySelector(".qamount").textContent=qMoney(a);sub+=a});const rate=5,tax=sub*rate/100,total=sub+tax;$("qSubtotal").textContent=qMoney(sub);$("qTax").textContent=qMoney(tax);$("qTotal").textContent=qMoney(total);const result={sub,tax,total,rate};renderQuotePreview(result);return result}
+function buildQuoteQuickNote(){
+  const installDate=String($("qInstallDate")?.value||"").replace(/-/g,"/");
+  const names=[...$("qItemsBody").querySelectorAll(".qname")].map(x=>fmtQName(x.value).trim()).filter(Boolean);
+  return [
+    `安裝日 : ${installDate}`,
+    `編號 : ${$("qNo")?.value.trim()||""}`,
+    `案名 : ${$("qCaseName")?.value.trim()||""}`,
+    `顏色 : ${$("qColorNo")?.value.trim()||""}`,
+    `名稱(檯面樣式) : ${names.join("、")}`,
+    `地址 : ${$("qAddress")?.value.trim()||""}`
+  ].join("\n");
+}
+function refreshQuoteQuickNote(){const box=$("qQuickNoteText");if(box)box.value=buildQuoteQuickNote()}
+function setQuoteQuickNoteOpen(open){
+  const body=$("qQuickNoteBody"),toggle=$("qQuickNoteToggleBtn"),copy=$("qQuickNoteCopyBtn");
+  if(!body)return;
+  body.classList.toggle("hidden",!open);
+  copy?.classList.toggle("hidden",!open);
+  if(toggle)toggle.textContent=open?"收合記事本":"展開記事本";
+  if(open)refreshQuoteQuickNote();
+}
+function openQuoteQuickNoteFromHeader(){
+  if(!["admin","editor"].includes(profile?.role))return;
+  showFeature("quote");
+  setTimeout(()=>{setQuoteQuickNoteOpen(true);$("quoteQuickNoteCard")?.scrollIntoView({behavior:"smooth",block:"start"})},80);
+}
+async function copyQuoteQuickNote(){
+  refreshQuoteQuickNote();
+  const text=$("qQuickNoteText")?.value||buildQuoteQuickNote();
+  try{await navigator.clipboard.writeText(text)}catch(e){
+    const ta=$("qQuickNoteText");if(ta){ta.focus();ta.select();document.execCommand("copy");ta.setSelectionRange(0,0)}
+  }
+  const b=$("qQuickNoteCopyBtn");if(b){const old=b.textContent;b.textContent="已複製";setTimeout(()=>b.textContent=old,1200)}
+}
+function calcQuote(){let sub=0;[...$("qItemsBody").children].forEach(tr=>{const a=Number(tr.querySelector(".qcm").value||0)*Number(tr.querySelector(".qprice").value||0);tr.querySelector(".qamount").textContent=qMoney(a);sub+=a});const rate=5,tax=sub*rate/100,total=sub+tax;$("qSubtotal").textContent=qMoney(sub);$("qTax").textContent=qMoney(tax);$("qTotal").textContent=qMoney(total);const result={sub,tax,total,rate};renderQuotePreview(result);refreshQuoteQuickNote();return result}
 function currentQuoteDraft(calcResult=null){const c=calcResult||calcQuote();const meta=qMeta();return {quote_no:$("qNo").value.trim(),quote_date:$("qDate").value,customer_name:$("qCustomer").value.trim(),contact_name:meta.case_name||null,phone:null,address:$("qAddress").value.trim(),items:getQuoteItems(),subtotal:c.sub,tax_rate:5,tax_amount:c.tax,total_amount:c.total,note:JSON.stringify(meta)}}
 function renderQuotePreview(calcResult=null){if(!$("quotePreviewBody"))return;let c=calcResult;if(!c){let sub=0;[...$("qItemsBody").children].forEach(tr=>sub+=Number(tr.querySelector(".qcm").value||0)*Number(tr.querySelector(".qprice").value||0));c={sub,rate:5,tax:sub*.05,total:sub*1.05}}const x=currentQuoteDraft(c),m=qMetaFromNote(x.note);$("qpCaseName").textContent=m.case_name||"";$("qpNo").textContent=x.quote_no||"";$("qpCustomer").textContent=x.customer_name||"";$("qpDate").textContent=x.quote_date||"";$("qpInstallDate").textContent=m.install_date||"";$("qpAddress").textContent=x.address||"";$("qpColorNo").textContent=m.color_no||"";$("qpProductName").textContent=m.product_name||"";$("qpFrontEdge").textContent=m.front_edge||"";$("qpBackWall").textContent=m.back_wall||"";$("qpSubtotal").textContent=qMoney(x.subtotal);$("qpTax").textContent=qMoney(x.tax_amount);$("qpTotal").textContent=qMoney(x.total_amount);const items=x.items.length?x.items:[{name:"",process_size:"",total_cm:"",unit:"",price:""}];let rows=items.map((it,i)=>`<tr><td>${i+1}</td><td>${esc(fmtQName(it.name||it.description||""))}</td><td>${esc(it.process_size||"")}</td><td>${it.total_cm===""?"":qMoney(it.total_cm??it.qty??0)}</td><td>${esc(it.unit||"")}</td><td>${it.price===""?"":qMoney(it.price)}</td><td>${(it.total_cm??it.qty)===""||it.price===""?"":qMoney(Number(it.total_cm??it.qty??0)*Number(it.price||0))}</td></tr>`).join("");for(let i=items.length;i<8;i++)rows+=`<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;$("quotePreviewBody").innerHTML=rows}
 function previewQuotePdf(){printQuote(currentQuoteDraft())}
@@ -1689,7 +1747,7 @@ function exportInstallStatsExcel(){
   XLSX.writeFile(wb2,`${String(month).slice(5,7)}月製作安裝統計表.xlsx`);
 }
 
-["qCaseName","qNo","qCustomer","qDate","qInstallDate","qAddress","qFileAddress","qColorNo","qProductName","qFrontEdge","qBackWall"].forEach(id=>$(id)?.addEventListener("input",()=>renderQuotePreview()));$("qDate")?.addEventListener("change",()=>renderQuotePreview());$("qInstallDate")?.addEventListener("change",()=>renderQuotePreview());$("qPreviewPdfBtn")?.addEventListener("click",previewQuotePdf);$("qPreviewExcelBtn")?.addEventListener("click",previewQuoteExcel);
+["qCaseName","qNo","qCustomer","qDate","qInstallDate","qAddress","qFileAddress","qColorNo","qProductName","qFrontEdge","qBackWall"].forEach(id=>$(id)?.addEventListener("input",()=>{renderQuotePreview();refreshQuoteQuickNote()}));$("qDate")?.addEventListener("change",()=>renderQuotePreview());$("qInstallDate")?.addEventListener("change",()=>renderQuotePreview());$("qPreviewPdfBtn")?.addEventListener("click",previewQuotePdf);$("qPreviewExcelBtn")?.addEventListener("click",previewQuoteExcel);
 async function logout(){await sb.auth.signOut();profile=null;currentUser=null;$("appPage").classList.add("hidden");$("loginPage").classList.remove("hidden")}
 $("loginBtn").addEventListener("click",signIn);$("passkeyBtn").addEventListener("click",passkeyLogin);
 ["loginEmail","loginPassword"].forEach(id=>{
@@ -1710,7 +1768,7 @@ $("ftime").addEventListener("blur",()=>{
 });
 
 $("closeViewBtn").addEventListener("click",()=>$("viewDlg").close());
-$("saveEventBtn").addEventListener("click",saveEvent);$("deleteEventBtn").addEventListener("click",deleteEvent);$("saveNoteBtn").addEventListener("click",saveNote);$("calendarTabBtn").addEventListener("click",()=>showFeature("calendar"));$("quoteTabBtn").addEventListener("click",()=>showFeature("quote"));$("installStatsTabBtn").addEventListener("click",()=>showFeature("stats"));$("stOrderDate").addEventListener("input",e=>normalizeStatMDInput(e.target));$("stInstallDate").addEventListener("input",e=>normalizeStatMDInput(e.target));$("stBringQuoteBtn")?.addEventListener("click",bringSelectedQuoteToStats);$("stSaveBtn")?.addEventListener("click",saveInstallStat);$("stResetBtn")?.addEventListener("click",resetInstallStatForm);$("stLoadBtn").addEventListener("click",loadInstallStats);$("stExportBtn").addEventListener("click",exportInstallStatsExcel);
+$("saveEventBtn").addEventListener("click",saveEvent);$("deleteEventBtn").addEventListener("click",deleteEvent);$("saveNoteBtn").addEventListener("click",saveNote);$("calendarTabBtn").addEventListener("click",()=>showFeature("calendar"));$("quoteTabBtn").addEventListener("click",()=>showFeature("quote"));$("quoteQuickNoteHeaderBtn")?.addEventListener("click",openQuoteQuickNoteFromHeader);$("qQuickNoteToggleBtn")?.addEventListener("click",()=>setQuoteQuickNoteOpen($("qQuickNoteBody")?.classList.contains("hidden")));$("qQuickNoteCopyBtn")?.addEventListener("click",copyQuoteQuickNote);$("installStatsTabBtn").addEventListener("click",()=>showFeature("stats"));$("stOrderDate").addEventListener("input",e=>normalizeStatMDInput(e.target));$("stInstallDate").addEventListener("input",e=>normalizeStatMDInput(e.target));$("stBringQuoteBtn")?.addEventListener("click",bringSelectedQuoteToStats);$("stSaveBtn")?.addEventListener("click",saveInstallStat);$("stResetBtn")?.addEventListener("click",resetInstallStatForm);$("stLoadBtn").addEventListener("click",loadInstallStats);$("stExportBtn").addEventListener("click",exportInstallStatsExcel);
 $("stMasterLoadBtn")?.addEventListener("click",loadMasterInstallSummary);
 $("stMasterExportBtn")?.addEventListener("click",exportMasterInstallSummaryExcel);
 $("stFinalExportBtn")?.addEventListener("click",exportFinalInstallSummaryExcel);
