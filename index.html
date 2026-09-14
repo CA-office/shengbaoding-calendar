@@ -184,8 +184,16 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
 
 
 <style id="master-install-summary-style">
-#stMasterTableBody td,
-#stMasterTableBody th{text-align:center!important}
+.masterInstallerGroup{margin:0 0 18px 0}
+.masterInstallerGroup:last-child{margin-bottom:0}
+.masterInstallerTitle{font-size:16px;font-weight:900;margin:0 0 7px;color:#18324d}
+.masterInstallerMeta{font-size:12px;color:var(--muted);margin-left:6px;font-weight:700}
+.masterInstallerGroup .statsTableWrap{overflow-x:auto}
+.masterInstallerGroup .statsTable{min-width:1450px}
+.masterInstallerGroup .statsTable th,.masterInstallerGroup .statsTable td{text-align:center!important}
+.masterInstallerGroup .ownShare{font-weight:900;background:#fff8dc}
+.masterInstallerTotals{display:flex;gap:18px;flex-wrap:wrap;justify-content:flex-end;padding:7px 3px 0;font-weight:800;font-size:12px}
+.masterInstallerTotals b{font-size:13px}
 </style>
 
 
@@ -451,7 +459,7 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
         <thead><tr>
           <th>操作</th><th>客編</th><th>客戶</th><th>編號</th><th>出貨單號</th><th>接單日期</th><th>安裝日期</th>
           <th>案名</th><th>色號-人</th><th>色號-石</th><th>型號</th><th>尺寸(cm)</th><th>未稅金額</th>
-          <th>備註</th><th>樓層</th><th>安裝人員</th><th>龍</th><th>凱</th><th>自安</th><th>富</th><th>草屯</th>
+          <th>安裝日期</th><th>安裝人員</th><th>客戶</th><th>案名</th><th>色號-人</th><th>尺寸(cm)</th><th>色號-石</th><th>尺寸(cm)</th><th>型號</th><th>備註</th><th>樓層</th><th>龍</th><th>凱</th><th>自安</th><th>富</th><th>草屯</th>
         </tr></thead>
         <tbody id="stTableBody"></tbody>
       </table>
@@ -466,14 +474,7 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
       <button type="button" id="stMasterLoadBtn">查詢</button>
       <div style="text-align:right"><button type="button" id="stMasterExportBtn" class="primary">下載師傅的安裝總數表 Excel</button></div>
     </div>
-    <div class="statsTableWrap">
-      <table class="statsTable" style="min-width:900px">
-        <thead><tr>
-          <th>備註</th><th>樓層</th><th>安裝人員</th><th>龍</th><th>凱</th><th>自安</th><th>富</th><th>草屯</th>
-        </tr></thead>
-        <tbody id="stMasterTableBody"></tbody>
-      </table>
-    </div>
+    <div id="stMasterGroups"></div>
     <div id="stMasterEmpty" class="quoteEmpty hidden">目前沒有安裝統計資料</div>
   </div>
 </section>
@@ -1065,27 +1066,80 @@ function getMasterInstallRows(){
   return rows;
 }
 
+function masterInstallerDefs(){
+  return [
+    {name:"龍",key:"long_share"},
+    {name:"凱",key:"kai_share"},
+    {name:"自安",key:"self_install_share"},
+    {name:"富",key:"fu_share"},
+    {name:"草屯",key:"caotun_share"}
+  ];
+}
+
+function masterShareNumber(v){
+  const n=Number(v);
+  return Number.isFinite(n)?n:0;
+}
+
 function renderMasterInstallSummary(){
-  const body=$("stMasterTableBody");
-  if(!body)return;
-  body.innerHTML="";
-
+  const wrap=$("stMasterGroups");
+  if(!wrap)return;
+  wrap.innerHTML="";
   const rows=getMasterInstallRows();
-  $("stMasterEmpty")?.classList.toggle("hidden",rows.length>0);
+  const defs=masterInstallerDefs();
+  let visibleGroups=0;
 
-  rows.forEach(x=>{
-    const tr=document.createElement("tr");
-    tr.innerHTML=`
-      <td>${esc(x.note||"")}</td>
-      <td>${esc(x.floor||"")}</td>
-      <td>${esc(x.installers||"")}</td>
-      <td>${x.long_share||""}</td>
-      <td>${x.kai_share||""}</td>
-      <td>${x.self_install_share||""}</td>
-      <td>${x.fu_share||""}</td>
-      <td>${x.caotun_share||""}</td>`;
-    body.appendChild(tr);
+  defs.forEach(def=>{
+    const personRows=rows.filter(x=>masterShareNumber(x?.[def.key])>0);
+    if(!personRows.length)return;
+    visibleGroups++;
+
+    const group=document.createElement("section");
+    group.className="masterInstallerGroup";
+    const tableRows=personRows.map(x=>{
+      const human=x.color_type==="human"?x.color_no||"":"";
+      const stone=x.color_type==="stone"?x.color_no||"":"";
+      const humanSize=x.color_type==="human"?qMoney(x.size_cm||0):"";
+      const stoneSize=x.color_type==="stone"?qMoney(x.size_cm||0):"";
+      const installerCells=defs.map(d=>{
+        const v=d.name===def.name?(x?.[d.key]||""):"";
+        return `<td class="${d.name===def.name?"ownShare":""}">${esc(v)}</td>`;
+      }).join("");
+      return `<tr>
+        <td>${esc(statDateToMD(x.install_date||""))}</td>
+        <td>${esc(x.installers||"")}</td>
+        <td>${esc(x.customer_name||"")}</td>
+        <td>${esc(x.case_name||"")}</td>
+        <td>${esc(human)}</td>
+        <td>${humanSize}</td>
+        <td>${esc(stone)}</td>
+        <td>${stoneSize}</td>
+        <td>${esc(x.model||"")}</td>
+        <td>${esc(x.note||"")}</td>
+        <td>${esc(x.floor||"")}</td>
+        ${installerCells}
+      </tr>`;
+    }).join("");
+
+    const humanTotal=personRows.reduce((sum,x)=>sum+(x.color_type==="human"?masterShareNumber(x.size_cm):0),0);
+    const stoneTotal=personRows.reduce((sum,x)=>sum+(x.color_type==="stone"?masterShareNumber(x.size_cm):0),0);
+    const shareTotal=personRows.reduce((sum,x)=>sum+masterShareNumber(x?.[def.key]),0);
+
+    group.innerHTML=`
+      <h3 class="masterInstallerTitle">${esc(def.name)} 的安裝統計表 <span class="masterInstallerMeta">共 ${personRows.length} 筆｜安裝數 ${qMoney(shareTotal)}</span></h3>
+      <div class="statsTableWrap">
+        <table class="statsTable">
+          <thead><tr>
+            <th>安裝日期</th><th>安裝人員</th><th>客戶</th><th>案名</th><th>色號-人</th><th>尺寸(cm)</th><th>色號-石</th><th>尺寸(cm)</th><th>型號</th><th>備註</th><th>樓層</th><th>龍</th><th>凱</th><th>自安</th><th>富</th><th>草屯</th>
+          </tr></thead>
+          <tbody>${tableRows}</tbody>
+        </table>
+      </div>
+      <div class="masterInstallerTotals"><span>人造石尺寸合計：<b>${qMoney(humanTotal)}</b></span><span>石英石尺寸合計：<b>${qMoney(stoneTotal)}</b></span><span>人造石&石英石總計：<b>${qMoney(humanTotal+stoneTotal)}</b></span><span>${esc(def.name)} 安裝數合計：<b>${qMoney(shareTotal)}</b></span></div>`;
+    wrap.appendChild(group);
   });
+
+  $("stMasterEmpty")?.classList.toggle("hidden",visibleGroups>0);
 }
 
 async function loadMasterInstallSummary(){
@@ -1103,43 +1157,64 @@ function exportMasterInstallSummaryExcel(){
 
   const month=$("stMasterMonth")?.value||$("stMonth")?.value||statsTodayMonth();
   const rows=getMasterInstallRows();
-
+  const defs=masterInstallerDefs();
   if(!rows.length)return alert("目前沒有可下載的安裝統計資料");
 
-  const aoa=[
-    [`${month.replace("-","/")} 師傅的安裝總數表`],
-    ["備註","樓層","安裝人員","龍","凱","自安","富","草屯"],
-    ...rows.map(x=>[
-      x.note||"",
-      x.floor||"",
-      x.installers||"",
-      x.long_share||"",
-      x.kai_share||"",
-      x.self_install_share||"",
-      x.fu_share||"",
-      x.caotun_share||""
-    ])
-  ];
-
-  const ws=XLSX.utils.aoa_to_sheet(aoa);
-  ws["!merges"]=[{s:{r:0,c:0},e:{r:0,c:7}}];
-  ws["!cols"]=[
-    {wch:22},{wch:10},{wch:18},{wch:8},{wch:8},{wch:8},{wch:8},{wch:8}
-  ];
-
-  const range=XLSX.utils.decode_range(ws["!ref"]);
-  for(let R=0;R<=range.e.r;R++){
-    for(let C=0;C<=range.e.c;C++){
-      const a=XLSX.utils.encode_cell({r:R,c:C});
-      if(!ws[a])continue;
-      ws[a].s=ws[a].s||{};
-      ws[a].s.font={name:"Noto Sans HK",sz:11};
-      ws[a].s.alignment={horizontal:"center",vertical:"center"};
-    }
-  }
-
   const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,ws,"師傅安裝總數");
+  let sheetCount=0;
+
+  defs.forEach(def=>{
+    const personRows=rows.filter(x=>masterShareNumber(x?.[def.key])>0);
+    if(!personRows.length)return;
+    sheetCount++;
+
+    const humanTotal=personRows.reduce((sum,x)=>sum+(x.color_type==="human"?masterShareNumber(x.size_cm):0),0);
+    const stoneTotal=personRows.reduce((sum,x)=>sum+(x.color_type==="stone"?masterShareNumber(x.size_cm):0),0);
+    const shareTotal=personRows.reduce((sum,x)=>sum+masterShareNumber(x?.[def.key]),0);
+
+    const aoa=[
+      [`${month.replace("-","/")} ${def.name} 的安裝統計表`],
+      ["安裝日期","安裝人員","客戶","案名","色號-人","尺寸(cm)","色號-石","尺寸(cm)","型號","備註","樓層","龍","凱","自安","富","草屯"],
+      ...personRows.map(x=>[
+        statDateToMD(x.install_date||""),
+        x.installers||"",
+        x.customer_name||"",
+        x.case_name||"",
+        x.color_type==="human"?(x.color_no||""):"",
+        x.color_type==="human"?(x.size_cm||""):"",
+        x.color_type==="stone"?(x.color_no||""):"",
+        x.color_type==="stone"?(x.size_cm||""):"",
+        x.model||"",
+        x.note||"",
+        x.floor||"",
+        def.name==="龍"?(x.long_share||""):"",
+        def.name==="凱"?(x.kai_share||""):"",
+        def.name==="自安"?(x.self_install_share||""):"",
+        def.name==="富"?(x.fu_share||""):"",
+        def.name==="草屯"?(x.caotun_share||""):""
+      ]),
+      [],
+      ["尺寸(cm) 合計 :","","","","",humanTotal,"",stoneTotal,"","","",`${def.name}安裝數合計`,shareTotal,"","",""],
+      ["人造石&石英石 總計 :","","","","",humanTotal+stoneTotal,"","","","","","","","","",""]
+    ];
+
+    const ws=XLSX.utils.aoa_to_sheet(aoa);
+    ws["!merges"]=[{s:{r:0,c:0},e:{r:0,c:15}}];
+    ws["!cols"]=[{wch:12},{wch:18},{wch:18},{wch:24},{wch:14},{wch:12},{wch:14},{wch:12},{wch:10},{wch:22},{wch:10},{wch:8},{wch:8},{wch:8},{wch:8},{wch:8}];
+    const range=XLSX.utils.decode_range(ws["!ref"]);
+    for(let R=0;R<=range.e.r;R++){
+      for(let C=0;C<=range.e.c;C++){
+        const a=XLSX.utils.encode_cell({r:R,c:C});
+        if(!ws[a])continue;
+        ws[a].s=ws[a].s||{};
+        ws[a].s.font={name:"Noto Sans HK",sz:R===0?14:11,bold:R<=1};
+        ws[a].s.alignment={horizontal:"center",vertical:"center"};
+      }
+    }
+    XLSX.utils.book_append_sheet(wb,ws,def.name.slice(0,31));
+  });
+
+  if(!sheetCount)return alert("本月份目前沒有師傅安裝數可下載");
   XLSX.writeFile(wb,`師傅的安裝總數表_${month}.xlsx`);
 }
 
