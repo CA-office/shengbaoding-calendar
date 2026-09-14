@@ -1174,7 +1174,7 @@ function exportFinalInstallSummaryExcel(){
   }
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,"最終統計");
-  XLSX.writeFile(wb,`安裝及製作最終統計_${month}.xlsx`);
+  XLSX.writeFile(wb,`${String(month).slice(5,7)}月安裝統計.xlsx`);
 }
 
 function renderMasterInstallSummary(){
@@ -1338,7 +1338,7 @@ function exportMasterInstallSummaryExcel(){
   });
 
   if(!sheetCount)return alert("本月份目前沒有師傅安裝數可下載");
-  XLSX.writeFile(wb,`安裝組_${month}_${billing.start}_至_${billing.end}.xlsx`);
+  XLSX.writeFile(wb,`${String(month).slice(5,7)}月個人安裝統計.xlsx`);
 }
 
 
@@ -1686,7 +1686,7 @@ function exportInstallStatsExcel(){
 
   const wb2=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb2,ws,month.slice(5)+"月");
-  XLSX.writeFile(wb2,`製作安裝統計表_${month}.xlsx`);
+  XLSX.writeFile(wb2,`${String(month).slice(5,7)}月製作安裝統計表.xlsx`);
 }
 
 ["qCaseName","qNo","qCustomer","qDate","qInstallDate","qAddress","qFileAddress","qColorNo","qProductName","qFrontEdge","qBackWall"].forEach(id=>$(id)?.addEventListener("input",()=>renderQuotePreview()));$("qDate")?.addEventListener("change",()=>renderQuotePreview());$("qInstallDate")?.addEventListener("change",()=>renderQuotePreview());$("qPreviewPdfBtn")?.addEventListener("click",previewQuotePdf);$("qPreviewExcelBtn")?.addEventListener("click",previewQuoteExcel);
