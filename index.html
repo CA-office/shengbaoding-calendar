@@ -15,9 +15,12 @@
 <meta name="twitter:card" content="summary">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+HK:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box} :root{--bd:#d7e0e8;--tx:#18324d;--muted:#66788a;--green:#20a95b}
-body{margin:0;font-family:"Microsoft JhengHei",Arial,sans-serif;background:#fff;color:var(--tx)} button,input,textarea,select{font:inherit}.hidden{display:none!important}
+body{margin:0;font-family:"Noto Sans HK","Microsoft JhengHei",Arial,sans-serif;background:#fff;color:var(--tx)} button,input,textarea,select{font:inherit}.hidden{display:none!important}
 .loginWrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:22px;background:#f3f7fa}.loginCard{width:min(430px,100%);background:#fff;border:1px solid var(--bd);border-radius:16px;padding:24px;box-shadow:0 14px 40px #17324d15}.loginCard h1{font-size:24px;margin:0 0 6px;text-align:center}.loginSub{text-align:center;color:var(--muted);font-size:13px;margin-bottom:22px}.field{display:block;font-weight:800;font-size:13px;margin:10px 0}.field input{width:100%;padding:12px;border:1px solid #bcc9d4;border-radius:9px;margin-top:5px}.loginBtn{width:100%;padding:12px;border:0;border-radius:9px;background:#81D8D0;color:#18324d;font-weight:900;margin-top:8px}.err{color:#c51d1d;font-size:13px;margin-top:10px;min-height:20px;text-align:center}
 header{padding:8px 7px 7px;border-bottom:1px solid var(--bd);background:#fff;position:sticky;top:0;z-index:20}.toprow{display:flex;align-items:center;justify-content:center;gap:8px}.brand{font-weight:900;font-size:19px;text-align:center;flex:1}.userBtn{white-space:nowrap;padding:5px 8px;border:1px solid #c8d2dc;border-radius:8px;background:#fff;font-size:11px}.roleLine{text-align:center;font-size:10px;color:var(--muted);margin-top:2px}.controls{display:flex;justify-content:center;align-items:center;gap:5px;margin-top:6px;flex-wrap:wrap}.controls button{padding:6px 8px;border:1px solid #c9d3dc;border-radius:8px;background:#fff}.month{font-size:17px;font-weight:900;min-width:112px;text-align:center}.legend{display:flex;justify-content:center;gap:5px 9px;flex-wrap:wrap;margin-top:6px;font-size:9px}.lg{display:flex;gap:3px;align-items:center}.dot{width:8px;height:8px;border-radius:50%}
 main{padding:4px}.calendar{border:1px solid #cbd5de;border-radius:6px;overflow:hidden;background:#fff}.weekhead,.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}.weekhead div{text-align:center;font-size:10px;font-weight:800;padding:5px 1px;background:#f7fafc;border-right:1px solid #d8e0e7}.weekhead div:last-child{border-right:0}.day{min-height:88px;border-top:1px solid #d8e0e7;border-right:1px solid #d8e0e7;padding:2px;overflow:hidden;background:#fff}.day:nth-child(7){border-right:0}.blank{background:#fbfcfd}.date{font-size:11px;font-weight:900;line-height:1.1}.holiday .date,.holidayName,.weekend{color:#df1717}.holidayName{display:block;font-size:7px;line-height:1;font-weight:800;margin-top:1px}.split{border-top:2px dashed #7f8f9f;margin:3px 0}.event{font-size:7.5px;line-height:1.15;border-radius:3px;padding:2px;margin:2px 0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}.adminEvent{cursor:pointer}.blue{color:#07579d;border:1px solid #b9dcfa;background:#f4faff}.green{color:#166033;border:1px solid #bde4c5;background:#f6fcf6}.red{color:#a21414;border:1px solid #f2c2c2;background:#fffafa}.orange{color:#984a00;border:1px solid #f1d1b0;background:#fffaf5}.purple{color:#633399;border:1px solid #d9c4ef;background:#fcf9ff}.yellow{color:#715900;border:1px solid #e7d992;background:#fffdf4}.black{color:#111;border:1px solid #cdd2d6;background:#fafafa}.actions{display:grid;grid-template-columns:1fr;gap:7px;margin-top:7px}.btn{border:1px solid #cbd5de;border-radius:8px;padding:10px;background:#fff;font-weight:800}.primary{background:var(--green);color:#fff;border-color:var(--green)}.noteBox{display:none;margin-top:7px;border:1px solid #d1dae2;border-radius:8px;padding:9px;background:#fff}.noteBox.show{display:block}.noteTitle{font-weight:900;margin-bottom:5px}.noteText{font-size:13px;line-height:1.55;white-space:pre-wrap}.sync{text-align:center;font-size:10px;color:var(--muted);padding:7px 0 2px}
@@ -36,7 +39,7 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
 .featureTabs{display:flex;justify-content:center;gap:6px;margin-top:6px}.featureTabs button{padding:6px 12px;border:1px solid #c9d3dc;border-radius:8px;background:#fff;font-weight:800;color:var(--tx)}.featureTabs button.active{background:#18324d;color:#fff;border-color:#18324d}
 .quoteWrap{max-width:1180px;margin:10px auto 30px;padding:0 6px}.quoteCard{background:#fff;border:1px solid #d5dee6;border-radius:12px;padding:14px;margin-bottom:12px}.quoteTitle{font-size:20px;font-weight:900;margin:0 0 12px}.quoteGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.quoteGrid label{font-size:13px;font-weight:800}.quoteGrid input,.quoteGrid textarea{width:100%;padding:10px;border:1px solid #bdc8d2;border-radius:8px;margin-top:4px}.quoteGrid .full{grid-column:1/-1}.quoteGrid textarea{height:72px;resize:vertical}.quoteItems{width:100%;border-collapse:collapse;margin-top:10px}.quoteItems th,.quoteItems td{border:1px solid #d8e0e7;padding:6px;vertical-align:middle}.quoteItems th{background:#f5f8fa;font-size:12px}.quoteItems input{width:100%;min-width:60px;padding:7px;border:1px solid #cbd5de;border-radius:6px}.quoteItems .qdesc{min-width:150px}.quoteItems .qnote{min-width:100px}.quoteItems button{border:0;border-radius:6px;padding:6px 8px;background:#d62d2d;color:#fff}.quoteActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.quoteActions button{padding:9px 13px;border:1px solid #cbd5de;border-radius:8px;background:#fff;font-weight:800}.quoteActions .primary{background:var(--green);color:#fff;border-color:var(--green)}.quoteSummary{display:grid;grid-template-columns:1fr auto;gap:5px 18px;justify-content:end;margin-top:10px;font-weight:800}.quoteList{width:100%;border-collapse:collapse}.quoteList th,.quoteList td{border-bottom:1px solid #e0e6eb;padding:8px 6px;text-align:left;font-size:13px;white-space:nowrap}.quoteList th{background:#f6f8fa}.quoteListBtns{display:flex;gap:5px}.quoteListBtns button{padding:6px 8px;border:1px solid #cbd5de;border-radius:7px;background:#fff;font-size:12px}.quoteListBtns .danger{background:#d62d2d;color:#fff}.quoteEmpty{padding:24px;text-align:center;color:var(--muted)}
 .quotePreviewCard{background:#fff;border:1px solid #d5dee6;border-radius:12px;padding:18px;margin-bottom:12px;overflow:hidden}.quotePreviewHeading{text-align:center;font-size:26px;font-weight:900;letter-spacing:1px;margin:2px 0 18px;color:#18324d}.quotePreviewMeta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}.quotePreviewMeta>div{background:#f5f8fa;border-radius:7px;padding:8px 10px;min-height:38px}.quotePreviewTable{width:100%;border-collapse:collapse}.quotePreviewTable th,.quotePreviewTable td{border:1px solid #c8d4de;padding:7px 6px;text-align:center}.quotePreviewTable th{background:#e9f0f5}.quotePreviewTable td:nth-child(2),.quotePreviewTable td:last-child{text-align:left}.quotePreviewSum{width:min(360px,100%);margin:14px 0 0 auto}.quotePreviewSum>div{display:flex;justify-content:space-between;padding:5px 2px}.quotePreviewTotal{font-weight:900;font-size:18px;border-top:2px solid #18324d;margin-top:3px;padding-top:8px!important}.quotePreviewNote{margin-top:14px;white-space:pre-wrap}.quoteDownloadBtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.quoteDownloadBtns button{padding:9px 13px;border:1px solid #cbd5de;border-radius:8px;background:#18324d;color:#fff;font-weight:800}
-.officialQuote{color:#111;background:#fff;width:100%;max-width:1040px;min-width:820px;margin:0 auto;padding:14px 24px 0;font-family:Arial,"Microsoft JhengHei",sans-serif;font-size:16px}
+.officialQuote{color:#111;background:#fff;width:100%;max-width:1040px;min-width:820px;margin:0 auto;padding:14px 24px 0;font-family:"Noto Sans HK","Microsoft JhengHei",Arial,sans-serif;font-size:16px}
 .officialTitle{text-align:center;font-size:34px;font-weight:400;letter-spacing:1px;margin:0 0 18px;line-height:1.2}
 .officialHeader{width:96%;margin:0 auto 16px;display:grid;grid-template-columns:64% 36%;grid-template-rows:auto auto auto auto;row-gap:12px;align-items:center;line-height:1.35}
 .officialHeader .case{text-align:center;padding-left:12%}.officialHeader .number{text-align:left;padding-left:16%}
@@ -194,6 +197,23 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
 .masterInstallerGroup .ownShare{font-weight:900;background:#fff8dc}
 .masterInstallerTotals{display:flex;gap:18px;flex-wrap:wrap;justify-content:flex-end;padding:7px 3px 0;font-weight:800;font-size:12px}
 .masterInstallerTotals b{font-size:13px}
+.finalInstallCard{overflow:hidden}
+.finalSummaryHead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.finalSummaryTitle{font-size:22px;font-weight:900;margin:0;color:#18324d}
+.finalSummarySub{font-size:13px;color:var(--muted);font-weight:700}
+.finalSummaryTable{width:100%;border-collapse:collapse;table-layout:fixed;min-width:0}
+.finalSummaryTable th,.finalSummaryTable td{border:1px solid #c7d2dc;text-align:center;padding:10px 4px;white-space:normal}
+.finalSummaryTable th{background:#f5f8fa;font-weight:900;font-size:14px}
+.finalSummaryTable td{font-size:19px;font-weight:900;color:#18324d}
+.finalSummaryActions{display:flex;justify-content:flex-end;margin-top:10px}
+.finalSummaryActions button{padding:9px 13px;border:1px solid #18324d;border-radius:8px;background:#18324d;color:#fff;font-weight:800}
+@media(max-width:600px){
+  .finalSummaryTitle{font-size:18px}
+  .finalSummarySub{font-size:11px}
+  .finalSummaryTable th{font-size:11px;padding:7px 2px}
+  .finalSummaryTable td{font-size:15px;padding:8px 2px}
+  .finalSummaryActions button{width:100%}
+}
 </style>
 
 
@@ -340,6 +360,13 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
 }
 </style>
 
+
+<style id="master-billing-period-style">
+.masterStatsFilter{grid-template-columns:minmax(180px,240px) minmax(230px,300px) auto 1fr}
+.masterStatsFilter input[readonly]{background:#f7f9fb;color:#18324d;font-variant-numeric:tabular-nums}
+@media(max-width:900px){.masterStatsFilter{grid-template-columns:repeat(2,minmax(0,1fr))}.masterStatsFilter>div{grid-column:1/-1;text-align:left!important}}
+@media(max-width:600px){.masterStatsFilter{grid-template-columns:1fr}.masterStatsFilter>div{grid-column:auto}}
+</style>
 </head>
 <body>
 <div id="pullRefreshIndicator" aria-hidden="true"><div class="pull-spinner"></div></div>
@@ -459,7 +486,7 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
         <thead><tr>
           <th>操作</th><th>客編</th><th>客戶</th><th>編號</th><th>出貨單號</th><th>接單日期</th><th>安裝日期</th>
           <th>案名</th><th>色號-人</th><th>色號-石</th><th>型號</th><th>尺寸(cm)</th><th>未稅金額</th>
-          <th>安裝日期</th><th>安裝人員</th><th>客戶</th><th>案名</th><th>色號-人</th><th>尺寸(cm)</th><th>色號-石</th><th>尺寸(cm)</th><th>型號</th><th>備註</th><th>樓層</th><th>龍</th><th>凱</th><th>自安</th><th>富</th><th>草屯</th>
+          <th>備註</th><th>樓層</th><th>安裝人員</th><th>龍</th><th>凱</th><th>自安</th><th>富</th><th>草屯</th>
         </tr></thead>
         <tbody id="stTableBody"></tbody>
       </table>
@@ -468,14 +495,29 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
   </div>
 
   <div class="statsCard">
-    <h2 class="statsTitle">師傅的安裝總數表</h2>
-    <div class="statsFilter">
+    <h2 class="statsTitle">安裝組</h2>
+    <div class="statsFilter masterStatsFilter">
       <label>查詢月份<input id="stMasterMonth" type="month"></label>
+      <label>請款日期<input id="stMasterBillingRange" type="text" readonly></label>
       <button type="button" id="stMasterLoadBtn">查詢</button>
-      <div style="text-align:right"><button type="button" id="stMasterExportBtn" class="primary">下載師傅的安裝總數表 Excel</button></div>
+      <div style="text-align:right"><button type="button" id="stMasterExportBtn" class="primary">下載安裝組 Excel</button></div>
     </div>
     <div id="stMasterGroups"></div>
     <div id="stMasterEmpty" class="quoteEmpty hidden">目前沒有安裝統計資料</div>
+  </div>
+
+  <div class="statsCard finalInstallCard" id="stFinalSummaryCard">
+    <div class="finalSummaryHead">
+      <div>
+        <h2 class="finalSummaryTitle" id="stFinalSummaryTitle">安裝及製作最終統計</h2>
+        <div class="finalSummarySub">數字＝各師傅個人表「人造石＆石英石總計」</div>
+      </div>
+      <button type="button" id="stFinalExportBtn" class="primary" style="padding:9px 13px;border:1px solid #18324d;border-radius:8px;background:#18324d;color:#fff;font-weight:800">下載最終統計表 Excel</button>
+    </div>
+    <table class="finalSummaryTable">
+      <thead><tr><th>龍</th><th>凱</th><th>自安</th><th>富</th><th>草屯</th></tr></thead>
+      <tbody><tr id="stFinalSummaryRow"><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr></tbody>
+    </table>
   </div>
 </section>
 
@@ -1051,7 +1093,7 @@ function currentStatsDraftForMaster(){
 }
 
 function getMasterInstallRows(){
-  let rows=[...installStatsRows];
+  let rows=[...(Array.isArray(masterInstallRows)?masterInstallRows:installStatsRows)];
   const draft=currentStatsDraftForMaster();
 
   if(draft){
@@ -1079,6 +1121,60 @@ function masterInstallerDefs(){
 function masterShareNumber(v){
   const n=Number(v);
   return Number.isFinite(n)?n:0;
+}
+
+function finalInstallerTotals(){
+  const rows=getMasterInstallRows();
+  return masterInstallerDefs().map(def=>{
+    const personRows=rows.filter(x=>masterShareNumber(x?.[def.key])>0);
+    const humanTotal=personRows.reduce((sum,x)=>sum+(x.color_type==="human"?masterShareNumber(x.size_cm):0),0);
+    const stoneTotal=personRows.reduce((sum,x)=>sum+(x.color_type==="stone"?masterShareNumber(x.size_cm):0),0);
+    return {name:def.name,total:humanTotal+stoneTotal};
+  });
+}
+
+function renderFinalInstallSummary(){
+  const row=$("stFinalSummaryRow");
+  if(!row)return;
+  const month=$("stMasterMonth")?.value||$("stMonth")?.value||statsTodayMonth();
+  const mm=month&&month.includes("-")?String(Number(month.split("-")[1])).padStart(2,"0"):"";
+  if($("stFinalSummaryTitle"))$("stFinalSummaryTitle").textContent=`${mm?mm+"月 ":""}安裝及製作統計`;
+  const totals=finalInstallerTotals();
+  row.innerHTML=totals.map(x=>`<td>${qMoney(x.total)}</td>`).join("");
+}
+
+function exportFinalInstallSummaryExcel(){
+  if(profile?.role!=="admin")return;
+  if(typeof XLSX==="undefined")return alert("Excel 元件尚未載入，請重新整理後再試");
+  const month=$("stMasterMonth")?.value||$("stMonth")?.value||statsTodayMonth();
+  const mm=month&&month.includes("-")?String(Number(month.split("-")[1])).padStart(2,"0"):"";
+  const totals=finalInstallerTotals();
+  const aoa=[
+    [`${mm?mm+"月 ":""}安裝及製作統計`,"","","",""],
+    totals.map(x=>x.name),
+    totals.map(x=>x.total)
+  ];
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws["!merges"]=[{s:{r:0,c:0},e:{r:0,c:4}}];
+  ws["!cols"]=[{wch:16},{wch:16},{wch:16},{wch:16},{wch:16}];
+  ws["!rows"]=[{hpt:30},{hpt:28},{hpt:34}];
+  const thin={style:"thin",color:{rgb:"000000"}};
+  const range=XLSX.utils.decode_range(ws["!ref"]);
+  for(let R=0;R<=range.e.r;R++){
+    for(let C=0;C<=range.e.c;C++){
+      const a=XLSX.utils.encode_cell({r:R,c:C});
+      if(!ws[a])ws[a]={t:"s",v:""};
+      ws[a].s={
+        font:{name:"Noto Sans HK",sz:R===0?20:(R===2?18:14),bold:R!==2},
+        alignment:{horizontal:"center",vertical:"center"},
+        border:{top:thin,bottom:thin,left:thin,right:thin}
+      };
+      if(R===2)ws[a].s.font.color={rgb:"0000FF"};
+    }
+  }
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"最終統計");
+  XLSX.writeFile(wb,`安裝及製作最終統計_${month}.xlsx`);
 }
 
 function renderMasterInstallSummary(){
@@ -1140,14 +1236,40 @@ function renderMasterInstallSummary(){
   });
 
   $("stMasterEmpty")?.classList.toggle("hidden",visibleGroups>0);
+  renderFinalInstallSummary();
+}
+
+function masterBillingPeriod(month){
+  const value=String(month||statsTodayMonth());
+  const [y,m]=value.split("-").map(Number);
+  if(!y||!m)return {start:"",end:"",label:""};
+  const prev=new Date(y,m-2,26);
+  const end=new Date(y,m-1,25);
+  const iso=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const label=d=>`${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())}`;
+  return {start:iso(prev),end:iso(end),label:`${label(prev)} ~ ${label(end)}`};
+}
+
+function updateMasterBillingRange(){
+  const month=$("stMasterMonth")?.value||$("stMonth")?.value||statsTodayMonth();
+  const p=masterBillingPeriod(month);
+  if($("stMasterBillingRange"))$("stMasterBillingRange").value=p.label;
+  return p;
 }
 
 async function loadMasterInstallSummary(){
   if(profile?.role!=="admin")return;
   const month=$("stMasterMonth")?.value||statsTodayMonth();
-  if($("stMonth"))$("stMonth").value=month;
-  await loadInstallStats();
-  if($("stMasterMonth"))$("stMasterMonth").value=$("stMonth").value;
+  if(!$("stMasterMonth").value)$("stMasterMonth").value=month;
+  const p=updateMasterBillingRange();
+  let q=sb.from("sbd_install_stats").select("*").order("install_date",{ascending:true,nullsFirst:true}).order("created_at",{ascending:true});
+  if(p.start&&p.end)q=q.gte("install_date",p.start).lte("install_date",p.end);
+  const {data,error}=await q;
+  if(error){
+    if($("stMasterEmpty")){$("stMasterEmpty").textContent="讀取失敗："+error.message;$("stMasterEmpty").classList.remove("hidden");}
+    return;
+  }
+  masterInstallRows=data||[];
   renderMasterInstallSummary();
 }
 
@@ -1156,6 +1278,7 @@ function exportMasterInstallSummaryExcel(){
   if(typeof XLSX==="undefined")return alert("Excel 元件尚未載入，請重新整理後再試");
 
   const month=$("stMasterMonth")?.value||$("stMonth")?.value||statsTodayMonth();
+  const billing=masterBillingPeriod(month);
   const rows=getMasterInstallRows();
   const defs=masterInstallerDefs();
   if(!rows.length)return alert("目前沒有可下載的安裝統計資料");
@@ -1173,7 +1296,7 @@ function exportMasterInstallSummaryExcel(){
     const shareTotal=personRows.reduce((sum,x)=>sum+masterShareNumber(x?.[def.key]),0);
 
     const aoa=[
-      [`${month.replace("-","/")} ${def.name} 的安裝統計表`],
+      [`${billing.label} ${def.name} 的安裝統計表`],
       ["安裝日期","安裝人員","客戶","案名","色號-人","尺寸(cm)","色號-石","尺寸(cm)","型號","備註","樓層","龍","凱","自安","富","草屯"],
       ...personRows.map(x=>[
         statDateToMD(x.install_date||""),
@@ -1215,7 +1338,7 @@ function exportMasterInstallSummaryExcel(){
   });
 
   if(!sheetCount)return alert("本月份目前沒有師傅安裝數可下載");
-  XLSX.writeFile(wb,`師傅的安裝總數表_${month}.xlsx`);
+  XLSX.writeFile(wb,`安裝組_${month}_${billing.start}_至_${billing.end}.xlsx`);
 }
 
 
@@ -1351,7 +1474,7 @@ function initInstallerPicker(){
 }
 
 // ===== 製作安裝統計表（僅 admin）=====
-let installStatsRows=[],editingInstallStatId=null;
+let installStatsRows=[],masterInstallRows=null,editingInstallStatId=null;
 
 function statsTodayMonth(){
   const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}`;
@@ -1463,6 +1586,7 @@ async function loadInstallStats(){
   if(!$("stMonth").value)$("stMonth").value=statsTodayMonth();
   const month=$("stMonth").value;
   if($("stMasterMonth"))$("stMasterMonth").value=month;
+  updateMasterBillingRange();
   let q=sb.from("sbd_install_stats").select("*").order("install_date",{ascending:true,nullsFirst:true}).order("created_at",{ascending:true});
   if(month){
     const [y,m]=month.split("-").map(Number);
@@ -1473,6 +1597,7 @@ async function loadInstallStats(){
   const {data,error}=await q;
   if(error){$("stEmpty").textContent="讀取失敗："+error.message;$("stEmpty").classList.remove("hidden");return}
   installStatsRows=data||[];renderInstallStats();
+  await loadMasterInstallSummary();
 }
 function renderInstallStats(){
   const b=$("stTableBody");b.innerHTML="";
@@ -1588,8 +1713,10 @@ $("closeViewBtn").addEventListener("click",()=>$("viewDlg").close());
 $("saveEventBtn").addEventListener("click",saveEvent);$("deleteEventBtn").addEventListener("click",deleteEvent);$("saveNoteBtn").addEventListener("click",saveNote);$("calendarTabBtn").addEventListener("click",()=>showFeature("calendar"));$("quoteTabBtn").addEventListener("click",()=>showFeature("quote"));$("installStatsTabBtn").addEventListener("click",()=>showFeature("stats"));$("stOrderDate").addEventListener("input",e=>normalizeStatMDInput(e.target));$("stInstallDate").addEventListener("input",e=>normalizeStatMDInput(e.target));$("stBringQuoteBtn")?.addEventListener("click",bringSelectedQuoteToStats);$("stSaveBtn")?.addEventListener("click",saveInstallStat);$("stResetBtn")?.addEventListener("click",resetInstallStatForm);$("stLoadBtn").addEventListener("click",loadInstallStats);$("stExportBtn").addEventListener("click",exportInstallStatsExcel);
 $("stMasterLoadBtn")?.addEventListener("click",loadMasterInstallSummary);
 $("stMasterExportBtn")?.addEventListener("click",exportMasterInstallSummaryExcel);
+$("stFinalExportBtn")?.addEventListener("click",exportFinalInstallSummaryExcel);
 $("stMasterMonth")?.addEventListener("change",()=>{
-  if($("stMonth"))$("stMonth").value=$("stMasterMonth").value;
+  masterInstallRows=null;
+  updateMasterBillingRange();
 });$("qAddItemBtn").addEventListener("click",()=>addQuoteItem());$("qNameManageBtn")?.addEventListener("click",()=>{resetQNameEditor();renderQNameManager();$("qNameDlg").showModal()});$("qNameOptionSaveBtn")?.addEventListener("click",saveQNameOption);$("qNameOptionCancelBtn")?.addEventListener("click",resetQNameEditor);$("qNameDlgCloseBtn")?.addEventListener("click",()=>$("qNameDlg").close());$("qCustomerManageBtn")?.addEventListener("click",()=>{resetQCustomerEditor();renderQCustomerManager();$("qCustomerDlg").showModal()});$("qCustomerOptionSaveBtn")?.addEventListener("click",saveQCustomer);$("qCustomerOptionCancelBtn")?.addEventListener("click",resetQCustomerEditor);$("qCustomerDlgCloseBtn")?.addEventListener("click",()=>$("qCustomerDlg").close());$("qSaveBtn").addEventListener("click",saveQuote);$("qCancelEditBtn").addEventListener("click",resetQuoteForm);["stCustomerCode","stCustomer","stJobNo","stShipNo","stOrderDate","stInstallDate","stCaseName","stColorType","stColorNo","stModel","stSizeCm","stUntaxedAmount","stNote","stFloor","stInstallers","stLong","stKai","stSelfInstall","stFu","stCaotun"].forEach(id=>{
   $(id)?.addEventListener("input",renderStatsEditingPreviewRow);
   $(id)?.addEventListener("change",renderStatsEditingPreviewRow);
@@ -1608,8 +1735,11 @@ $("stMasterMonth")?.addEventListener("change",()=>{
 
 $("stMonth")?.addEventListener("change",()=>{
   if($("stMasterMonth"))$("stMasterMonth").value=$("stMonth").value;
+  masterInstallRows=null;
+  updateMasterBillingRange();
+  renderFinalInstallSummary();
 });
-initInstallerPicker();renderStatsEditingPreviewRow();renderMasterInstallSummary();boot();
+initInstallerPicker();updateMasterBillingRange();renderStatsEditingPreviewRow();renderMasterInstallSummary();boot();
 </script>
 
 <script>
