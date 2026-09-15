@@ -1429,7 +1429,7 @@ function initInstallerPicker(){
 }
 
 // ===== 製作安裝統計表（僅 admin）=====
-let installStatsRows=[],masterInstallRows=null,editingInstallStatId=null;
+let installStatsRows=[],masterInstallRows=null,editingInstallStatId=null,currentStatsQuoteId=null;
 
 function statsTodayMonth(){
   const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}`;
@@ -1494,6 +1494,7 @@ function getStatForm(){
 }
 function resetInstallStatForm(){
   editingInstallStatId=null;
+  currentStatsQuoteId=null;
   setStatForm({});
   if($("stQuoteSelect"))$("stQuoteSelect").value="";
   if($("stSaveBtn"))$("stSaveBtn").textContent="儲存統計資料";
@@ -1518,17 +1519,22 @@ function bringSelectedQuoteToStats(){
 }
 function openStatsFromQuote(x){
   if(profile?.role!=="admin")return;
+  // 從報價單紀錄按「製作安裝」：把兩邊共有的欄位直接帶入
+  currentStatsQuoteId=x?.id||null;
+  editingInstallStatId=null;
+  const draft=statDraftFromQuote(x||{});
   showFeature("stats");
   setTimeout(()=>{
-    $("stQuoteSelect").value=String(x.id);
-    editingInstallStatId=null;
-    setStatForm(statDraftFromQuote(x));
+    const sel=$("stQuoteSelect");
+    if(sel && x?.id) sel.value=String(x.id);
+    setStatForm(draft);
+    $("installStatsView")?.scrollIntoView({behavior:"smooth",block:"start"});
   },0);
 }
 async function saveInstallStat(){
   if(profile?.role!=="admin")return;
   const payload=getStatForm();
-  payload.quote_id=$("stQuoteSelect")?.value||null;
+  payload.quote_id=$("stQuoteSelect")?.value||currentStatsQuoteId||null;
   if(!payload.customer_name&&!payload.case_name)return alert("請至少輸入客戶或案名");
   let r;
   if(editingInstallStatId)r=await sb.from("sbd_install_stats").update(payload).eq("id",editingInstallStatId);
