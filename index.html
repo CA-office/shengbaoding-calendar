@@ -900,7 +900,7 @@ async function excelQuote(x){
     setText("L8",`背牆  ${m.back_wall||""}  cm`);
     for(let r=10;r<=17;r++){
       setText("A"+r,"");setText("B"+r,"");setText("F"+r,"");setText("I"+r,"");setText("J"+r,"");setText("K"+r,"");
-      setNum("L"+r,0,`SUM(I${r}*K${r})`);
+      setNum("L"+r,0,`IF(OR(I${r}=\"\",K${r}=\"\"),\"\",I${r}*K${r})`);
     }
     for(let i=0;i<Math.min(8,items.length);i++){
       const r=10+i,it=items[i]||{},qtyRaw=(it.total_cm??it.qty),priceRaw=it.price;
@@ -908,7 +908,7 @@ async function excelQuote(x){
       setNum("A"+r,i+1);setText("B"+r,fmtQName(it.name||it.description||""));setText("F"+r,it.process_size||"");
       if(qtyRaw===""||qtyRaw==null)setText("I"+r,"");else setNum("I"+r,qty);
       setText("J"+r,it.unit||"");if(priceRaw===""||priceRaw==null)setText("K"+r,"");else setNum("K"+r,price);
-      setNum("L"+r,qty*price,`SUM(I${r}*K${r})`);
+      setNum("L"+r,qty*price,`IF(OR(I${r}=\"\",K${r}=\"\"),\"\",I${r}*K${r})`);
     }
     setNum("L18",money(x.subtotal),"SUM(L10:L17)");setNum("L19",money(x.tax_amount),"L18*0.05");setNum("L20",money(x.total_amount),"SUM(L18:L19)");
     zip.file(sheetPath,new XMLSerializer().serializeToString(doc));
