@@ -884,24 +884,7 @@ table{width:100%;border-collapse:collapse;border:1.4px solid #111;table-layout:f
 </style>
 
 </head><body><div class="page"><div class="title">勝鈔環保科技股份有限公司報價單</div><div class="header"><div class="case">案名：${esc(m.case_name||x.contact_name||"")}</div><div class="number">編號：${esc(x.quote_no||"")}</div><div class="customer">客戶名稱：${esc(x.customer_name||"")}</div><div class="date">日期：${esc(qDateDisplay(x.quote_date))}</div><div class="customer">聯絡人電話：${esc(m.contact_phone||x.phone||"")}</div><div class="install">實際安裝日期：${esc(qDateDisplay(m.install_date))}</div><div class="address">安裝地址：${esc(x.address||"")}</div><div class="install">安裝時段：${esc(m.install_period||"")}</div></div><div class="hint" style="color:#ff0000 !important;font-size:14px !important;font-weight:700 !important;">此為初估計價　實際價格會依實際色號、尺寸、作法變動</div><div class="mat"><div>色 號</div><div class="value">${esc(m.color_no||"")}</div><div>品 名</div><div class="value">${esc(m.product_name||"")}</div><div class="edge">前緣 <span class="edgeNum">${esc(m.front_edge||"")}</span> <span class="cmUnit">cm</span> ／ 背牆 <span class="edgeNum">${esc(m.back_wall||"")}</span> <span class="cmUnit">cm</span></div></div><table><thead><tr><th>項數</th><th>名稱</th><th>加工尺寸 (CM)</th><th>總公分數</th><th>單位</th><th>單價</th><th>小計</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td></td><td colspan="3" class="left">備註：此價格為實價計價</td><td colspan="2">合計</td><td>${qMoney(x.subtotal)}</td></tr><tr><td></td><td colspan="3"></td><td colspan="2">稅金5%</td><td>${qMoney(x.tax_amount)}</td></tr><tr><td></td><td colspan="3"></td><td colspan="2">總計</td><td>${qMoney(x.total_amount)}</td></tr></tfoot></table><div class="notes"><div>備註：　1.本報價單有效期間為30天</div><div style="padding-left:11mm"><span style="display:inline-block;width:1.45em;text-align:right;margin-right:.18em">2.</span>付款方式:月結40天，未月結客戶安裝完工收現，稅外加不扣%</div><div style="padding-left:11mm"><span style="display:inline-block;width:1.45em;text-align:right;margin-right:.18em">3.</span>開發票為總計金額</div><div style="padding-left:11mm"><span style="display:inline-block;width:1.45em;text-align:right;margin-right:.18em">4.</span>本公司產品款項未結清資產屬勝鈔環保科技股份有限公司所有權</div></div><div class="sign"><div>勝鈔環保科技股份有限公司<br>TEL:02-26771176<br>FAX:02-26772076<br><br><br>業務代表簽名:</div><div>客戶簽名:</div></div></div><script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script>
-<script id="quote-input-enable-fix">
-(function(){
-  function enableQuoteInputs(){
-    document.querySelectorAll('#quoteView .quoteGrid input, #quoteView .quoteGrid textarea, #quoteView .quoteGrid select, #quoteView .quoteItems input, #quoteView .quoteItems select').forEach(function(el){
-      el.disabled=false;
-      if(el.tagName==='INPUT' || el.tagName==='TEXTAREA') el.readOnly=false;
-      el.style.pointerEvents='auto';
-    });
-  }
-  document.addEventListener('DOMContentLoaded', enableQuoteInputs);
-  document.addEventListener('click', function(e){
-    if(e.target && (e.target.id==='quoteTabBtn' || e.target.closest?.('[data-act="edit"]'))) setTimeout(enableQuoteInputs,0);
-  });
-  const mo=new MutationObserver(enableQuoteInputs);
-  const start=function(){var q=document.getElementById('quoteView'); if(q) mo.observe(q,{subtree:true,childList:true});};
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
-})();
-</script>
+
 </body></html>`
 }
 function printQuote(x){const w=window.open("","_blank");if(!w){alert("瀏覽器阻擋新視窗，請允許彈出視窗");return}w.document.write(quotePrintHtml(x));w.document.close()}
