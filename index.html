@@ -771,7 +771,7 @@ function showFeature(name){
   $("quoteTabBtn").classList.toggle("active",quote);
   $("installStatsTabBtn").classList.toggle("active",stats);
   if(quote&&["admin","editor"].includes(profile?.role)){resetQuoteForm();loadQuoteOptions();loadQuotes()}
-  if(stats&&profile?.role==="admin"){loadQuotesForStats();loadInstallStats()}
+  if(stats&&profile?.role==="admin"){(async()=>{await loadQuotesForStats();await syncAllQuotesToInstallStats();await loadInstallStats()})()}
 }
 function addQuoteItem(item={}){const tr=document.createElement("tr");const totalCm=item.total_cm??item.qty??0;tr.innerHTML=`<td class="qidx"></td><td><input class="qname" list="qNameOptionsList" placeholder="選擇或直接輸入" value="${esc(fmtQName(item.name||item.description||""))}"></td><td><input class="qsize" value="${esc(item.process_size||"")}"></td><td><input class="qcm" type="number" min="0" step="0.01" value="${Number(totalCm||0)}"></td><td><select class="qunit"><option value=""></option><option value="cm" ${String(item.unit||"").toLowerCase()==="cm"?"selected":""}>cm</option><option value="式" ${String(item.unit||"")==="式"?"selected":""}>式</option></select></td><td><input class="qprice" type="number" min="0" step="0.01" value="${Number(item.price||0)}"></td><td class="qamount">0</td><td><button type="button" class="qremove">刪</button></td>`;$("qItemsBody").appendChild(tr);tr.querySelectorAll("input,select").forEach(i=>i.addEventListener("input",calcQuote));const qi=tr.querySelector(".qname");qi?.addEventListener("blur",()=>{qi.value=fmtQName(qi.value);calcQuote()});tr.querySelector(".qremove").addEventListener("click",()=>{tr.remove();renumberQuoteItems();calcQuote()});renumberQuoteItems();calcQuote()}
 function renumberQuoteItems(){[...$("qItemsBody").children].forEach((tr,i)=>tr.querySelector(".qidx").textContent=i+1)}
@@ -818,7 +818,7 @@ function renderQuotePreview(calcResult=null){if(!$("quotePreviewBody"))return;le
 function previewQuotePdf(){printQuote(currentQuoteDraft())}
 function previewQuoteExcel(){excelQuote(currentQuoteDraft())}
 function resetQuoteForm(){editingQuoteId=null;$("quoteFormTitle").textContent="新增報價單";$("qCaseName").value="";$("qNo").value=makeQuoteNo();$("qCustomer").value="";$("qDate").value=qDateDisplay(qToday());$("qInstallDate").value="";$("qContactPhone").value="";$("qInstallPeriod").value="";$("qAddress").value="";$("qFileAddress").value="";$("qColorNo").value="";$("qProductName").value="";$("qFrontEdge").value="";$("qBackWall").value="";$("qItemsBody").innerHTML="";addQuoteItem();$("qCancelEditBtn").classList.add("hidden");calcQuote()}
-async function saveQuote(){if(!["admin","editor"].includes(profile.role))return;const no=$("qNo").value.trim()||makeQuoteNo(),date=qDateStorage($("qDate").value)||qToday(),customer=$("qCustomer").value.trim(),items=getQuoteItems();const c=calcQuote(),meta=qMeta(),payload={quote_no:no,quote_date:date,customer_name:customer,contact_name:meta.case_name||null,phone:meta.contact_phone||null,address:$("qAddress").value.trim()||null,items,subtotal:c.sub,tax_rate:5,tax_amount:c.tax,total_amount:c.total,note:JSON.stringify(meta)};let r;if(editingQuoteId)r=await sb.from("sbd_quotes").update(payload).eq("id",editingQuoteId);else r=await sb.from("sbd_quotes").insert(payload);if(r.error){alert("報價單儲存失敗："+r.error.message);return}resetQuoteForm();await loadQuotes()}
+async function saveQuote(){if(!["admin","editor"].includes(profile.role))return;const no=$("qNo").value.trim()||makeQuoteNo(),date=qDateStorage($("qDate").value)||qToday(),customer=$("qCustomer").value.trim(),items=getQuoteItems();const c=calcQuote(),meta=qMeta(),payload={quote_no:no,quote_date:date,customer_name:customer,contact_name:meta.case_name||null,phone:meta.contact_phone||null,address:$("qAddress").value.trim()||null,items,subtotal:c.sub,tax_rate:5,tax_amount:c.tax,total_amount:c.total,note:JSON.stringify(meta)};let r;if(editingQuoteId)r=await sb.from("sbd_quotes").update(payload).eq("id",editingQuoteId);else r=await sb.from("sbd_quotes").insert(payload);if(r.error){alert("報價單儲存失敗："+r.error.message);return}resetQuoteForm();await loadQuotes();if(profile?.role==="admin"){const saved=quoteRows.find(q=>String(q.quote_no||"")===String(no));if(saved)await syncOneQuoteToInstallStats(saved);await loadInstallStats()}}
 async function loadQuotes(){if(!["admin","editor"].includes(profile.role))return;const {data,error}=await sb.from("sbd_quotes").select("*").order("quote_date",{ascending:false}).order("created_at",{ascending:false});if(error){$("quoteEmpty").textContent="讀取報價單失敗："+error.message;$("quoteEmpty").classList.remove("hidden");return}quoteRows=data||[];renderQuoteList()}
 function renderQuoteList(){const body=$("quoteListBody");body.innerHTML="";$("quoteEmpty").classList.toggle("hidden",quoteRows.length>0);quoteRows.forEach(x=>{const tr=document.createElement("tr"),del=profile.role==="admin"?`<button type="button" class="danger" data-act="delete" data-id="${x.id}">刪除</button>`:"",stats=profile.role==="admin"?`<button type="button" data-act="stats" data-id="${x.id}">製作安裝</button>`:"";tr.innerHTML=`<td>${esc(qDateDisplay(x.quote_date))}</td><td>${esc(x.quote_no||"")}</td><td>${esc(x.customer_name||"")}</td><td>${qMoney(x.total_amount)}</td><td><div class="quoteListBtns"><button type="button" data-act="edit" data-id="${x.id}">修改</button><button type="button" data-act="pdf" data-id="${x.id}">PDF</button><button type="button" data-act="excel" data-id="${x.id}">Excel</button>${stats}${del}</div></td>`;body.appendChild(tr)});body.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{const x=quoteRows.find(q=>String(q.id)===String(b.dataset.id));if(!x)return;if(b.dataset.act==="edit")editQuote(x);if(b.dataset.act==="pdf")printQuote(x);if(b.dataset.act==="excel")excelQuote(x);if(b.dataset.act==="stats")openStatsFromQuote(x);if(b.dataset.act==="delete")deleteQuote(x.id)}))}
 function editQuote(x){if(!["admin","editor"].includes(profile.role))return;const m=qMetaFromNote(x.note);editingQuoteId=x.id;$("quoteFormTitle").textContent="修改報價單";$("qCaseName").value=m.case_name||x.contact_name||"";$("qNo").value=x.quote_no||"";$("qCustomer").value=x.customer_name||"";$("qDate").value=qDateDisplay(x.quote_date||qToday());$("qInstallDate").value=qDateDisplay(m.install_date||"");$("qContactPhone").value=m.contact_phone||x.phone||"";$("qInstallPeriod").value=m.install_period||"";$("qAddress").value=x.address||"";$("qFileAddress").value=m.file_address||"";$("qColorNo").value=m.color_no||"";$("qProductName").value=m.product_name||"";$("qFrontEdge").value=m.front_edge||"";$("qBackWall").value=m.back_wall||"";$("qItemsBody").innerHTML="";(Array.isArray(x.items)?x.items:[]).forEach(addQuoteItem);if(!$("qItemsBody").children.length)addQuoteItem();$("qCancelEditBtn").classList.remove("hidden");calcQuote();$("quoteView").scrollIntoView({behavior:"smooth",block:"start"})}
@@ -1576,10 +1576,33 @@ function openStatsFromQuote(x){
     $("installStatsView")?.scrollIntoView({behavior:"smooth",block:"start"});
   },0);
 }
+async function syncOneQuoteToInstallStats(x){
+  if(profile?.role!=="admin"||!x)return;
+  const draft=statDraftFromQuote(x);
+  // 不使用 quote_id（資料庫此欄是 bigint，報價單 id 則為 UUID）。改用報價單編號唯一連動。
+  delete draft.quote_id;
+  if(!draft.job_no)return;
+  const {data,error}=await sb.from("sbd_install_stats").select("*").eq("job_no",draft.job_no).limit(1);
+  if(error)return;
+  const existing=(data||[])[0];
+  if(existing){
+    // 只同步報價單本身帶來的欄位，不覆蓋人工補填的出貨單號、樓層、安裝人員、備註與分配數。
+    const patch={customer_name:draft.customer_name,order_date:draft.order_date,install_date:draft.install_date,case_name:draft.case_name,color_no:draft.color_no,model:draft.model,size_cm:draft.size_cm,untaxed_amount:draft.untaxed_amount};
+    await sb.from("sbd_install_stats").update(patch).eq("id",existing.id);
+  }else{
+    await sb.from("sbd_install_stats").insert(draft);
+  }
+}
+async function syncAllQuotesToInstallStats(){
+  if(profile?.role!=="admin")return;
+  for(const x of quoteRows)await syncOneQuoteToInstallStats(x);
+}
 async function saveInstallStat(){
   if(profile?.role!=="admin")return;
   const payload=getStatForm();
-  payload.quote_id=$("stQuoteSelect")?.value||currentStatsQuoteId||null;
+  // sbd_install_stats.quote_id 為 bigint，但報價單 id 是 UUID；不可把 UUID 寫進 bigint 欄位。
+  // 統計表改以「編號 job_no」與報價單連動，手動新增也可正常儲存。
+  delete payload.quote_id;
   if(!payload.customer_name&&!payload.case_name)return alert("請至少輸入客戶或案名");
   let r;
   if(editingInstallStatId)r=await sb.from("sbd_install_stats").update(payload).eq("id",editingInstallStatId);
