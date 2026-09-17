@@ -412,11 +412,15 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
 .outing-table{width:100%;border-collapse:collapse;table-layout:fixed}
 .outing-table th,.outing-table td{border-bottom:1px solid #dbe3ec;padding:9px 8px;text-align:left;vertical-align:top}
 .outing-table th{background:#f3f7fa;color:#163a5b}
-.outing-table th:nth-child(1),.outing-table td:nth-child(1){width:14.2857%}
-.outing-table th:nth-child(2),.outing-table td:nth-child(2){width:14.2857%}
-.outing-table th:nth-child(3),.outing-table td:nth-child(3){width:14.2857%}
-.outing-table th:nth-child(4),.outing-table td:nth-child(4){width:28.5714%}
-.outing-table th:nth-child(5),.outing-table td:nth-child(5){width:28.5714%}
+.outing-table th:nth-child(1),.outing-table td:nth-child(1){width:14.2857%!important;max-width:14.2857%}
+.outing-table th:nth-child(2),.outing-table td:nth-child(2){width:14.2857%!important;max-width:14.2857%}
+.outing-table th:nth-child(3),.outing-table td:nth-child(3){width:14.2857%!important;max-width:14.2857%}
+.outing-table th:nth-child(4),.outing-table td:nth-child(4){width:28.5714%!important;max-width:28.5714%}
+.outing-table th:nth-child(5),.outing-table td:nth-child(5){width:28.5714%!important;max-width:28.5714%}
+/* OUTING WIDTH FINAL: 日期2｜案名2｜師傅2｜地點4｜操作4 */
+.outing-table col:nth-child(1),.outing-table col:nth-child(2),.outing-table col:nth-child(3){width:14.2857%!important}
+.outing-table col:nth-child(4),.outing-table col:nth-child(5){width:28.5714%!important}
+
 .outing-add,.outing-edit{border:1px solid #b9c8d6;background:#fff;border-radius:7px;padding:5px 9px;cursor:pointer}
 .outing-del{border:0;background:#e52d32;color:#fff;border-radius:6px;padding:6px 9px;cursor:pointer}
 </style>
@@ -427,7 +431,7 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
 <section id="appPage" class="hidden"><header><div class="toprow"><div class="brand">勝寶鼎/新弘股公司｜行事曆</div><button id="logoutBtn" class="userBtn">登出</button></div><div id="roleLine" class="roleLine"></div><div class="featureTabs"><button id="calendarTabBtn" class="active">行事曆</button><button id="quoteTabBtn" class="hidden">報價單</button><button id="quoteQuickNoteHeaderBtn" class="hidden">記事本／複製</button><button id="installStatsTabBtn" class="hidden">安裝統計表</button></div><div class="controls" id="calendarControls"><button id="prevBtn">‹</button><div id="monthTitle" class="month"></div><button id="nextBtn">›</button><button id="todayBtn">本月</button><button id="noteBtn" class="hidden">備註</button></div><div class="legend"><span class="lg"><i class="dot" style="background:#20aa5a"></i>綠－石英石</span><span class="lg"><i class="dot" style="background:#2196f3"></i>藍－人造石</span><span class="lg"><i class="dot" style="background:#e52424"></i>紅－維修</span><span class="lg"><i class="dot" style="background:#ff851b"></i>橘色</span><span class="lg"><i class="dot" style="background:#8c35d5"></i>紫－浤富代裝石英</span><span class="lg"><i class="dot" style="background:#e5b800"></i>黃－自安送料</span><span class="lg"><i class="dot" style="background:#111"></i>黑</span><span class="lg symbolLegend">☑</span><span class="lg symbolLegend">☒</span><span class="lg symbolLegend">➜</span><span class="lg symbolLegend">●</span><span class="lg symbolLegend">▲</span><span class="lg symbolLegend">✔</span><span class="lg symbolLegend">✘</span></div></header><main>
 <div id="calendarView"><section class="calendar"><div class="weekhead"><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div class="weekend">六</div><div class="weekend">日</div></div><div id="weeks"></div></section><section class="outing-card" id="outingRecords">
 <h3>外出紀錄</h3>
-<table class="outing-table"><colgroup><col style="width:14.2857%"><col style="width:14.2857%"><col style="width:14.2857%"><col style="width:28.5714%"><col style="width:28.5714%"></colgroup><thead><tr>
+<table class="outing-table"><colgroup><col style="width:14.2857%!important"><col style="width:14.2857%!important"><col style="width:14.2857%!important"><col style="width:28.5714%!important"><col style="width:28.5714%!important"></colgroup><thead><tr>
 <th><button type="button" class="outing-add" onclick="addOutingRecord()">＋ 新增</button> 日期</th>
 <th>案名</th><th>師傅</th><th>地點</th><th>操作</th>
 </tr></thead><tbody id="outingRows"></tbody></table>
