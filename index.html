@@ -412,6 +412,11 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
 .outing-table{width:100%;border-collapse:collapse}
 .outing-table th,.outing-table td{border-bottom:1px solid #dbe3ec;padding:9px 8px;text-align:left;vertical-align:top}
 .outing-table th{background:#f3f7fa;color:#163a5b}
+.outing-table th:nth-child(1),.outing-table td:nth-child(1){width:14.2857%}
+.outing-table th:nth-child(2),.outing-table td:nth-child(2){width:14.2857%}
+.outing-table th:nth-child(3),.outing-table td:nth-child(3){width:14.2857%}
+.outing-table th:nth-child(4),.outing-table td:nth-child(4){width:28.5714%}
+.outing-table th:nth-child(5),.outing-table td:nth-child(5){width:28.5714%}
 .outing-add,.outing-edit{border:1px solid #b9c8d6;background:#fff;border-radius:7px;padding:5px 9px;cursor:pointer}
 .outing-del{border:0;background:#e52d32;color:#fff;border-radius:6px;padding:6px 9px;cursor:pointer}
 </style>
@@ -424,7 +429,7 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
 <h3>外出紀錄</h3>
 <table class="outing-table"><thead><tr>
 <th><button type="button" class="outing-add" onclick="addOutingRecord()">＋ 新增</button> 日期</th>
-<th>案名</th><th>安裝</th><th>內容</th><th>操作</th>
+<th>案名</th><th>師傅</th><th>地點</th><th>操作</th>
 </tr></thead><tbody id="outingRows"></tbody></table>
 </section><div id="noteBox" class="noteBox"><div class="noteTitle">備註</div><div id="noteText" class="noteText"></div></div><div id="syncText" class="sync"></div></div>
 <section id="quoteView" class="quoteWrap hidden">
@@ -1858,8 +1863,8 @@ initInstallerPicker();updateMasterBillingRange();renderStatsEditingPreviewRow();
   // 行事曆資料自動連動到外出紀錄（目前查詢月份）
   const linked=(Array.isArray(window.events)?window.events:(typeof events!=="undefined"?events:[])).map(x=>({
     id:String(x.id), date:x.event_date||"", caseName:x.title||"",
-    install:(typeof eventInstall==="function"?eventInstall(x):""),
-    content:(typeof cleanEventDetails==="function"?cleanEventDetails(x.details||""):(x.details||"")), linked:true,
+    install:"",
+    content:"", linked:true,
     time:x.event_time||""
   }));
   const manual=get().map(x=>({...x,linked:false,time:""}));
@@ -1872,18 +1877,45 @@ initInstallerPicker();updateMasterBillingRange();renderStatsEditingPreviewRow();
    const {error}=await sb.from("sbd_calendar_events").delete().eq("id",id);
    if(error){alert("刪除失敗："+error.message);return} await loadMonth();
  };
- window.addOutingRecord=function(){
-  const date=norm(prompt("日期（YYYY-MM-DD）","")||""); if(!date)return;
-  const a=get(); a.push({id:String(Date.now()),date,caseName:prompt("案名","")||"",install:prompt("安裝","")||"",content:prompt("內容","")||""}); put(a);renderOutingRecords();
- };
- window.editOutingRecord=function(id){
-  const a=get(),i=a.findIndex(x=>x.id===id);if(i<0)return;const x=a[i];
-  const date=norm(prompt("日期（YYYY-MM-DD）",x.date)||"");if(!date)return;
-  const caseName=prompt("案名",x.caseName);if(caseName===null)return;
-  const install=prompt("安裝",x.install);if(install===null)return;
-  const content=prompt("內容",x.content);if(content===null)return;
-  a[i]={...x,date,caseName,install,content};put(a);renderOutingRecords();
- };
+ function openManualOutingForm(record){
+  let modal=document.getElementById("manualOutingModal");
+  if(!modal){
+    modal=document.createElement("div");
+    modal.id="manualOutingModal";
+    modal.style.cssText="position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px";
+    modal.innerHTML=`<div style="background:#fff;width:min(560px,96vw);border-radius:14px;padding:20px;box-shadow:0 18px 50px rgba(0,0,0,.25)">
+      <div style="font-size:20px;font-weight:800;margin-bottom:16px">新增外出紀錄</div>
+      <div style="display:grid;grid-template-columns:110px 1fr;gap:12px;align-items:center">
+        <label>日期</label><input id="omDate" type="date" style="padding:9px;border:1px solid #cbd5e1;border-radius:8px">
+        <label>案名</label><input id="omCase" style="padding:9px;border:1px solid #cbd5e1;border-radius:8px">
+        <label>師傅</label><input id="omInstall" style="padding:9px;border:1px solid #cbd5e1;border-radius:8px">
+        <label>地點</label><textarea id="omContent" rows="4" style="padding:9px;border:1px solid #cbd5e1;border-radius:8px;resize:vertical"></textarea>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px">
+        <button type="button" id="omCancel" style="padding:9px 18px;border:1px solid #cbd5e1;background:#fff;border-radius:8px">取消</button>
+        <button type="button" id="omSave" style="padding:9px 18px;border:0;background:#173a5e;color:#fff;border-radius:8px;font-weight:700">儲存</button>
+      </div></div>`;
+    document.body.appendChild(modal);
+  }
+  modal.style.display="flex";
+  modal.querySelector("div>div").textContent=record?"修改外出紀錄":"新增外出紀錄";
+  document.getElementById("omDate").value=record?.date||"";
+  document.getElementById("omCase").value=record?.caseName||"";
+  document.getElementById("omInstall").value=record?.install||"";
+  document.getElementById("omContent").value=record?.content||"";
+  document.getElementById("omCancel").onclick=()=>modal.style.display="none";
+  document.getElementById("omSave").onclick=()=>{
+    const date=norm(document.getElementById("omDate").value);
+    if(!date){alert("請選擇日期");return}
+    const a=get();
+    const data={date,caseName:document.getElementById("omCase").value.trim(),install:document.getElementById("omInstall").value.trim(),content:document.getElementById("omContent").value.trim()};
+    if(record){const i=a.findIndex(x=>x.id===record.id);if(i>=0)a[i]={...a[i],...data}}
+    else a.push({id:String(Date.now()),...data});
+    put(a);modal.style.display="none";renderOutingRecords();
+  };
+ }
+ window.addOutingRecord=function(){openManualOutingForm(null)};
+ window.editOutingRecord=function(id){const x=get().find(x=>x.id===id);if(x)openManualOutingForm(x)};
  window.deleteOutingRecord=function(id){if(confirm("確定刪除這筆外出紀錄？")){put(get().filter(x=>x.id!==id));renderOutingRecords()}};
  document.addEventListener("DOMContentLoaded",renderOutingRecords);
 })();
