@@ -1840,22 +1840,71 @@ initInstallerPicker();updateMasterBillingRange();renderStatsEditingPreviewRow();
   a[i]={...x,date,caseName,install,content};put(a);renderOutingRecords();
  };
  window.deleteOutingRecord=function(id){if(confirm("確定刪除這筆外出紀錄？")){put(get().filter(x=>x.id!==id));renderOutingRecords()}};
- 
-function applyOutingVisibility(){
-  const box=document.getElementById("outingRecords");
-  if(!box)return;
-  // Read the same role/user values commonly used by this page; only admin and user1 may see the section.
-  const candidates=[
-    window.currentUser, window.currentRole, window.loginUser, window.loggedInUser,
-    localStorage.getItem("currentUser"), localStorage.getItem("currentRole"),
-    sessionStorage.getItem("currentUser"), sessionStorage.getItem("currentRole")
-  ].filter(Boolean).map(v=>typeof v==="object"?String(v.role||v.username||v.name||""):String(v));
-  const text=candidates.join(" ").toLowerCase();
-  const allowed=/管理員|管理员|admin|使用者1|使用者 1|user1|user 1/.test(text);
-  box.style.display=allowed?"":"none";
-}
-document.addEventListener("DOMContentLoaded",function(){renderOutingRecords();applyOutingVisibility();setTimeout(applyOutingVisibility,300);});
+ document.addEventListener("DOMContentLoaded",renderOutingRecords);
+})();
+</script>
 
+<script id="exact-user-permissions">
+(function(){
+const EDITOR_EMAIL="a0985029910@gmail.com";
+const VIEWERS=new Set(["numberoneaustin@yahoo.com.tw","rman770212@yahoo.com.tw","gen20312@gmail.com"]);
+
+async function getLoginEmail(){
+  try{
+    if(window.sb && sb.auth){
+      const r=await sb.auth.getUser();
+      return String(r?.data?.user?.email||"").toLowerCase();
+    }
+    if(window.supabaseClient && supabaseClient.auth){
+      const r=await supabaseClient.auth.getUser();
+      return String(r?.data?.user?.email||"").toLowerCase();
+    }
+  }catch(e){}
+  return "";
+}
+function hideOtherModules(){
+  // Keep calendar tab/page. Hide other top navigation modules.
+  document.querySelectorAll("button,a").forEach(el=>{
+    const t=(el.textContent||"").trim();
+    if(["報價單","記事本 / 複製","記事本／複製","安裝統計表"].includes(t)) el.style.display="none";
+  });
+  ["quote","quotation","notes","copy","installStats","installStatistics"].forEach(id=>{
+    const el=document.getElementById(id); if(el)el.style.display="none";
+  });
+}
+function disableCalendarChanges(){
+  // Hide calendar add controls and block obvious modify/delete controls within calendar area.
+  const cal=document.querySelector('[id*="calendar" i],.calendar');
+  const root=cal||document;
+  root.querySelectorAll("button").forEach(b=>{
+    const t=(b.textContent||"").trim();
+    if(t==="+"||/新增|修改|刪除/.test(t)) b.style.display="none";
+  });
+  root.querySelectorAll('[onclick]').forEach(el=>{
+    const c=String(el.getAttribute("onclick")||"");
+    if(/add|edit|delete|remove|新增|修改|刪除/i.test(c)){
+      el.removeAttribute("onclick");
+      el.style.cursor="default";
+    }
+  });
+}
+async function applyExactPermissions(){
+  const email=await getLoginEmail();
+  if(!email)return;
+  const outing=document.getElementById("outingRecords");
+
+  if(email===EDITOR_EMAIL){
+    hideOtherModules();
+    if(outing)outing.style.display="";
+  }else if(VIEWERS.has(email)){
+    hideOtherModules();
+    if(outing)outing.style.display="none";
+    disableCalendarChanges();
+  }
+  // Admin and any account not in the four specified accounts keep original permissions.
+}
+document.addEventListener("DOMContentLoaded",()=>setTimeout(applyExactPermissions,600));
+window.addEventListener("load",()=>setTimeout(applyExactPermissions,900));
 })();
 </script>
 </body>
