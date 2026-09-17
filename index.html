@@ -1844,67 +1844,77 @@ initInstallerPicker();updateMasterBillingRange();renderStatsEditingPreviewRow();
 })();
 </script>
 
-<script id="exact-user-permissions">
+<script id="safe-fixed-user-permissions">
 (function(){
-const EDITOR_EMAIL="a0985029910@gmail.com";
-const VIEWERS=new Set(["numberoneaustin@yahoo.com.tw","rman770212@yahoo.com.tw","gen20312@gmail.com"]);
+  const USER1="a0985029910@gmail.com";
+  const READONLY=new Set([
+    "numberoneaustin@yahoo.com.tw",
+    "rman770212@yahoo.com.tw",
+    "gen20312@gmail.com"
+  ]);
 
-async function getLoginEmail(){
-  try{
-    if(window.sb && sb.auth){
-      const r=await sb.auth.getUser();
-      return String(r?.data?.user?.email||"").toLowerCase();
-    }
-    if(window.supabaseClient && supabaseClient.auth){
-      const r=await supabaseClient.auth.getUser();
-      return String(r?.data?.user?.email||"").toLowerCase();
-    }
-  }catch(e){}
-  return "";
-}
-function hideOtherModules(){
-  // Keep calendar tab/page. Hide other top navigation modules.
-  document.querySelectorAll("button,a").forEach(el=>{
-    const t=(el.textContent||"").trim();
-    if(["報價單","記事本 / 複製","記事本／複製","安裝統計表"].includes(t)) el.style.display="none";
-  });
-  ["quote","quotation","notes","copy","installStats","installStatistics"].forEach(id=>{
-    const el=document.getElementById(id); if(el)el.style.display="none";
-  });
-}
-function disableCalendarChanges(){
-  // Hide calendar add controls and block obvious modify/delete controls within calendar area.
-  const cal=document.querySelector('[id*="calendar" i],.calendar');
-  const root=cal||document;
-  root.querySelectorAll("button").forEach(b=>{
-    const t=(b.textContent||"").trim();
-    if(t==="+"||/新增|修改|刪除/.test(t)) b.style.display="none";
-  });
-  root.querySelectorAll('[onclick]').forEach(el=>{
-    const c=String(el.getAttribute("onclick")||"");
-    if(/add|edit|delete|remove|新增|修改|刪除/i.test(c)){
-      el.removeAttribute("onclick");
-      el.style.cursor="default";
-    }
-  });
-}
-async function applyExactPermissions(){
-  const email=await getLoginEmail();
-  if(!email)return;
-  const outing=document.getElementById("outingRecords");
-
-  if(email===EDITOR_EMAIL){
-    hideOtherModules();
-    if(outing)outing.style.display="";
-  }else if(VIEWERS.has(email)){
-    hideOtherModules();
-    if(outing)outing.style.display="none";
-    disableCalendarChanges();
+  function hideByText(labels){
+    document.querySelectorAll("button,a").forEach(function(el){
+      const t=(el.textContent||"").replace(/\s+/g," ").trim();
+      if(labels.some(function(x){return t===x || t.indexOf(x)>=0;})) el.style.display="none";
+    });
   }
-  // Admin and any account not in the four specified accounts keep original permissions.
-}
-document.addEventListener("DOMContentLoaded",()=>setTimeout(applyExactPermissions,600));
-window.addEventListener("load",()=>setTimeout(applyExactPermissions,900));
+
+  function setOuting(show){
+    const el=document.getElementById("outingRecords");
+    if(el) el.style.display=show?"":"none";
+  }
+
+  function makeCalendarReadonly(){
+    const roots=[];
+    document.querySelectorAll('[id*="calendar" i], .calendar').forEach(function(x){roots.push(x)});
+    if(!roots.length) roots.push(document);
+    roots.forEach(function(root){
+      root.querySelectorAll("button").forEach(function(b){
+        const t=(b.textContent||"").trim();
+        if(/新增|修改|刪除/.test(t) || t==="+") b.style.display="none";
+      });
+    });
+  }
+
+  function apply(email){
+    email=String(email||"").toLowerCase();
+    if(!email)return;
+    if(email===USER1){
+      hideByText(["報價單","記事本 / 複製","記事本／複製","安裝統計表"]);
+      setOuting(true);
+    }else if(READONLY.has(email)){
+      hideByText(["報價單","記事本 / 複製","記事本／複製","安裝統計表"]);
+      setOuting(false);
+      makeCalendarReadonly();
+    }
+  }
+
+  async function run(){
+    try{
+      // Discover the existing Supabase client only after login code has initialized.
+      const clients=[window.sb,window.supabaseClient,window.client].filter(Boolean);
+      for(const c of clients){
+        if(c && c.auth && typeof c.auth.getUser==="function"){
+          const r=await c.auth.getUser();
+          const email=r && r.data && r.data.user && r.data.user.email;
+          if(email){ apply(email); return; }
+        }
+      }
+      // Fallback: inspect the authenticated session stored by Supabase without changing it.
+      for(let i=0;i<localStorage.length;i++){
+        const k=localStorage.key(i)||"";
+        if(k.indexOf("auth-token")<0) continue;
+        try{
+          const v=JSON.parse(localStorage.getItem(k)||"{}");
+          const email=(v.user&&v.user.email)||(v.currentSession&&v.currentSession.user&&v.currentSession.user.email);
+          if(email){apply(email);return;}
+        }catch(e){}
+      }
+    }catch(e){ console.warn("permission apply skipped",e); }
+  }
+
+  window.addEventListener("load",function(){ setTimeout(run,1200); });
 })();
 </script>
 </body>
