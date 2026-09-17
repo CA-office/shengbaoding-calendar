@@ -53,17 +53,6 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
 .officialFixedNotes{border:2px solid #111;border-top:0;padding:9px 12px;display:grid;gap:12px;line-height:1.4;min-height:145px;font-size:14px}
 .officialSign{display:grid;grid-template-columns:1fr 1fr;border:2px solid #111;border-top:0;min-height:160px}.officialSign>div{padding:6px 5px;line-height:1.65}.officialSign>div+div{border-left:1px solid #111}.officialSign>div:last-child{position:relative}.productCode{position:absolute;right:12px;bottom:10px;font-weight:400;font-size:14px}
 .quotePreviewCard{overflow-x:auto}.quoteItems .qsize{min-width:120px}.quoteItems .qname{min-width:130px}.quoteItems .qcm{min-width:90px}@media(max-width:700px){.officialQuote{min-width:820px}.officialTitle{font-size:30px}}
-
-.outing-card{margin-top:14px;padding:16px;border:1px solid #d7e0ea;border-radius:12px;background:#fff}
-.outing-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
-.outing-head h3{margin:0;color:#0d3152}
-.outing-table{width:100%;border-collapse:collapse}
-.outing-table th,.outing-table td{border-bottom:1px solid #dbe3ec;padding:9px 8px;text-align:left;vertical-align:top}
-.outing-table th{background:#f3f7fa;color:#163a5b}
-.outing-add{border:1px solid #b9c8d6;background:#fff;border-radius:7px;padding:6px 10px;cursor:pointer}
-.outing-edit{border:1px solid #b9c8d6;background:#fff;border-radius:6px;padding:4px 9px;cursor:pointer;margin-right:5px}
-.outing-del{border:0;background:#e52d32;color:#fff;border-radius:6px;padding:5px 9px;cursor:pointer}
-@media(max-width:760px){.outing-table{font-size:13px}.outing-table th,.outing-table td{padding:7px 5px}}
 </style>
 
 <style id="quote-note-align-fix">
@@ -416,25 +405,28 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
 .quoteListWrap .quoteList th,.quoteListWrap .quoteList td{vertical-align:middle}
 @media(max-width:700px){.quoteListWrap{overflow-x:auto;-webkit-overflow-scrolling:touch}.quoteListWrap .quoteList{min-width:980px}}
 </style>
+
+<style id="outing-record-style">
+.outing-card{margin-top:14px;padding:16px;border:1px solid #d7e0ea;border-radius:12px;background:#fff}
+.outing-card h3{margin:0 0 10px;color:#0d3152}
+.outing-table{width:100%;border-collapse:collapse}
+.outing-table th,.outing-table td{border-bottom:1px solid #dbe3ec;padding:9px 8px;text-align:left;vertical-align:top}
+.outing-table th{background:#f3f7fa;color:#163a5b}
+.outing-add,.outing-edit{border:1px solid #b9c8d6;background:#fff;border-radius:7px;padding:5px 9px;cursor:pointer}
+.outing-del{border:0;background:#e52d32;color:#fff;border-radius:6px;padding:6px 9px;cursor:pointer}
+</style>
 </head>
 <body>
 <div id="pullRefreshIndicator" aria-hidden="true"><div class="pull-spinner"></div></div>
 <section id="loginPage" class="loginWrap"><div class="loginCard"><h1>勝寶鼎/新弘股公司</h1><label class="field">Email<input id="loginEmail" type="email" autocomplete="username"></label><label class="field">密碼<input id="loginPassword" type="password" autocomplete="current-password"></label><button id="loginBtn" class="loginBtn">登入</button><button id="passkeyBtn" class="loginBtn" type="button" style="margin-top:10px;background:#fff;border:1px solid #81D8D0">使用 Face ID／裝置解鎖登入</button><div id="loginErr" class="err"></div></div></section>
 <section id="appPage" class="hidden"><header><div class="toprow"><div class="brand">勝寶鼎/新弘股公司｜行事曆</div><button id="logoutBtn" class="userBtn">登出</button></div><div id="roleLine" class="roleLine"></div><div class="featureTabs"><button id="calendarTabBtn" class="active">行事曆</button><button id="quoteTabBtn" class="hidden">報價單</button><button id="quoteQuickNoteHeaderBtn" class="hidden">記事本／複製</button><button id="installStatsTabBtn" class="hidden">安裝統計表</button></div><div class="controls" id="calendarControls"><button id="prevBtn">‹</button><div id="monthTitle" class="month"></div><button id="nextBtn">›</button><button id="todayBtn">本月</button><button id="noteBtn" class="hidden">備註</button></div><div class="legend"><span class="lg"><i class="dot" style="background:#20aa5a"></i>綠－石英石</span><span class="lg"><i class="dot" style="background:#2196f3"></i>藍－人造石</span><span class="lg"><i class="dot" style="background:#e52424"></i>紅－維修</span><span class="lg"><i class="dot" style="background:#ff851b"></i>橘－浤富代裝石英</span><span class="lg"><i class="dot" style="background:#8c35d5"></i>紫</span><span class="lg"><i class="dot" style="background:#e5b800"></i>黃</span><span class="lg"><i class="dot" style="background:#111"></i>黑</span><span class="lg symbolLegend">☑</span><span class="lg symbolLegend">☒</span><span class="lg symbolLegend">➜</span><span class="lg symbolLegend">●</span><span class="lg symbolLegend">▲</span><span class="lg symbolLegend">✔</span><span class="lg symbolLegend">✘</span></div></header><main>
-<div id="calendarView"><section class="calendar"><div class="weekhead"><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div class="weekend">六</div><div class="weekend">日</div></div><div id="weeks"></div></section>
-<section class="outing-card" id="outingRecords">
-  <div class="outing-head">
-    <h3>外出紀錄</h3>
-  </div>
-  <table class="outing-table">
-    <thead><tr>
-      <th><button type="button" class="outing-add" onclick="addOutingRecord()">＋ 新增</button> 日期</th>
-      <th>案名</th><th>安裝</th><th>內容</th><th>操作</th>
-    </tr></thead>
-    <tbody id="outingRows"></tbody>
-  </table>
-</section>
-<div id="noteBox" class="noteBox"><div class="noteTitle">備註</div><div id="noteText" class="noteText"></div></div><div id="syncText" class="sync"></div></div>
+<div id="calendarView"><section class="calendar"><div class="weekhead"><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div class="weekend">六</div><div class="weekend">日</div></div><div id="weeks"></div></section><section class="outing-card" id="outingRecords">
+<h3>外出紀錄</h3>
+<table class="outing-table"><thead><tr>
+<th><button type="button" class="outing-add" onclick="addOutingRecord()">＋ 新增</button> 日期</th>
+<th>案名</th><th>安裝</th><th>內容</th><th>操作</th>
+</tr></thead><tbody id="outingRows"></tbody></table>
+</section><div id="noteBox" class="noteBox"><div class="noteTitle">備註</div><div id="noteText" class="noteText"></div></div><div id="syncText" class="sync"></div></div>
 <section id="quoteView" class="quoteWrap hidden">
   <div class="quoteCard">
     <h2 class="quoteTitle" id="quoteFormTitle">新增報價單</h2>
@@ -915,53 +907,6 @@ table{width:100%;border-collapse:collapse;border:1.4px solid #111;table-layout:f
 </style>
 
 </head><body><div class="page"><div class="title">勝鈔環保科技股份有限公司報價單</div><div class="header"><div class="case">案名：${esc(m.case_name||x.contact_name||"")}</div><div class="number">編號：${esc(x.quote_no||"")}</div><div class="customer">客戶名稱：${(()=>{const v=String(x.customer_name||"").trim(),mm=v.match(/^([A-Za-z0-9_-]+)\s*(.*)$/);return mm?`<span class="customerCode">${esc(mm[1])}</span>${mm[2]?` <span class="customerName">${esc(mm[2])}</span>`:""}`:`<span class="customerName">${esc(v)}</span>`})()}</div><div class="date">日期：${esc(qDateDisplay(x.quote_date))}</div><div class="customer">聯絡人電話：<span class="customerPhone">${esc(m.contact_phone||x.phone||"")}</span></div><div class="install">實際安裝日期：${esc(qDateDisplay(m.install_date))}</div><div class="address">安裝地址：${esc(x.address||"")}</div><div class="install">安裝時段：${esc(m.install_period||"")}</div></div><div class="hint" style="color:#ff0000 !important;font-size:14px !important;font-weight:700 !important;">此為初估計價　實際價格會依實際色號、尺寸、作法變動</div><div class="mat"><div>色 號</div><div class="value">${esc(m.color_no||"")}</div><div>品 名</div><div class="value">${esc(m.product_name||"")}</div><div class="edge">前緣 <span class="edgeNum">${esc(m.front_edge||"")}</span> <span class="cmUnit">cm</span> ／ 背牆 <span class="edgeNum">${esc(m.back_wall||"")}</span> <span class="cmUnit">cm</span></div></div><table><thead><tr><th>項數</th><th>名稱</th><th>加工尺寸 (CM)</th><th>總公分數</th><th>單位</th><th>單價</th><th>小計</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td></td><td colspan="3" class="left">備註：此價格為實價計價</td><td colspan="2">合計</td><td>${qMoney(x.subtotal)}</td></tr><tr><td></td><td colspan="3"></td><td colspan="2">稅金5%</td><td>${qMoney(x.tax_amount)}</td></tr><tr><td></td><td colspan="3"></td><td colspan="2">總計</td><td>${qMoney(x.total_amount)}</td></tr></tfoot></table><div class="notes"><div>備註：　1.本報價單有效期間為30天</div><div style="padding-left:11mm"><span style="display:inline-block;width:1.45em;text-align:right;margin-right:.18em">2.</span>付款方式:月結40天，未月結客戶安裝完工收現，稅外加不扣%</div><div style="padding-left:11mm"><span style="display:inline-block;width:1.45em;text-align:right;margin-right:.18em">3.</span>開發票為總計金額</div><div style="padding-left:11mm"><span style="display:inline-block;width:1.45em;text-align:right;margin-right:.18em">4.</span>本公司產品款項未結清資產屬勝鈔環保科技股份有限公司所有權</div></div><div class="sign"><div>勝鈔環保科技股份有限公司<br>TEL:02-26771176<br>FAX:02-26772076<br><br><br>業務代表簽名:</div><div>客戶簽名:</div></div><div class="footerProductCode" style="text-align:right;padding-right:34mm;margin-top:2mm">${String(m.product_name||"").trim()==="樂天"?"G5DE":"G5DD"}</div></div><script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script>
-
-
-<script>
-(function(){
-  const OUTING_KEY="sbd_outing_records_v1";
-  const loadOutings=()=>{try{return JSON.parse(localStorage.getItem(OUTING_KEY)||"[]")}catch(e){return[]}};
-  const saveOutings=a=>localStorage.setItem(OUTING_KEY,JSON.stringify(a));
-  const escOut=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
-  function normalizeDate(v){
-    v=String(v||"").trim();
-    if(!v)return "";
-    const m=v.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/);
-    if(m)return `${m[1]}-${String(m[2]).padStart(2,"0")}-${String(m[3]).padStart(2,"0")}`;
-    return v;
-  }
-  window.renderOutingRecords=function(){
-    const tb=document.getElementById("outingRows"); if(!tb)return;
-    const a=loadOutings().slice().sort((x,y)=>String(normalizeDate(x.date)).localeCompare(String(normalizeDate(y.date))));
-    tb.innerHTML=a.length?a.map(x=>`<tr>
-      <td>${escOut(x.date)}</td><td>${escOut(x.caseName)}</td><td>${escOut(x.install)}</td><td>${escOut(x.content)}</td>
-      <td><button class="outing-edit" onclick="editOutingRecord('${x.id}')">修改</button><button class="outing-del" onclick="deleteOutingRecord('${x.id}')">刪除</button></td>
-    </tr>`).join(""):`<tr><td colspan="5" style="text-align:center;color:#718096;padding:18px">目前沒有外出紀錄</td></tr>`;
-  };
-  window.addOutingRecord=function(){
-    const date=normalizeDate(prompt("日期（YYYY-MM-DD）","")||""); if(!date)return;
-    const caseName=prompt("案名","")||"";
-    const install=prompt("安裝","")||"";
-    const content=prompt("內容","")||"";
-    const a=loadOutings(); a.push({id:String(Date.now())+Math.random().toString(16).slice(2),date,caseName,install,content});
-    saveOutings(a); renderOutingRecords();
-  };
-  window.editOutingRecord=function(id){
-    const a=loadOutings(),i=a.findIndex(x=>x.id===id); if(i<0)return;
-    const x=a[i];
-    const date=normalizeDate(prompt("日期（YYYY-MM-DD）",x.date)||""); if(!date)return;
-    const caseName=prompt("案名",x.caseName); if(caseName===null)return;
-    const install=prompt("安裝",x.install); if(install===null)return;
-    const content=prompt("內容",x.content); if(content===null)return;
-    a[i]={...x,date,caseName,install,content}; saveOutings(a); renderOutingRecords();
-  };
-  window.deleteOutingRecord=function(id){
-    if(!confirm("確定刪除這筆外出紀錄？"))return;
-    saveOutings(loadOutings().filter(x=>x.id!==id)); renderOutingRecords();
-  };
-  document.addEventListener("DOMContentLoaded",renderOutingRecords);
-})();
-</script>
 
 </body></html>`
 }
@@ -1877,6 +1822,35 @@ initInstallerPicker();updateMasterBillingRange();renderStatsEditingPreviewRow();
 
 // 報價單新增欄位：聯絡人電話／安裝時段，電腦與手機共用同一表單並即時同步預覽
 ["qContactPhone","qInstallPeriod"].forEach(id=>$(id)?.addEventListener("input",()=>{renderQuotePreview();refreshQuoteQuickNote()}));
+</script>
+
+<script id="outing-record-script">
+(function(){
+ const KEY="sbd_outing_records_v1";
+ const get=()=>{try{return JSON.parse(localStorage.getItem(KEY)||"[]")}catch(e){return[]}};
+ const put=a=>localStorage.setItem(KEY,JSON.stringify(a));
+ const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
+ const norm=v=>{v=String(v||"").trim();const m=v.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/);return m?`${m[1]}-${String(m[2]).padStart(2,"0")}-${String(m[3]).padStart(2,"0")}`:v};
+ window.renderOutingRecords=function(){
+  const tb=document.getElementById("outingRows"); if(!tb)return;
+  const a=get().slice().sort((a,b)=>norm(a.date).localeCompare(norm(b.date)));
+  tb.innerHTML=a.length?a.map(x=>`<tr><td>${esc(x.date)}</td><td>${esc(x.caseName)}</td><td>${esc(x.install)}</td><td>${esc(x.content)}</td><td><button class="outing-edit" onclick="editOutingRecord('${x.id}')">修改</button> <button class="outing-del" onclick="deleteOutingRecord('${x.id}')">刪除</button></td></tr>`).join(""):'<tr><td colspan="5" style="text-align:center;color:#718096;padding:18px">目前沒有外出紀錄</td></tr>';
+ };
+ window.addOutingRecord=function(){
+  const date=norm(prompt("日期（YYYY-MM-DD）","")||""); if(!date)return;
+  const a=get(); a.push({id:String(Date.now()),date,caseName:prompt("案名","")||"",install:prompt("安裝","")||"",content:prompt("內容","")||""}); put(a);renderOutingRecords();
+ };
+ window.editOutingRecord=function(id){
+  const a=get(),i=a.findIndex(x=>x.id===id);if(i<0)return;const x=a[i];
+  const date=norm(prompt("日期（YYYY-MM-DD）",x.date)||"");if(!date)return;
+  const caseName=prompt("案名",x.caseName);if(caseName===null)return;
+  const install=prompt("安裝",x.install);if(install===null)return;
+  const content=prompt("內容",x.content);if(content===null)return;
+  a[i]={...x,date,caseName,install,content};put(a);renderOutingRecords();
+ };
+ window.deleteOutingRecord=function(id){if(confirm("確定刪除這筆外出紀錄？")){put(get().filter(x=>x.id!==id));renderOutingRecords()}};
+ document.addEventListener("DOMContentLoaded",renderOutingRecords);
+})();
 </script>
 </body>
 </html>
