@@ -433,7 +433,7 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
 <h3>外出紀錄</h3>
 <table class="outing-table"><colgroup><col style="width:14.2857%!important"><col style="width:14.2857%!important"><col style="width:14.2857%!important"><col style="width:28.5714%!important"><col style="width:28.5714%!important"></colgroup><thead><tr>
 <th><button type="button" class="outing-add" onclick="addOutingRecord()">＋ 新增</button> 日期</th>
-<th>案名</th><th>師傅</th><th>地點</th><th>操作</th>
+<th>師傅</th><th>案名</th><th>地點</th><th>操作</th>
 </tr></thead><tbody id="outingRows"></tbody></table>
 </section><div id="noteBox" class="noteBox"><div class="noteTitle">備註</div><div id="noteText" class="noteText"></div></div><div id="syncText" class="sync"></div></div>
 <section id="quoteView" class="quoteWrap hidden">
@@ -1873,7 +1873,7 @@ initInstallerPicker();updateMasterBillingRange();renderStatsEditingPreviewRow();
   }));
   const manual=get().map(x=>({...x,linked:false,time:""}));
   const a=[...linked,...manual].sort((a,b)=>norm(a.date).localeCompare(norm(b.date))||String(a.time||"").localeCompare(String(b.time||"")));
-  tb.innerHTML=a.length?a.map(x=>`<tr><td>${esc2(x.date)}</td><td>${esc2(x.caseName)}</td><td>${esc2(x.install)}</td><td>${esc2(x.content)}</td><td>${x.linked?`<button class="outing-edit" onclick="editLinkedOuting('${x.id}')">修改</button> <button class="outing-del" onclick="deleteLinkedOuting('${x.id}')">刪除</button>`:`<button class="outing-edit" onclick="editOutingRecord('${x.id}')">修改</button> <button class="outing-del" onclick="deleteOutingRecord('${x.id}')">刪除</button>`}</td></tr>`).join(""):'<tr><td colspan="5" style="text-align:center;color:#718096;padding:18px">目前沒有外出紀錄</td></tr>';
+  tb.innerHTML=a.length?a.map(x=>`<tr><td>${esc2(x.date)}</td><td>${esc2(x.install)}</td><td>${esc2(x.caseName)}</td><td>${esc2(x.content)}</td><td>${x.linked?`<button class="outing-edit" onclick="editLinkedOuting('${x.id}')">修改</button> <button class="outing-del" onclick="deleteLinkedOuting('${x.id}')">刪除</button>`:`<button class="outing-edit" onclick="editOutingRecord('${x.id}')">修改</button> <button class="outing-del" onclick="deleteOutingRecord('${x.id}')">刪除</button>`}</td></tr>`).join(""):'<tr><td colspan="5" style="text-align:center;color:#718096;padding:18px">目前沒有外出紀錄</td></tr>';
  };
  window.editLinkedOuting=function(id){ if(typeof openEditEvent==="function") openEditEvent(id); };
  window.deleteLinkedOuting=async function(id){
