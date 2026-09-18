@@ -1862,60 +1862,44 @@ initInstallerPicker();updateMasterBillingRange();renderStatsEditingPreviewRow();
  const put=a=>localStorage.setItem(KEY,JSON.stringify(a));
  const esc2=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
  const norm=v=>{v=String(v||"").trim();const m=v.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/);return m?`${m[1]}-${String(m[2]).padStart(2,"0")}-${String(m[3]).padStart(2,"0")}`:v};
+ function importCalendarOnce(){
+   const a=get(); let changed=false;
+   const evs=Array.isArray(window.events)?window.events:(typeof events!=="undefined"?events:[]);
+   evs.forEach(x=>{
+     const sid=String(x.id||""); if(!sid||a.some(r=>String(r.sourceEventId||"")===sid))return;
+     a.push({id:"cal_"+sid,sourceEventId:sid,date:x.event_date||"",caseName:x.title||"",install:"",content:""}); changed=true;
+   });
+   if(changed)put(a);
+   return a;
+ }
  window.renderOutingRecords=function(){
   const tb=document.getElementById("outingRows"); if(!tb)return;
-  // 行事曆資料自動連動到外出紀錄（目前查詢月份）
-  const linked=(Array.isArray(window.events)?window.events:(typeof events!=="undefined"?events:[])).map(x=>({
-    id:String(x.id), date:x.event_date||"", caseName:x.title||"",
-    install:"",
-    content:"", linked:true,
-    time:x.event_time||""
-  }));
-  const manual=get().map(x=>({...x,linked:false,time:""}));
-  const a=[...linked,...manual].sort((a,b)=>norm(a.date).localeCompare(norm(b.date))||String(a.time||"").localeCompare(String(b.time||"")));
-  tb.innerHTML=a.length?a.map(x=>`<tr><td>${esc2(x.date)}</td><td>${esc2(x.install)}</td><td>${esc2(x.caseName)}</td><td>${esc2(x.content)}</td><td>${x.linked?`<button class="outing-edit" onclick="editLinkedOuting('${x.id}')">修改</button> <button class="outing-del" onclick="deleteLinkedOuting('${x.id}')">刪除</button>`:`<button class="outing-edit" onclick="editOutingRecord('${x.id}')">修改</button> <button class="outing-del" onclick="deleteOutingRecord('${x.id}')">刪除</button>`}</td></tr>`).join(""):'<tr><td colspan="5" style="text-align:center;color:#718096;padding:18px">目前沒有外出紀錄</td></tr>';
- };
- window.editLinkedOuting=function(id){ if(typeof openEditEvent==="function") openEditEvent(id); };
- window.deleteLinkedOuting=async function(id){
-   if(!confirm("確定刪除這筆行事曆／外出紀錄？"))return;
-   const {error}=await sb.from("sbd_calendar_events").delete().eq("id",id);
-   if(error){alert("刪除失敗："+error.message);return} await loadMonth();
+  const a=importCalendarOnce().sort((a,b)=>norm(a.date).localeCompare(norm(b.date))||String(a.id).localeCompare(String(b.id)));
+  tb.innerHTML=a.length?a.map(x=>`<tr><td>${esc2(x.date)}</td><td>${esc2(x.install)}</td><td>${esc2(x.caseName)}</td><td>${esc2(x.content)}</td><td><button class="outing-edit" onclick="editOutingRecord('${x.id}')">修改</button> <button class="outing-del" onclick="deleteOutingRecord('${x.id}')">刪除</button></td></tr>`).join(""):'<tr><td colspan="5" style="text-align:center;color:#718096;padding:18px">目前沒有外出紀錄</td></tr>';
  };
  function openManualOutingForm(record){
   let modal=document.getElementById("manualOutingModal");
   if(!modal){
-    modal=document.createElement("div");
-    modal.id="manualOutingModal";
+    modal=document.createElement("div"); modal.id="manualOutingModal";
     modal.style.cssText="position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px";
     modal.innerHTML=`<div style="background:#fff;width:min(560px,96vw);border-radius:14px;padding:20px;box-shadow:0 18px 50px rgba(0,0,0,.25)">
       <div id="manualOutingTitle" style="font-size:20px;font-weight:800;margin-bottom:16px">新增外出紀錄</div>
       <div style="display:grid;grid-template-columns:110px 1fr;gap:12px;align-items:center">
         <label>日期</label><input id="omDate" type="date" style="padding:9px;border:1px solid #cbd5e1;border-radius:8px">
-        <label>案名</label><input id="omCase" style="padding:9px;border:1px solid #cbd5e1;border-radius:8px">
         <label>師傅</label><input id="omInstall" style="padding:9px;border:1px solid #cbd5e1;border-radius:8px">
-        <label>地點</label><textarea id="omContent" rows="4" style="padding:9px;border:1px solid #cbd5e1;border-radius:8px;resize:vertical"></textarea>
+        <label>案名</label><input id="omCase" style="padding:9px;border:1px solid #cbd5e1;border-radius:8px">
+        <label>地點</label><input id="omContent" style="padding:9px;border:1px solid #cbd5e1;border-radius:8px">
       </div>
-      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px">
-        <button type="button" id="omCancel" style="padding:9px 18px;border:1px solid #cbd5e1;background:#fff;border-radius:8px">取消</button>
-        <button type="button" id="omSave" style="padding:9px 18px;border:0;background:#173a5e;color:#fff;border-radius:8px;font-weight:700">儲存</button>
-      </div></div>`;
-    document.body.appendChild(modal);
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px"><button id="omCancel">取消</button><button id="omSave" style="background:#16a34a;color:#fff;border:0;border-radius:8px;padding:9px 16px">儲存</button></div></div>`;
+    document.body.appendChild(modal); modal.querySelector("#omCancel").onclick=()=>modal.style.display="none";
   }
-  modal.style.display="flex";
-  document.getElementById("manualOutingTitle").textContent=record?"修改外出紀錄":"新增外出紀錄";
-  document.getElementById("omDate").value=record?.date||"";
-  document.getElementById("omCase").value=record?.caseName||"";
-  document.getElementById("omInstall").value=record?.install||"";
-  document.getElementById("omContent").value=record?.content||"";
-  document.getElementById("omCancel").onclick=()=>modal.style.display="none";
-  document.getElementById("omSave").onclick=()=>{
-    const date=norm(document.getElementById("omDate").value);
-    if(!date){alert("請選擇日期");return}
-    const a=get();
-    const data={date,caseName:document.getElementById("omCase").value.trim(),install:document.getElementById("omInstall").value.trim(),content:document.getElementById("omContent").value.trim()};
+  modal.style.display="flex"; modal.querySelector("#manualOutingTitle").textContent=record?"修改外出紀錄":"新增外出紀錄";
+  modal.querySelector("#omDate").value=record?norm(record.date):""; modal.querySelector("#omInstall").value=record?.install||""; modal.querySelector("#omCase").value=record?.caseName||""; modal.querySelector("#omContent").value=record?.content||"";
+  modal.querySelector("#omSave").onclick=()=>{
+    const data={date:modal.querySelector("#omDate").value,install:modal.querySelector("#omInstall").value.trim(),caseName:modal.querySelector("#omCase").value.trim(),content:modal.querySelector("#omContent").value.trim()};
+    if(!data.date){alert("請輸入日期");return} const a=get();
     if(record){const i=a.findIndex(x=>x.id===record.id);if(i>=0)a[i]={...a[i],...data}}
-    else a.push({id:String(Date.now()),...data});
-    put(a);modal.style.display="none";renderOutingRecords();
+    else a.push({id:String(Date.now()),...data}); put(a); modal.style.display="none"; renderOutingRecords();
   };
  }
  window.addOutingRecord=function(){openManualOutingForm(null)};
