@@ -428,7 +428,7 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
 <body>
 <div id="pullRefreshIndicator" aria-hidden="true"><div class="pull-spinner"></div></div>
 <section id="loginPage" class="loginWrap"><div class="loginCard"><h1>勝寶鼎/新弘股公司</h1><label class="field">Email<input id="loginEmail" type="email" autocomplete="username"></label><label class="field">密碼<input id="loginPassword" type="password" autocomplete="current-password"></label><button id="loginBtn" class="loginBtn">登入</button><button id="passkeyBtn" class="loginBtn" type="button" style="margin-top:10px;background:#fff;border:1px solid #81D8D0">使用 Face ID／裝置解鎖登入</button><div id="loginErr" class="err"></div></div></section>
-<section id="appPage" class="hidden"><header><div class="toprow"><div class="brand">勝寶鼎/新弘股公司｜行事曆</div><button id="logoutBtn" class="userBtn">登出</button></div><div id="roleLine" class="roleLine"></div><div class="featureTabs"><button id="calendarTabBtn" class="active">行事曆</button><button id="quoteTabBtn" class="hidden">報價單</button><button id="quoteQuickNoteHeaderBtn" class="hidden">記事本／複製</button><button id="installStatsTabBtn" class="hidden">安裝統計表</button></div><div class="controls" id="calendarControls"><button id="prevBtn">‹</button><div id="monthTitle" class="month"></div><button id="nextBtn">›</button><button id="todayBtn">本月</button><button id="noteBtn" class="hidden">備註</button></div><div class="legend"><span class="lg"><i class="dot" style="background:#20aa5a"></i>綠－石英石</span><span class="lg"><i class="dot" style="background:#2196f3"></i>藍－人造石</span><span class="lg"><i class="dot" style="background:#e52424"></i>紅－維修</span><span class="lg"><i class="dot" style="background:#ff851b"></i>橘色</span><span class="lg"><i class="dot" style="background:#8c35d5"></i>紫－浤富代裝石英</span><span class="lg"><i class="dot" style="background:#e5b800"></i>黃－自安送料</span><span class="lg"><i class="dot" style="background:#111"></i>黑</span><span class="lg symbolLegend">☑</span><span class="lg symbolLegend">☒</span><span class="lg symbolLegend">➜</span><span class="lg symbolLegend">●</span><span class="lg symbolLegend">▲</span><span class="lg symbolLegend">✔</span><span class="lg symbolLegend">✘</span></div></header><main>
+<section id="appPage" class="hidden"><header><div class="toprow"><div class="brand">勝寶鼎/新弘股公司｜行事曆</div><button id="logoutBtn" class="userBtn">登出</button></div><div id="roleLine" class="roleLine"></div><div class="featureTabs"><button id="calendarTabBtn" class="active">行事曆</button><button id="quoteTabBtn" class="hidden">報價單</button><button id="quoteQuickNoteHeaderBtn" class="hidden">記事本／複製</button><button id="installStatsTabBtn" class="hidden">安裝統計表</button></div><div class="controls" id="calendarControls"><button id="prevBtn">‹</button><div id="monthTitle" class="month"></div><button id="nextBtn">›</button><button id="todayBtn">本月</button><button id="noteBtn" class="hidden">備註</button></div><div class="legend"><span class="lg"><i class="dot" style="background:#20aa5a"></i>綠－石英石</span><span class="lg"><i class="dot" style="background:#2196f3"></i>藍－人造石</span><span class="lg"><i class="dot" style="background:#e52424"></i>紅－維修</span><span class="lg"><i class="dot" style="background:#ff851b"></i>橘色－草屯接單</span><span class="lg"><i class="dot" style="background:#8c35d5"></i>紫－浤富代裝石英</span><span class="lg"><i class="dot" style="background:#e5b800"></i>黃－自安送料</span><span class="lg"><i class="dot" style="background:#111"></i>黑</span><span class="lg symbolLegend">☑</span><span class="lg symbolLegend">☒</span><span class="lg symbolLegend">➜</span><span class="lg symbolLegend">●</span><span class="lg symbolLegend">▲</span><span class="lg symbolLegend">✔</span><span class="lg symbolLegend">✘</span></div></header><main>
 <div id="calendarView"><section class="calendar"><div class="weekhead"><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div class="weekend">六</div><div class="weekend">日</div></div><div id="weeks"></div></section><section class="outing-card" id="outingRecords">
 <h3>外出紀錄</h3>
 <table class="outing-table"><colgroup><col style="width:14.2857%!important"><col style="width:14.2857%!important"><col style="width:14.2857%!important"><col style="width:28.5714%!important"><col style="width:28.5714%!important"></colgroup><thead><tr>
@@ -606,7 +606,7 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
     <h2>查看行程</h2>
     <div><b>日期</b><div id="vdate"></div></div>
     <div><b>案名</b><div id="vtitle"></div></div>
-    <div><b>內容</b><div id="vdetail" style="white-space:pre-wrap"></div></div>
+    <div><b>詳細內容</b><div id="vdetail" style="white-space:pre-wrap"></div></div>
     <div class="formActions"><button type="button" id="closeViewBtn">關閉</button></div>
   </div>
 </dialog>
@@ -725,7 +725,14 @@ async function passkeyLogin(){
   }catch(e){$("loginErr").textContent="Face ID／裝置解鎖未完成"}
 }
 async function signIn(){ $("loginErr").textContent="";const email=$("loginEmail").value.trim(),password=$("loginPassword").value;if(!email||!password){$("loginErr").textContent="請輸入 Email 和密碼";return}$("loginBtn").disabled=true;const {error}=await sb.auth.signInWithPassword({email,password});$("loginBtn").disabled=false;if(error){$("loginErr").textContent="登入失敗，請確認帳號或密碼";return}await boot();await ensurePasskey() }
-async function boot(){const {data:{session}}=await sb.auth.getSession();if(!session){$("loginPage").classList.remove("hidden");$("appPage").classList.add("hidden");return}currentUser=session.user;const {data,error}=await sb.from("sbd_users").select("display_name,role,active").eq("user_id",currentUser.id).maybeSingle();if(error||!data||!data.active){await sb.auth.signOut();$("loginErr").textContent="此帳號尚未開通勝寶鼎/新弘股公司權限";$("loginPage").classList.remove("hidden");$("appPage").classList.add("hidden");return}profile=data;$("loginPage").classList.add("hidden");$("appPage").classList.remove("hidden");const roleText=profile.role==="admin"?"管理者":"使用者";$("roleLine").textContent=`${profile.display_name||currentUser.email}｜${roleText}`;$("noteBtn").classList.toggle("hidden",profile.role!=="admin");$("quoteTabBtn").classList.toggle("hidden",!["admin","editor"].includes(profile.role));$("quoteQuickNoteHeaderBtn")?.classList.toggle("hidden",!["admin","editor"].includes(profile.role));$("installStatsTabBtn").classList.toggle("hidden",profile.role!=="admin");showFeature("calendar");await loadMonth()}
+async function boot(){const {data:{session}}=await sb.auth.getSession();if(!session){$("loginPage").classList.remove("hidden");$("appPage").classList.add("hidden");return}currentUser=session.user;const {data,error}=await sb.from("sbd_users").select("display_name,role,active").eq("user_id",currentUser.id).maybeSingle();if(error||!data||!data.active){await sb.auth.signOut();$("loginErr").textContent="此帳號尚未開通勝寶鼎/新弘股公司權限";$("loginPage").classList.remove("hidden");$("appPage").classList.add("hidden");return}profile=data;
+// 固定使用者2：只能查看行事曆，但可查看完整「詳細內容」，不得新增／修改／刪除。
+const fixedUser2Email="numberoneaustin@yahoo.com.tw";
+if(String(currentUser?.email||"").toLowerCase()===fixedUser2Email){profile={...profile,role:"viewer"};}
+$("loginPage").classList.add("hidden");$("appPage").classList.remove("hidden");const roleText=profile.role==="admin"?"管理者":"使用者";$("roleLine").textContent=`${profile.display_name||currentUser.email}｜${roleText}`;$("noteBtn").classList.toggle("hidden",profile.role!=="admin");$("quoteTabBtn").classList.toggle("hidden",!["admin","editor"].includes(profile.role));$("quoteQuickNoteHeaderBtn")?.classList.toggle("hidden",!["admin","editor"].includes(profile.role));$("installStatsTabBtn").classList.toggle("hidden",profile.role!=="admin");
+const isFixedUser2=String(currentUser?.email||"").toLowerCase()==="numberoneaustin@yahoo.com.tw";
+$("outingRecords")?.classList.toggle("hidden",isFixedUser2);
+showFeature("calendar");await loadMonth()}
 async function loadMonth(){ $("syncText").textContent="讀取中…";const {data:e,error:ee}=await sb.from("sbd_calendar_events").select("id,event_date,event_time,title,details,color,created_at").gte("event_date",firstDay()).lt("event_date",nextMonthFirst()).order("event_date").order("event_time",{ascending:true,nullsFirst:true});if(ee){$("syncText").textContent="讀取行程失敗";return}events=e||[];const {data:n,error:ne}=await sb.from("sbd_month_notes").select("id,month_start,note").eq("month_start",firstDay()).maybeSingle();currentNoteRow=ne?null:n;render();if(typeof renderOutingRecords==="function")renderOutingRecords();$("syncText").textContent="資料已同步" }
 function render(){const y=view.getFullYear(),m=view.getMonth()+1;$("monthTitle").textContent=`${y} 年 ${m} 月`;const last=new Date(y,m,0).getDate(),first=(new Date(y,m-1,1).getDay()+6)%7,h=holidayMap(y,m);let out="";for(let r=0;r<6;r++){out+='<div class="week">';for(let c=0;c<7;c++){const n=r*7+c-first+1;if(n<1||n>last){out+='<div class="day blank"></div>';continue}const key=`${ym()}-${pad(n)}`,a=events.filter(x=>x.event_date===key),upper=a.filter(x=>eventInstall(x)==="勝寶鼎"),lower=a.filter(x=>eventInstall(x)==="外包"),isRed=!!h[n]||c>=5;const chip=x=>{const t=(x.event_time?x.event_time.slice(0,5)+" ":"")+esc(x.title);return `<div class="event ${esc(x.color)} adminEvent" data-id="${x.id}">${t}</div>`};const canAdd=["admin","editor"].includes(profile.role);out+=`<div class="day${isRed?" holiday":""}" data-date="${key}"><div class="dateLine${canAdd?" canAdd":""}"${canAdd?` data-date="${key}" role="button" tabindex="0" aria-label="新增 ${key} 行程"`:""}><div class="date">${n}${h[n]?`<span class="holidayName">${esc(h[n])}</span>`:""}</div>${canAdd?`<span class="dayAdd">＋</span>`:""}</div>${upper.map(chip).join("")}<div class="split"></div>${lower.map(chip).join("")}</div>`}out+='</div>'}$("weeks").innerHTML=out;$("weeks").querySelectorAll(".adminEvent").forEach(el=>el.addEventListener("click",ev=>{ev.stopPropagation();if(["admin","editor"].includes(profile.role))openEditEvent(el.dataset.id);else openViewEvent(el.dataset.id)}));$("weeks").querySelectorAll(".dateLine.canAdd").forEach(el=>{el.addEventListener("click",ev=>{ev.stopPropagation();openNewEvent(el.dataset.date)});el.addEventListener("keydown",ev=>{if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();openNewEvent(el.dataset.date)}})});const note=(currentNoteRow?.note||"").trim();$("noteText").textContent=note;$("noteBox").classList.toggle("show",!!note)}
 function openNewEvent(dateOverride){if(!["admin","editor"].includes(profile.role))return;currentEditId=null;$("eventDlgTitle").textContent="新增行程";$("deleteEventBtn").classList.add("hidden");$("installField").classList.toggle("hidden",!["admin","editor"].includes(profile.role));$("fdate").value=displayDateInput(dateOverride||`${ym()}-01`);$("ftime").value="";$("ftitle").value="";$("fdetail").value="";$("fcolor").value="blue";$("finstall").value="勝寶鼎";$("eventDlg").showModal()}
@@ -738,7 +745,7 @@ function openViewEvent(id){
   $("viewDlg").showModal();
 }
 function openEditEvent(id){if(!["admin","editor"].includes(profile.role))return;const x=events.find(v=>v.id===id);if(!x)return;currentEditId=id;$("eventDlgTitle").textContent="修改行程";$("deleteEventBtn").classList.toggle("hidden",profile.role!=="admin");$("installField").classList.remove("hidden");$("fdate").value=displayDateInput(x.event_date);$("ftime").value=x.event_time?x.event_time.slice(0,5):"";$("ftitle").value=x.title||"";$("fdetail").value=cleanEventDetails(x.details);$("fcolor").value=x.color||"blue";$("finstall").value=eventInstall(x);$("eventDlg").showModal()}
-async function saveEvent(){const event_date=normalizeDateInput($("fdate").value)||$("fdate").value;const event_time=$("ftime").value?(normalizeTimeInput($("ftime").value)||$("ftime").value):null;const install=$("finstall").value||"勝寶鼎";const payload={event_date,event_time,title:$("ftitle").value.trim(),details:packEventDetails($("fdetail").value,install),color:$("fcolor").value};if(!payload.event_date||!payload.title){alert("請輸入日期和名稱");return}let error;if(currentEditId&&["admin","editor"].includes(profile.role))({error}=await sb.from("sbd_calendar_events").update(payload).eq("id",currentEditId));else{if(!["admin","editor"].includes(profile.role))return;({error}=await sb.from("sbd_calendar_events").insert(payload))}if(error){alert("儲存失敗："+error.message);return}$("eventDlg").close();await loadMonth()}
+async function saveEvent(){const event_date=normalizeDateInput($("fdate").value)||$("fdate").value;const event_time=$("ftime").value?(normalizeTimeInput($("ftime").value)||$("ftime").value):null;const install=$("finstall").value||"勝寶鼎";const payload={event_date,event_time,title:$("ftitle").value.trim(),details:packEventDetails($("fdetail").value,install),color:$("fcolor").value};let error;if(currentEditId&&["admin","editor"].includes(profile.role))({error}=await sb.from("sbd_calendar_events").update(payload).eq("id",currentEditId));else{if(!["admin","editor"].includes(profile.role))return;({error}=await sb.from("sbd_calendar_events").insert(payload))}if(error){alert("儲存失敗："+error.message);return}$("eventDlg").close();await loadMonth()}
 async function deleteEvent(){if(profile.role!=="admin"||!currentEditId)return;if(!confirm("確定刪除這筆行程？"))return;const {error}=await sb.from("sbd_calendar_events").delete().eq("id",currentEditId);if(error){alert("刪除失敗："+error.message);return}$("eventDlg").close();await loadMonth()}
 function openNote(){if(profile.role!=="admin")return;$("fnote").value=currentNoteRow?.note||"";$("noteDlg").showModal()}
 async function saveNote(){if(profile.role!=="admin")return;const note=$("fnote").value.trim();let error;if(currentNoteRow)({error}=await sb.from("sbd_month_notes").update({note}).eq("id",currentNoteRow.id));else({error}=await sb.from("sbd_month_notes").insert({month_start:firstDay(),note}));if(error){alert("備註儲存失敗："+error.message);return}$("noteDlg").close();await loadMonth()}
@@ -926,6 +933,48 @@ table{width:100%;border-collapse:collapse;border:1.4px solid #111;table-layout:f
 </style>
 
 </head><body><div class="page"><div class="title">勝鈔環保科技股份有限公司報價單</div><div class="header"><div class="case">案名：${esc(m.case_name||x.contact_name||"")}</div><div class="number">編號：${esc(x.quote_no||"")}</div><div class="customer">客戶名稱：${(()=>{const v=String(x.customer_name||"").trim(),mm=v.match(/^([A-Za-z0-9_-]+)\s*(.*)$/);return mm?`<span class="customerCode">${esc(mm[1])}</span>${mm[2]?` <span class="customerName">${esc(mm[2])}</span>`:""}`:`<span class="customerName">${esc(v)}</span>`})()}</div><div class="date">日期：${esc(qDateDisplay(x.quote_date))}</div><div class="customer">聯絡人電話：<span class="customerPhone">${esc(m.contact_phone||x.phone||"")}</span></div><div class="install">實際安裝日期：${esc(qDateDisplay(m.install_date))}</div><div class="address">安裝地址：${esc(x.address||"")}</div><div class="install">安裝時段：${esc(m.install_period||"")}</div></div><div class="hint" style="color:#ff0000 !important;font-size:14px !important;font-weight:700 !important;">此為初估計價　實際價格會依實際色號、尺寸、作法變動</div><div class="mat"><div>色 號</div><div class="value">${esc(m.color_no||"")}</div><div>品 名</div><div class="value">${esc(m.product_name||"")}</div><div class="edge">前緣 <span class="edgeNum">${esc(m.front_edge||"")}</span> <span class="cmUnit">cm</span> ／ 背牆 <span class="edgeNum">${esc(m.back_wall||"")}</span> <span class="cmUnit">cm</span></div></div><table><thead><tr><th>項數</th><th>名稱</th><th>加工尺寸 (CM)</th><th>總公分數</th><th>單位</th><th>單價</th><th>小計</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td></td><td colspan="3" class="left">備註：此價格為實價計價</td><td colspan="2">合計</td><td>${qMoney(x.subtotal)}</td></tr><tr><td></td><td colspan="3"></td><td colspan="2">稅金5%</td><td>${qMoney(x.tax_amount)}</td></tr><tr><td></td><td colspan="3"></td><td colspan="2">總計</td><td>${qMoney(x.total_amount)}</td></tr></tfoot></table><div class="notes"><div>備註：　1.本報價單有效期間為30天</div><div style="padding-left:11mm"><span style="display:inline-block;width:1.45em;text-align:right;margin-right:.18em">2.</span>付款方式:月結40天，未月結客戶安裝完工收現，稅外加不扣%</div><div style="padding-left:11mm"><span style="display:inline-block;width:1.45em;text-align:right;margin-right:.18em">3.</span>開發票為總計金額</div><div style="padding-left:11mm"><span style="display:inline-block;width:1.45em;text-align:right;margin-right:.18em">4.</span>本公司產品款項未結清資產屬勝鈔環保科技股份有限公司所有權</div></div><div class="sign"><div>勝鈔環保科技股份有限公司<br>TEL:02-26771176<br>FAX:02-26772076<br><br><br>業務代表簽名:</div><div>客戶簽名:</div></div></div><script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script>
+
+
+<script id="calendar-edit-restore-patch">
+// 行事曆修改維持原本獨立功能；外出紀錄修改不回寫行事曆。
+document.addEventListener("click", function(e){
+  const el=e.target.closest && e.target.closest("#weeks .adminEvent");
+  if(!el) return;
+  if(!profile || !["admin","editor"].includes(profile.role)) return;
+  e.preventDefault();
+  e.stopImmediatePropagation();
+  openEditEvent(el.dataset.id);
+}, true);
+</script>
+
+
+<script id="outing-edit-hard-override-v2">
+// 外出紀錄強制獨立：攔截外出紀錄區所有修改/刪除，禁止呼叫行事曆修改視窗
+document.addEventListener("click", function(e){
+  const row=e.target.closest && e.target.closest("#outingRows tr");
+  if(!row) return;
+  const edit=e.target.closest(".outing-edit");
+  const del=e.target.closest(".outing-del");
+  if(!edit && !del) return;
+  e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+  const id=(edit||del).getAttribute("data-outing-id") || (edit||del).getAttribute("onclick")?.match(/\('([^']+)'\)/)?.[1];
+  if(!id) return;
+  if(edit) window.editOutingRecord(id);
+  else window.deleteOutingRecord(id);
+}, true);
+
+// 重新包裝表格輸出，按鈕只保存外出紀錄 id，不綁任何行事曆函式
+const _outingRender=window.renderOutingRecords;
+window.renderOutingRecords=function(){
+  _outingRender && _outingRender();
+  document.querySelectorAll("#outingRows .outing-edit, #outingRows .outing-del").forEach(btn=>{
+    const m=(btn.getAttribute("onclick")||"").match(/\('([^']+)'\)/);
+    if(m) btn.dataset.outingId=m[1];
+    btn.removeAttribute("onclick");
+  });
+};
+setTimeout(()=>window.renderOutingRecords&&window.renderOutingRecords(),0);
+</script>
 
 </body></html>`
 }
@@ -1909,6 +1958,48 @@ initInstallerPicker();updateMasterBillingRange();renderStatsEditingPreviewRow();
 })();
 </script>
 
+
+
+<script id="calendar-edit-restore-patch">
+// 行事曆修改維持原本獨立功能；外出紀錄修改不回寫行事曆。
+document.addEventListener("click", function(e){
+  const el=e.target.closest && e.target.closest("#weeks .adminEvent");
+  if(!el) return;
+  if(!profile || !["admin","editor"].includes(profile.role)) return;
+  e.preventDefault();
+  e.stopImmediatePropagation();
+  openEditEvent(el.dataset.id);
+}, true);
+</script>
+
+
+<script id="outing-edit-hard-override-v2">
+// 外出紀錄強制獨立：攔截外出紀錄區所有修改/刪除，禁止呼叫行事曆修改視窗
+document.addEventListener("click", function(e){
+  const row=e.target.closest && e.target.closest("#outingRows tr");
+  if(!row) return;
+  const edit=e.target.closest(".outing-edit");
+  const del=e.target.closest(".outing-del");
+  if(!edit && !del) return;
+  e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+  const id=(edit||del).getAttribute("data-outing-id") || (edit||del).getAttribute("onclick")?.match(/\('([^']+)'\)/)?.[1];
+  if(!id) return;
+  if(edit) window.editOutingRecord(id);
+  else window.deleteOutingRecord(id);
+}, true);
+
+// 重新包裝表格輸出，按鈕只保存外出紀錄 id，不綁任何行事曆函式
+const _outingRender=window.renderOutingRecords;
+window.renderOutingRecords=function(){
+  _outingRender && _outingRender();
+  document.querySelectorAll("#outingRows .outing-edit, #outingRows .outing-del").forEach(btn=>{
+    const m=(btn.getAttribute("onclick")||"").match(/\('([^']+)'\)/);
+    if(m) btn.dataset.outingId=m[1];
+    btn.removeAttribute("onclick");
+  });
+};
+setTimeout(()=>window.renderOutingRecords&&window.renderOutingRecords(),0);
+</script>
 
 </body>
 </html>
