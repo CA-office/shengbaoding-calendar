@@ -1895,5 +1895,38 @@ initInstallerPicker();updateMasterBillingRange();renderStatsEditingPreviewRow();
 </script>
 
 
-\n<script id="mobile-calendar-swipe-month-fixed">\n(function(){\n  const allowed=new Set([\n    'a0985029910@gmail.com',\n    'numberoneaustin@yahoo.com.tw',\n    'rman770212@yahoo.com.tw',\n    'gen20312@gmail.com'\n  ]);\n  let startX=0,startY=0,active=false;\n  function enabled(){\n    const email=String(window.currentUser?.email || (typeof currentUser!=='undefined'&&currentUser?currentUser.email:'') || '').toLowerCase();\n    return window.innerWidth<=700 && allowed.has(email);\n  }\n  const cal=document.querySelector('#calendarView .calendar');\n  if(!cal)return;\n  cal.addEventListener('touchstart',function(e){\n    if(!enabled()||!e.touches||e.touches.length!==1)return;\n    const t=e.touches[0]; startX=t.clientX; startY=t.clientY; active=true;\n  },{passive:true});\n  cal.addEventListener('touchend',function(e){\n    if(!active||!enabled()||!e.changedTouches||!e.changedTouches.length){active=false;return;}\n    active=false;\n    const t=e.changedTouches[0], dx=t.clientX-startX, dy=t.clientY-startY;\n    if(Math.abs(dx)<55 || Math.abs(dx)<=Math.abs(dy)*1.2)return;\n    const btn=document.getElementById(dx<0?'nextBtn':'prevBtn');\n    if(btn)btn.click();\n  },{passive:true});\n  cal.addEventListener('touchcancel',()=>{active=false},{passive:true});\n})();\n</script>\n</body>
+
+<script id="mobile-calendar-swipe-month-clean">
+(function(){
+  const allowed = new Set([
+    "a0985029910@gmail.com",
+    "numberoneaustin@yahoo.com.tw",
+    "rman770212@yahoo.com.tw",
+    "gen20312@gmail.com"
+  ]);
+  let sx=0, sy=0, tracking=false;
+  function userEmail(){
+    try { return String(currentUser && currentUser.email || "").toLowerCase(); }
+    catch(e){ return ""; }
+  }
+  function enabled(){ return window.matchMedia("(max-width: 700px)").matches && allowed.has(userEmail()); }
+  document.addEventListener("touchstart", function(e){
+    if(!enabled() || !e.touches || e.touches.length!==1) return;
+    const cal=e.target.closest && e.target.closest("#calendarView .calendar");
+    if(!cal) return;
+    const t=e.touches[0]; sx=t.clientX; sy=t.clientY; tracking=true;
+  }, {passive:true});
+  document.addEventListener("touchend", function(e){
+    if(!tracking){ return; }
+    tracking=false;
+    if(!enabled() || !e.changedTouches || !e.changedTouches.length) return;
+    const t=e.changedTouches[0], dx=t.clientX-sx, dy=t.clientY-sy;
+    if(Math.abs(dx)<60 || Math.abs(dx)<=Math.abs(dy)*1.15) return;
+    const btn=document.getElementById(dx<0 ? "nextBtn" : "prevBtn");
+    if(btn) btn.click();
+  }, {passive:true});
+  document.addEventListener("touchcancel", function(){ tracking=false; }, {passive:true});
+})();
+</script>
+</body>
 </html>
