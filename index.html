@@ -906,15 +906,15 @@ function renderQuoteList(){const body=$("quoteListBody");body.innerHTML="";$("qu
 function editQuote(x){if(!["admin","editor"].includes(profile.role))return;const m=qMetaFromNote(x.note);editingQuoteId=x.id;$("quoteFormTitle").textContent="修改報價單";$("qCaseName").value=m.case_name||x.contact_name||"";$("qNo").value=x.quote_no||"";$("qCustomer").value=x.customer_name||"";$("qDate").value=qDateDisplay(x.quote_date||qToday());$("qInstallDate").value=qDateDisplay(m.install_date||"");$("qContactPhone").value=m.contact_phone||x.phone||"";$("qInstallPeriod").value=m.install_period||"";$("qAddress").value=x.address||"";$("qFileAddress").value=m.file_address||"";$("qColorNo").value=m.color_no||"";$("qProductName").value=m.product_name||"";$("qFrontEdge").value=m.front_edge||"";$("qBackWall").value=m.back_wall||"";$("qItemsBody").innerHTML="";(Array.isArray(x.items)?x.items:[]).forEach(addQuoteItem);if(!$("qItemsBody").children.length)addQuoteItem();$("qCancelEditBtn").classList.remove("hidden");calcQuote();$("quoteView").scrollIntoView({behavior:"smooth",block:"start"})}
 async function deleteQuote(id){if(profile.role!=="admin")return;if(!confirm("確定刪除這張報價單？"))return;const {error}=await sb.from("sbd_quotes").delete().eq("id",id);if(error){alert("刪除失敗："+error.message);return}await loadQuotes()}
 function quoteDownloadBase(x){
-  const m=x.meta||{};
-  const clean=v=>String(v||"").trim()
-    .replace(/^[A-Za-z]+\d+[A-Za-z0-9_-]*\s*/,"")
+  const m=qMetaFromNote(x.note||"");
+  const safe=v=>String(v||"").trim()
     .replace(/[\\/:*?"<>|]/g," ")
     .replace(/\s+/g," ").trim();
-  const customer=clean(m.customer_name||m.customer||x.customer_name||"");
-  const caseName=clean(m.case_name||m.project_name||x.case_name||"");
-  const date=String(m.quote_date||x.quote_date||"").trim();
-  return [date,customer,caseName].filter(Boolean).join("_")||"報價單";
+  const quoteNo=safe(x.quote_no||m.quote_no||"");
+  const customerRaw=String(x.customer_name||m.customer_name||m.customer||"");
+  const customerChinese=safe((customerRaw.match(/[\u3400-\u4DBF\u4E00-\u9FFF]+/g)||[]).join(""));
+  const fileAddress=safe(m.file_address||"");
+  return [quoteNo,customerChinese,fileAddress].filter(Boolean).join("_")||"報價單";
 }
 function quotePrintHtml(x){
   const m=qMetaFromNote(x.note),items=Array.isArray(x.items)?x.items:[];
@@ -1056,6 +1056,19 @@ async function excelQuote(x){
       setNum("L"+r,qty*price,`IF(OR(I${r}=\"\",K${r}=\"\"),\"\",I${r}*K${r})`);
     }
     setNum("L18",money(x.subtotal),"SUM(L10:L17)");setNum("L19",money(x.tax_amount),"ROUND(L18*0.05,0)");setNum("L20",money(x.total_amount),"SUM(L18:L19)");setText("L26",String(m.product_name||"").trim()==="樂天"?"G5DE":"G5DD");
+
+    // Excel 列印預設：將工作表放入單一頁面（1 頁寬 × 1 頁高）
+    let sheetPr=doc.getElementsByTagNameNS(NS,"sheetPr")[0];
+    if(!sheetPr){sheetPr=doc.createElementNS(NS,"sheetPr");doc.documentElement.insertBefore(sheetPr,doc.documentElement.firstChild)}
+    let pageSetUpPr=sheetPr.getElementsByTagNameNS(NS,"pageSetUpPr")[0];
+    if(!pageSetUpPr){pageSetUpPr=doc.createElementNS(NS,"pageSetUpPr");sheetPr.appendChild(pageSetUpPr)}
+    pageSetUpPr.setAttribute("fitToPage","1");
+    let pageSetup=doc.getElementsByTagNameNS(NS,"pageSetup")[0];
+    if(!pageSetup){pageSetup=doc.createElementNS(NS,"pageSetup");doc.documentElement.appendChild(pageSetup)}
+    pageSetup.setAttribute("fitToWidth","1");
+    pageSetup.setAttribute("fitToHeight","1");
+    pageSetup.removeAttribute("scale");
+
     zip.file(sheetPath,new XMLSerializer().serializeToString(doc));
     const blob=await zip.generateAsync({type:"blob",mimeType:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",compression:"DEFLATE"});
     const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`${quoteDownloadBase(x)}.xlsx`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
