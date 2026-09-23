@@ -572,7 +572,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
     <h2 class="statsTitle">製作安裝統計表</h2>
     <div class="statsFilter">
       <label>查詢月份<input id="stMonth" type="month"></label>
-      <button type="button" id="stLoadBtn">查詢</button>
+      <button type="button" id="stLoadBtn">查詢</button><label style="display:flex;align-items:center;gap:5px;white-space:nowrap"><input type="checkbox" id="stShowAll" checked style="width:auto">顯示全部月份</label><button type="button" id="stSyncAllBtn">同步全部報價單</button><span id="stSyncStatus" role="status" style="font-size:13px;color:#42617b"></span>
       <div style="text-align:right"><button type="button" id="stExportBtn" class="primary">下載製作安裝統計表 Excel</button></div>
     </div>
     <div class="statsTableWrap">
@@ -853,7 +853,7 @@ function showFeature(name){
   $("quoteTabBtn").classList.toggle("active",quote);
   $("installStatsTabBtn").classList.toggle("active",stats);
   if(quote&&["admin","editor"].includes(profile?.role)){resetQuoteForm();loadQuoteOptions();loadQuotes()}
-  if(stats&&profile?.role==="admin"){(async()=>{await loadQuotesForStats();await syncAllQuotesToInstallStats();await loadInstallStats()})()}
+  if(stats&&isAdminAccount()){(async()=>{await loadQuotesForStats();await syncAllQuotesToInstallStats();await loadInstallStats()})()}
 }
 function addQuoteItem(item={}){const tr=document.createElement("tr");const totalCm=item.total_cm??item.qty??0;tr.innerHTML=`<td class="qidx"></td><td><input class="qname" list="qNameOptionsList" placeholder="選擇或直接輸入" value="${esc(fmtQName(item.name||item.description||""))}"></td><td><input class="qsize" value="${esc(item.process_size||"")}"></td><td><input class="qcm" type="number" min="0" step="0.01" value="${Number(totalCm||0)}"></td><td><select class="qunit"><option value=""></option><option value="cm" ${String(item.unit||"").toLowerCase()==="cm"?"selected":""}>cm</option><option value="式" ${String(item.unit||"")==="式"?"selected":""}>式</option></select></td><td><input class="qprice" type="number" min="0" step="0.01" value="${Number(item.price||0)}"></td><td class="qamount">0</td><td><button type="button" class="qremove">刪</button></td>`;$("qItemsBody").appendChild(tr);tr.querySelectorAll("input,select").forEach(i=>i.addEventListener("input",calcQuote));const qi=tr.querySelector(".qname");qi?.addEventListener("blur",()=>{qi.value=fmtQName(qi.value);calcQuote()});tr.querySelector(".qremove").addEventListener("click",()=>{tr.remove();renumberQuoteItems();calcQuote()});renumberQuoteItems();calcQuote()}
 function renumberQuoteItems(){[...$("qItemsBody").children].forEach((tr,i)=>tr.querySelector(".qidx").textContent=i+1)}
@@ -1699,25 +1699,53 @@ function openStatsFromQuote(x){
   },0);
 }
 async function syncOneQuoteToInstallStats(x){
-  if(profile?.role!=="admin"||!x)return;
+  if(!isAdminAccount()||!x)return {status:"skip"};
   const draft=statDraftFromQuote(x);
-  // 不使用 quote_id（資料庫此欄是 bigint，報價單 id 則為 UUID）。改用報價單編號唯一連動。
+  // 報價單 UUID 不可存進 bigint quote_id；使用編號關聯。
   delete draft.quote_id;
-  if(!draft.job_no)return;
+  if(!draft.job_no)return {status:"skip"};
   const {data,error}=await sb.from("sbd_install_stats").select("*").eq("job_no",draft.job_no).limit(1);
-  if(error)return;
+  if(error)return {status:"error",no:draft.job_no,message:error.message};
   const existing=(data||[])[0];
   if(existing){
-    // 只同步報價單本身帶來的欄位，不覆蓋人工補填的出貨單號、樓層、安裝人員、備註與分配數。
-    const patch={customer_name:draft.customer_name,order_date:draft.order_date,install_date:draft.install_date,case_name:draft.case_name,color_no:draft.color_no,model:draft.model,size_cm:draft.size_cm,untaxed_amount:draft.untaxed_amount};
-    await sb.from("sbd_install_stats").update(patch).eq("id",existing.id);
-  }else{
-    await sb.from("sbd_install_stats").insert(draft);
+    // 已存在的統計紀錄不覆蓋人工填寫資料，僅補上原本空白的報價單欄位。
+    const patch={};
+    for(const k of ["customer_name","order_date","install_date","case_name","color_no","model","size_cm","untaxed_amount"]){
+      if((existing[k]===null||existing[k]===undefined||existing[k]==="") && draft[k]!==null && draft[k]!==undefined && draft[k]!=="")patch[k]=draft[k];
+    }
+    if(!Object.keys(patch).length)return {status:"existing"};
+    const {error:e}=await sb.from("sbd_install_stats").update(patch).eq("id",existing.id);
+    return e?{status:"error",no:draft.job_no,message:e.message}:{status:"updated"};
   }
+  const {error:e}=await sb.from("sbd_install_stats").insert(draft);
+  return e?{status:"error",no:draft.job_no,message:e.message}:{status:"created"};
 }
+let statsSyncInProgress=null;
 async function syncAllQuotesToInstallStats(){
-  if(profile?.role!=="admin")return;
-  for(const x of quoteRows)await syncOneQuoteToInstallStats(x);
+  if(!isAdminAccount())return;
+  if(statsSyncInProgress)return statsSyncInProgress;
+  statsSyncInProgress=(async()=>{
+    const status=$("stSyncStatus"),btn=$("stSyncAllBtn");
+    if(btn)btn.disabled=true;
+    if(status)status.textContent="正在讀取全部報價單…";
+    try{
+      // 每次直接從資料庫讀取全部，避免只同步目前畫面或先前快取。
+      const {data,error}=await sb.from("sbd_quotes").select("*").order("quote_no",{ascending:false});
+      if(error)throw error;
+      const quotes=data||[];
+      const result={created:0,updated:0,existing:0,skip:0,errors:[]};
+      for(let i=0;i<quotes.length;i++){
+        if(status)status.textContent=`正在同步 ${i+1}/${quotes.length}…`;
+        const r=await syncOneQuoteToInstallStats(quotes[i]);
+        if(r.status==="error")result.errors.push(`${r.no}: ${r.message}`);
+        else result[r.status]=(result[r.status]||0)+1;
+      }
+      if(status)status.textContent=`共 ${quotes.length} 筆報價單：新增 ${result.created}、補齊 ${result.updated}、已存在 ${result.existing}${result.errors.length?`；失敗 ${result.errors.length} 筆（${result.errors.slice(0,2).join("；")}）`:""}`;
+      return result;
+    }catch(e){if(status)status.textContent="同步失敗："+(e.message||String(e));return null;}
+    finally{if(btn)btn.disabled=false;}
+  })();
+  try{return await statsSyncInProgress}finally{statsSyncInProgress=null;}
 }
 async function saveInstallStat(){
   if(profile?.role!=="admin")return;
@@ -1739,7 +1767,7 @@ async function loadInstallStats(){
   if($("stMasterMonth"))$("stMasterMonth").value=month;
   updateMasterBillingRange();
   let q=sb.from("sbd_install_stats").select("*").order("install_date",{ascending:true,nullsFirst:true}).order("created_at",{ascending:true});
-  if(month){
+  if(month && !$("stShowAll")?.checked){
     const [y,m]=month.split("-").map(Number);
     const start=`${y}-${pad(m)}-01`;
     const d=new Date(y,m,1),end=`${d.getFullYear()}-${pad(d.getMonth()+1)}-01`;
@@ -1861,7 +1889,7 @@ $("ftime").addEventListener("blur",()=>{
 });
 
 $("closeViewBtn").addEventListener("click",()=>$("viewDlg").close());
-$("saveEventBtn").addEventListener("click",saveEvent);$("deleteEventBtn").addEventListener("click",deleteEvent);$("saveNoteBtn").addEventListener("click",saveNote);$("calendarTabBtn").addEventListener("click",()=>showFeature("calendar"));$("quoteTabBtn").addEventListener("click",()=>showFeature("quote"));$("quoteQuickNoteHeaderBtn")?.addEventListener("click",openQuoteQuickNoteFromHeader);$("qQuickNoteToggleBtn")?.addEventListener("click",()=>setQuoteQuickNoteOpen($("qQuickNoteBody")?.classList.contains("hidden")));$("qQuickNoteCopyBtn")?.addEventListener("click",copyQuoteQuickNote);$("installStatsTabBtn").addEventListener("click",()=>showFeature("stats"));$("stOrderDate").addEventListener("input",e=>normalizeStatMDInput(e.target));$("stInstallDate").addEventListener("input",e=>normalizeStatMDInput(e.target));$("stBringQuoteBtn")?.addEventListener("click",bringSelectedQuoteToStats);$("stSaveBtn")?.addEventListener("click",saveInstallStat);$("stResetBtn")?.addEventListener("click",resetInstallStatForm);$("stLoadBtn").addEventListener("click",loadInstallStats);$("stExportBtn").addEventListener("click",exportInstallStatsExcel);
+$("saveEventBtn").addEventListener("click",saveEvent);$("deleteEventBtn").addEventListener("click",deleteEvent);$("saveNoteBtn").addEventListener("click",saveNote);$("calendarTabBtn").addEventListener("click",()=>showFeature("calendar"));$("quoteTabBtn").addEventListener("click",()=>showFeature("quote"));$("quoteQuickNoteHeaderBtn")?.addEventListener("click",openQuoteQuickNoteFromHeader);$("qQuickNoteToggleBtn")?.addEventListener("click",()=>setQuoteQuickNoteOpen($("qQuickNoteBody")?.classList.contains("hidden")));$("qQuickNoteCopyBtn")?.addEventListener("click",copyQuoteQuickNote);$("installStatsTabBtn").addEventListener("click",()=>showFeature("stats"));$("stOrderDate").addEventListener("input",e=>normalizeStatMDInput(e.target));$("stInstallDate").addEventListener("input",e=>normalizeStatMDInput(e.target));$("stBringQuoteBtn")?.addEventListener("click",bringSelectedQuoteToStats);$("stSaveBtn")?.addEventListener("click",saveInstallStat);$("stResetBtn")?.addEventListener("click",resetInstallStatForm);$("stLoadBtn").addEventListener("click",loadInstallStats);$("stShowAll")?.addEventListener("change",loadInstallStats);$("stSyncAllBtn")?.addEventListener("click",async()=>{await syncAllQuotesToInstallStats();await loadInstallStats()});$("stExportBtn").addEventListener("click",exportInstallStatsExcel);
 $("stMasterLoadBtn")?.addEventListener("click",loadMasterInstallSummary);
 $("stMasterExportBtn")?.addEventListener("click",exportMasterInstallSummaryExcel);
 $("stFinalExportBtn")?.addEventListener("click",exportFinalInstallSummaryExcel);
