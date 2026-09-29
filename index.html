@@ -1701,6 +1701,10 @@ function openStatsFromQuote(x){
 async function syncOneQuoteToInstallStats(x){
   if(!isAdminAccount()||!x)return {status:"skip"};
   const draft=statDraftFromQuote(x);
+  // Supabase 的 date 欄位不可寫入空字串；沒有日期時一律存 null，仍允許同步。
+  for(const k of ["order_date","install_date"]){
+    if(draft[k]===undefined || draft[k]===null || String(draft[k]).trim()==="") draft[k]=null;
+  }
   // 報價單 UUID 不可存進 bigint quote_id；使用編號關聯。
   delete draft.quote_id;
   if(!draft.job_no)return {status:"skip"};
@@ -1775,7 +1779,13 @@ async function loadInstallStats(){
   }
   const {data,error}=await q;
   if(error){$("stEmpty").textContent="讀取失敗："+error.message;$("stEmpty").classList.remove("hidden");return}
-  installStatsRows=data||[];renderInstallStats();
+  installStatsRows=(data||[]).sort((a,b)=>{
+    const av=String(a.job_no||"").trim(), bv=String(b.job_no||"").trim();
+    const an=Number(av.replace(/\D/g,""))||0, bn=Number(bv.replace(/\D/g,""))||0;
+    if(bn!==an)return bn-an;
+    return bv.localeCompare(av,"zh-Hant",{numeric:true,sensitivity:"base"});
+  });
+  renderInstallStats();
   await loadMasterInstallSummary();
 }
 function renderInstallStats(){
