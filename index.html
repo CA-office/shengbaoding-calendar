@@ -2201,6 +2201,15 @@ async function poDownloadExcel(){
   }catch(e){console.error(e);alert("Excel 產生失敗："+e.message)}
 }
 
+// ===== 主選單／採購單按鈕事件（修正版） =====
+$("calendarTabBtn")?.addEventListener("click",()=>showFeature("calendar"));
+$("quoteTabBtn")?.addEventListener("click",()=>showFeature("quote"));
+$("installStatsTabBtn")?.addEventListener("click",()=>showFeature("stats"));
+$("purchaseTabBtn")?.addEventListener("click",()=>showFeature("purchase"));
+$("poProjectNewBtn")?.addEventListener("click",poProjectClear);
+$("poProjectClearBtn")?.addEventListener("click",poProjectClear);
+$("poProjectSaveBtn")?.addEventListener("click",poProjectSave);
+
 $("poPdfBtn")?.addEventListener("click",()=>$("poPdfInput").click());
 $("poPdfInput")?.addEventListener("change",e=>{const f=e.target.files?.[0];if(f)poReadPdf(f);e.target.value=""});
 $("poClearBtn")?.addEventListener("click",poClearPdf);
