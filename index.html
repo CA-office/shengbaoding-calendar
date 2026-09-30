@@ -1148,7 +1148,22 @@ async function excelQuote(x){
     setText("L5",qDateDisplay(m.install_date));
     setText("C6",x.address||"");
     setText("L6",m.install_period||"");
-    if(String(m.order_no||"").trim()) setText("L7",`訂單編號：${m.order_no}`); else setText("L7","");
+    // 訂單編號：只有有輸入時才切開第 7 列右側顯示；未輸入時完整保留舊模板 A7:L7。
+    const orderNo=String(m.order_no||"").trim();
+    if(orderNo){
+      const mergeCells=doc.getElementsByTagNameNS(NS,"mergeCells")[0];
+      if(mergeCells){
+        const oldMerge=[...mergeCells.getElementsByTagNameNS(NS,"mergeCell")].find(n=>n.getAttribute("ref")==="A7:L7");
+        if(oldMerge)mergeCells.removeChild(oldMerge);
+        const refs=new Set([...mergeCells.getElementsByTagNameNS(NS,"mergeCell")].map(n=>n.getAttribute("ref")));
+        for(const ref of ["A7:I7","J7:K7"]){
+          if(!refs.has(ref)){const mc=doc.createElementNS(NS,"mergeCell");mc.setAttribute("ref",ref);mergeCells.appendChild(mc)}
+        }
+        mergeCells.setAttribute("count",String(mergeCells.getElementsByTagNameNS(NS,"mergeCell").length));
+      }
+      setText("J7","訂單編號：");
+      setText("L7",orderNo);
+    }
     setText("C8",m.color_no||"");
     setText("F8",m.product_name||"");
     // J8:K8 與 L8 是原範本標題格，數值直接組進原文字，避免破壞合併儲存格。
