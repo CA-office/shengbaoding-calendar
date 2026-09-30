@@ -2085,7 +2085,7 @@ async function poReadPdf(file){
   }catch(e){console.error(e);$("poStatus").textContent="PDF 讀取失敗："+e.message}
 }
 function poIsDiscountRow(r){
-  return /現金扣\s*%?\s*0?\.95|現金扣%0\.95/i.test(String(r?.name||""));
+  return /現金扣/i.test(String(r?.name||""));
 }
 function poPreparedGroup(g){
   const original=g.rows||[];
@@ -2093,11 +2093,12 @@ function poPreparedGroup(g){
   const visible=original.filter(r=>!poIsDiscountRow(r));
   let discount=1;
   if(di>=0){
-    const d=original[di];
-    const q=Number(d.qty), p=Number(d.price);
-    if(Number.isFinite(q)&&q>0&&q<1.01) discount=q;
-    else if(Number.isFinite(p)&&p>0&&p<1.01) discount=p;
-    else discount=.95;
+    // 浤富 PDF 的「現金扣%0.95」是折扣控制列，不輸出成貨品。
+    // PDF 該列的 qty/price 可能是 1 / -153，因此不能拿它們當折扣率。
+    const label=String(original[di]?.name||"");
+    const m=label.match(/(?:%|％)?\s*(0?\.\d+)/);
+    discount=m?Number(m[1]):0.95;
+    if(!(discount>0&&discount<=1)) discount=0.95;
   }
   let beforeCount=di<0?visible.length:original.slice(0,di).filter(r=>!poIsDiscountRow(r)).length;
   const sums=visible.map(r=>Math.round((+r.qty||0)*(+r.price||0)));
@@ -2196,7 +2197,13 @@ async function poDownloadExcel(){
           const rr=rs+j;
           const src=j===0?5:(j===n-1?7:6);
           if(styleCache[src].height)ws.getRow(rr).height=styleCache[src].height;
-          for(let c=1;c<=9;c++)applyStyle(ws.getCell(rr,c),src);
+          for(let c=1;c<=9;c++){
+            applyStyle(ws.getCell(rr,c),src);
+            // 明細字體統一使用模板第一筆資料列的字體/對齊，避免同組字體大小不一。
+            const base=styleCache[5].cells[c];
+            if(base?.font) ws.getCell(rr,c).font=JSON.parse(JSON.stringify(base.font));
+            if(base?.alignment) ws.getCell(rr,c).alignment=JSON.parse(JSON.stringify(base.alignment));
+          }
 
           if(j===0)ws.getCell(`A${rr}`).value=gi+1;
           ws.getCell(`B${rr}`).value=it.name||"";
@@ -2239,6 +2246,20 @@ async function poDownloadExcel(){
       }
     }
     if(gi<prepared.length)throw new Error(`資料共 ${prepared.length} 組，5 張模板頁仍放不下；目前已排入 ${gi} 組`);
+
+    // 採購單 Excel：所有工作頁、所有已有格式/內容的儲存格，字體一律統一為 Noto Sans HK。
+    // 只改字型名稱，保留原模板的字級、粗體、框線、對齊、數字格式與合併設定。
+    wb.worksheets.forEach(ws=>{
+      const maxRow=Math.max(ws.rowCount||0,22);
+      const maxCol=Math.max(ws.columnCount||0,9);
+      for(let r=1;r<=maxRow;r++){
+        for(let c=1;c<=maxCol;c++){
+          const cell=ws.getCell(r,c);
+          const oldFont=cell.font?JSON.parse(JSON.stringify(cell.font)):{};
+          cell.font={...oldFont,name:"Noto Sans HK"};
+        }
+      }
+    });
 
     const buf=await wb.xlsx.writeBuffer();
     const blob=new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
