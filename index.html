@@ -2083,33 +2083,89 @@ async function poReadPdf(file){
     $("poStatus").textContent=`PDF 匯入完成：${poGroups.length} 個銷貨單分組、${poGroups.reduce((n,g)=>n+g.rows.length,0)} 筆貨品。請為每組選擇已建立的「單號／案名」。`;
   }catch(e){console.error(e);$("poStatus").textContent="PDF 讀取失敗："+e.message}
 }
-function poDownloadExcel(){
+function poIsDiscountRow(r){
+  return /現金扣\s*%?\s*0?\.95|現金扣%0\.95/i.test(String(r?.name||""));
+}
+function poPreparedGroup(g){
+  const original=g.rows||[];
+  const di=original.findIndex(poIsDiscountRow);
+  const visible=original.filter(r=>!poIsDiscountRow(r));
+  let discount=1;
+  if(di>=0){
+    const d=original[di];
+    const q=Number(d.qty), p=Number(d.price);
+    if(Number.isFinite(q)&&q>0&&q<1.01) discount=q;
+    else if(Number.isFinite(p)&&p>0&&p<1.01) discount=p;
+    else discount=.95;
+  }
+  let beforeCount=di<0?visible.length:original.slice(0,di).filter(r=>!poIsDiscountRow(r)).length;
+  const sums=visible.map(r=>Math.round((+r.qty||0)*(+r.price||0)));
+  const total=Math.round(sums.slice(0,beforeCount).reduce((a,b)=>a+b,0)*discount+sums.slice(beforeCount).reduce((a,b)=>a+b,0));
+  return {visible,discount,beforeCount,sums,total};
+}
+function poXmlEsc(v){return String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function poSetXmlCell(xml,addr,kind,value,formula){
+  const re=new RegExp('<c\\s+([^>]*\\br="'+addr+'"[^>]*)>([\\s\\S]*?)<\\/c>');
+  const m=xml.match(re); if(!m)return xml;
+  let attrs=m[1].replace(/\s+t="[^"]*"/g,"");
+  let body="";
+  if(formula){body='<f>'+poXmlEsc(formula)+'</f><v>'+Number(value||0)+'</v>';}
+  else if(kind==="n"){body='<v>'+Number(value||0)+'</v>';}
+  else if(value!==""&&value!=null){attrs+=' t="inlineStr"';body='<is><t xml:space="preserve">'+poXmlEsc(value)+'</t></is>';}
+  return xml.replace(re,'<c '+attrs+'>'+body+'</c>');
+}
+async function poDownloadExcel(){
   if(!poGroups.length)return alert("目前沒有 PDF 採購明細");
   try{
-    const wb=XLSX.read(PO_TEMPLATE_B64,{type:"base64",cellStyles:true});
-    const flat=[];const projects=poProjects();
-    poGroups.forEach(g=>{
-      const p=projects.find(x=>x.key===g.projectKey), total=g.rows.reduce((n,r)=>n+(+r.qty||0)*(+r.price||0),0);
-      g.rows.forEach((r,i)=>flat.push({...r,groupFirst:i===0,total:i===0?total:"",job:i===0&&p?[p.no,p.caseName,p.caseAmount?("$"+poFmt(p.caseAmount)):""].filter(Boolean).join(" "):""}));
-    });
-    const per=18;
-    wb.SheetNames.forEach((sn,si)=>{
-      const ws=wb.Sheets[sn];
-      for(let r=5;r<=22;r++)["A","B","D","E","F","G","H","I"].forEach(c=>{if(ws[c+r]){ws[c+r].v="";}else{ws[c+r]={t:"s",v:""};}});
-      flat.slice(si*per,(si+1)*per).forEach((x,j)=>{
-        const r=5+j;
-        const setv=(addr,t,v)=>{if(!ws[addr])ws[addr]={t,v};else{ws[addr].t=t;ws[addr].v=v;}};
-        setv("A"+r,"s",x.groupFirst?String(j+1):"");
-        setv("B"+r,"s",x.name||"");
-        setv("D"+r,"n",+x.qty||0);
-        setv("E"+r,"s",x.unit||"");
-        setv("F"+r,"n",+x.price||0);
-        setv("G"+r,"n",(+x.qty||0)*(+x.price||0));
-        setv("H"+r,typeof x.total==="number"?"n":"s",x.total);
-        setv("I"+r,"s",x.job||"");
-      });
-    });
-    XLSX.writeFile(wb,"浤富採購單_系統匯出.xlsx",{cellStyles:true});
+    if(typeof JSZip==="undefined")throw new Error("Excel 模板元件尚未載入");
+    const projects=poProjects();
+    const prepared=poGroups.map(g=>({g,p:poPreparedGroup(g)}));
+    const blocks=[[5,7],[8,10],[11,12],[13,15],[16,17],[18,20],[21,22]];
+    const maxGroups=blocks.length*5;
+    if(prepared.length>maxGroups)throw new Error(`本模板最多可放 ${maxGroups} 組銷貨單`);
+    for(const x of prepared){if(x.p.visible.length>3)throw new Error(`銷貨單 ${x.g.salesNo||""} 扣除現金扣%後仍超過 3 筆，請先確認模板區塊`);}
+
+    const bin=atob(PO_TEMPLATE_B64), u8=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
+    const zip=await JSZip.loadAsync(u8);
+
+    for(let si=0;si<5;si++){
+      const path=`xl/worksheets/sheet${si+1}.xml`;
+      let xml=await zip.file(path).async("string");
+      for(let bi=0;bi<blocks.length;bi++){
+        const [rs,re]=blocks[bi];
+        const item=prepared[si*blocks.length+bi];
+        // 清空此模板群組的資料，但保留原儲存格 style、框線、合併格、列高等 XML。
+        for(let r=rs;r<=re;r++)for(const c of ["A","B","C","D","E","F","G","H","I"])xml=poSetXmlCell(xml,c+r,"s","");
+        if(!item)continue;
+        const {g,p}=item, proj=projects.find(x=>x.key===g.projectKey);
+        if(p.visible.length>(re-rs+1))throw new Error(`銷貨單 ${g.salesNo||""} 有 ${p.visible.length} 筆，但模板第 ${bi+1} 組只有 ${re-rs+1} 列`);
+        const job=proj?[proj.no,proj.caseName].filter(Boolean).join("｜"):"";
+        xml=poSetXmlCell(xml,"A"+rs,"n",si*blocks.length+bi+1);
+        xml=poSetXmlCell(xml,"I"+rs,"s",job);
+        p.visible.forEach((r,j)=>{
+          const rr=rs+j, sum=Math.round((+r.qty||0)*(+r.price||0));
+          xml=poSetXmlCell(xml,"B"+rr,"s",r.name||"");
+          xml=poSetXmlCell(xml,"D"+rr,"n",+r.qty||0);
+          xml=poSetXmlCell(xml,"E"+rr,"s",r.unit||"");
+          xml=poSetXmlCell(xml,"F"+rr,"n",+r.price||0);
+          xml=poSetXmlCell(xml,"G"+rr,"n",sum,`F${rr}*D${rr}`);
+        });
+        let formula="";
+        const last=rs+p.visible.length-1;
+        if(p.discount!==1){
+          const beforeLast=rs+p.beforeCount-1;
+          const afterStart=beforeLast+1;
+          const left=p.beforeCount>0?(p.beforeCount===1?`G${rs}`:`SUM(G${rs}:G${beforeLast})`):"0";
+          const right=afterStart<=last?(afterStart===last?`+G${last}`:`+SUM(G${afterStart}:G${last})`):"";
+          formula=`${left}*${p.discount}${right}`;
+        }else formula=p.visible.length===1?`G${rs}`:`SUM(G${rs}:G${last})`;
+        xml=poSetXmlCell(xml,"H"+rs,"n",p.total,formula);
+      }
+      zip.file(path,xml);
+    }
+    const blob=await zip.generateAsync({type:"blob",compression:"DEFLATE"});
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="浤富採購單_系統匯出.xlsx";document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);
   }catch(e){console.error(e);alert("Excel 產生失敗："+e.message)}
 }
 $("closeViewBtn").addEventListener("click",()=>$("viewDlg").close());
