@@ -2176,7 +2176,11 @@ async function poDownloadExcel(){
           const footer=[...sheetData.getElementsByTagNameNS(NS,"row")].find(x=>Number(x.getAttribute("r"))>22);
           sheetData.insertBefore(row,footer||null);
         });
-        merges.push(`A${rs}:A${re}`,`H${rs}:H${re}`,`I${rs}:I${re}`);
+        // 只有跨 2 列以上才建立縱向合併；A5:A5 / H5:H5 / I5:I5 這種單格 merge 會讓 Excel 判定工作表需要修復。
+        if(n>1){
+          merges.push(`A${rs}:A${re}`,`H${rs}:H${re}`,`I${rs}:I${re}`);
+        }
+        // 型號品名固定橫向合併 B:C。
         for(let r=rs;r<=re;r++)merges.push(`B${r}:C${r}`);
         cursor=re+1;gi++;seq++;
       }
@@ -2194,6 +2198,19 @@ async function poDownloadExcel(){
       while(mc.firstChild)mc.removeChild(mc.firstChild);
       [...oldRefs,...merges].forEach(ref=>{const x=doc.createElementNS(NS,"mergeCell");x.setAttribute("ref",ref);mc.appendChild(x);});mc.setAttribute("count",String(oldRefs.length+merges.length));
       zip.file(path,new XMLSerializer().serializeToString(doc));
+    }
+    // 公式由 Excel 開啟時重新計算；避免模板原有快取值與新公式不一致。
+    const wbPath="xl/workbook.xml";
+    if(zip.file(wbPath)){
+      let wbXml=await zip.file(wbPath).async("string");
+      if(/<calcPr\b/.test(wbXml)){
+        wbXml=wbXml.replace(/<calcPr\b([^>]*)\/?>(?:<\/calcPr>)?/,m=>{
+          let x=m.replace(/\s+calcMode="[^"]*"/g,"").replace(/\s+fullCalcOnLoad="[^"]*"/g,"").replace(/\s+forceFullCalc="[^"]*"/g,"");
+          if(x.endsWith("/>")) return x.slice(0,-2)+' calcMode="auto" fullCalcOnLoad="1" forceFullCalc="1"/>';
+          return x;
+        });
+      }
+      zip.file(wbPath,wbXml);
     }
     if(gi<prepared.length)throw new Error(`資料共 ${prepared.length} 組，5 張模板頁仍放不下；目前已排入 ${gi} 組`);
     const blob=await zip.generateAsync({type:"blob",compression:"DEFLATE"});
