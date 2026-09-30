@@ -2014,7 +2014,7 @@ function poProjectSave(){
   const a=poProjects(), key=poProjectEditKey||Date.now().toString();
   const rec={key,no,caseName,caseAmount,updatedAt:new Date().toISOString()};
   const i=a.findIndex(x=>x.key===key); if(i>=0)a[i]=rec; else a.unshift(rec);
-  poSaveProjects(a);poProjectEditKey=key;poRenderProjects();poRenderGroups();alert("單號／案名已儲存");
+  poSaveProjects(a);poProjectEditKey=key;poRenderProjects();poRenderGroups();
 }
 function poRenderProjects(){
   const b=$("poProjectRecords");if(!b)return;const a=poProjects();
