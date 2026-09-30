@@ -2129,11 +2129,19 @@ async function poDownloadExcel(){
     wb.calcProperties.fullCalcOnLoad=true;
     wb.calcProperties.forceFullCalc=true;
     wb.calcProperties.calcMode='auto';
+    // 下載後直接顯示已填入資料的「樣本」工作頁。
+    if(!wb.views||!wb.views.length) wb.views=[{}];
+    wb.views[0].activeTab=Math.max(0,wb.worksheets.length-1);
+    wb.views[0].firstSheet=Math.max(0,wb.worksheets.length-1);
 
     let gi=0;
     const sheetCount=Math.min(5,wb.worksheets.length);
+    // 原模板目前開啟的工作頁是最後一張「樣本」。
+    // 先從使用者實際會看到的「樣本」開始填，再依序往前使用其他模板頁，
+    // 避免資料其實寫在第一張工作表，但 Excel 開啟時顯示最後一張空白頁。
+    const exportSheets=wb.worksheets.slice(0,sheetCount).reverse();
     for(let si=0;si<sheetCount;si++){
-      const ws=wb.worksheets[si];
+      const ws=exportSheets[si];
 
       // 只解除明細區原本的合併；標題、日期、廠商、頁尾全部保留。
       const merges=[];
