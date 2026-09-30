@@ -1168,7 +1168,34 @@ async function excelQuote(x){
       const color=doc.createElementNS(NS,"color");color.setAttribute("rgb","FF000000");rPr.appendChild(color);
       const sz=doc.createElementNS(NS,"sz");sz.setAttribute("val","8");rPr.appendChild(sz);
       const t=doc.createElementNS(NS,"t");t.textContent=orderNo;r.appendChild(rPr);r.appendChild(t);is.appendChild(r);c.appendChild(is);
+      // 套用右對齊樣式：以原模板右側欄位的樣式為基礎，保留邊框並讓訂單編號貼齊右側。
+      const stylesPath="xl/styles.xml";
+      const stylesText=await zip.file(stylesPath).async("string");
+      const stylesDoc=new DOMParser().parseFromString(stylesText,"application/xml");
+      const cellXfs=stylesDoc.getElementsByTagNameNS(NS,"cellXfs")[0];
+      const baseStyle=Number(c.getAttribute("s")||0);
+      const xfs=[...cellXfs.getElementsByTagNameNS(NS,"xf")];
+      const baseXf=xfs[baseStyle]||xfs[0];
+      const rightXf=baseXf.cloneNode(true);
+      rightXf.setAttribute("applyAlignment","1");
+      let al=[...rightXf.childNodes].find(n=>n.nodeType===1&&n.localName==="alignment");
+      if(!al){al=stylesDoc.createElementNS(NS,"alignment");rightXf.appendChild(al)}
+      al.setAttribute("horizontal","right");al.setAttribute("vertical","center");
+      cellXfs.appendChild(rightXf);cellXfs.setAttribute("count",String(cellXfs.getElementsByTagNameNS(NS,"xf").length));
+      c.setAttribute("s",String(cellXfs.getElementsByTagNameNS(NS,"xf").length-1));
+      zip.file(stylesPath,new XMLSerializer().serializeToString(stylesDoc));
       setText("L7","");
+      const hintCell=getCell("A7");
+      const hintBase=Number(hintCell.getAttribute("s")||0);
+      const hintXfs=[...cellXfs.getElementsByTagNameNS(NS,"xf")];
+      const hintXf=(hintXfs[hintBase]||hintXfs[0]).cloneNode(true);
+      hintXf.setAttribute("applyAlignment","1");
+      let hintAl=[...hintXf.childNodes].find(n=>n.nodeType===1&&n.localName==="alignment");
+      if(!hintAl){hintAl=stylesDoc.createElementNS(NS,"alignment");hintXf.appendChild(hintAl)}
+      hintAl.setAttribute("horizontal","right");hintAl.setAttribute("vertical","center");
+      cellXfs.appendChild(hintXf);cellXfs.setAttribute("count",String(cellXfs.getElementsByTagNameNS(NS,"xf").length));
+      hintCell.setAttribute("s",String(cellXfs.getElementsByTagNameNS(NS,"xf").length-1));
+      zip.file(stylesPath,new XMLSerializer().serializeToString(stylesDoc));
     }
     setText("C8",m.color_no||"");
     setText("F8",m.product_name||"");
