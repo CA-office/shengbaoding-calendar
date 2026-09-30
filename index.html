@@ -2230,13 +2230,17 @@ $("purchaseTabBtn")?.addEventListener("click",()=>showFeature("purchase"));
 $("poProjectNewBtn")?.addEventListener("click",poProjectClear);
 $("poProjectClearBtn")?.addEventListener("click",poProjectClear);
 $("poProjectSaveBtn")?.addEventListener("click",poProjectSave);
-["poNo","poCase","poCaseAmount"].forEach(id=>{
-  $(id)?.addEventListener("keydown",e=>{
-    if(e.key==="Enter"){
+// 單號／案名管理：在前綴、單號、案名、案件金額任一欄按 Enter 直接儲存
+["poNoPrefix","poNo","poCase","poCaseAmount"].forEach(id=>{
+  const el=$(id);
+  if(!el)return;
+  el.addEventListener("keydown",e=>{
+    if(e.key==="Enter" || e.keyCode===13){
       e.preventDefault();
+      e.stopPropagation();
       poProjectSave();
     }
-  });
+  },true);
 });
 
 $("poPdfBtn")?.addEventListener("click",()=>$("poPdfInput").click());
