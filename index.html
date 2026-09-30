@@ -805,9 +805,9 @@ async function saveEvent(){
     const payload={event_date,event_time,title:String($("ftitle").value||"").trim(),details:packEventDetails($("fdetail").value,install,master),color:$("fcolor").value};
     let result;
     if(currentEditId){
-      result=await sb.from("sbd_calendar_events").update(payload).eq("id",currentEditId).select("id,event_date").maybeSingle();
+      result=await sb.from("sbd_calendar_events").update(payload).eq("id",currentEditId);
     }else{
-      result=await sb.from("sbd_calendar_events").insert(payload).select("id,event_date").maybeSingle();
+      result=await sb.from("sbd_calendar_events").insert(payload);
     }
     if(result.error){alert("儲存失敗："+result.error.message);return;}
     rememberMaster(master);
