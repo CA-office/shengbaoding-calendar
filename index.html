@@ -16,6 +16,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs" type="module"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -2117,104 +2118,124 @@ function poSetXmlCell(xml,addr,kind,value,formula){
 async function poDownloadExcel(){
   if(!poGroups.length)return alert("目前沒有 PDF 採購明細");
   try{
-    if(typeof JSZip==="undefined")throw new Error("Excel 模板元件尚未載入");
+    if(typeof ExcelJS==="undefined")throw new Error("Excel 匯出元件尚未載入，請重新整理後再試");
     const projects=poProjects();
     const prepared=poGroups.map(g=>({g,p:poPreparedGroup(g)}));
     const bin=atob(PO_TEMPLATE_B64),u8=new Uint8Array(bin.length);
     for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
-    const zip=await JSZip.loadAsync(u8);
-    const NS="http://schemas.openxmlformats.org/spreadsheetml/2006/main";
+
+    const wb=new ExcelJS.Workbook();
+    await wb.xlsx.load(u8.buffer);
+    wb.calcProperties.fullCalcOnLoad=true;
+    wb.calcProperties.forceFullCalc=true;
+    wb.calcProperties.calcMode='auto';
+
     let gi=0;
-    for(let si=0;si<5;si++){
-      const path=`xl/worksheets/sheet${si+1}.xml`;
-      const raw=await zip.file(path).async("string");
-      const doc=new DOMParser().parseFromString(raw,"application/xml");
-      const sheetData=doc.getElementsByTagNameNS(NS,"sheetData")[0];
-      const rows=[...sheetData.getElementsByTagNameNS(NS,"row")];
-      const rowMap=new Map(rows.map(r=>[Number(r.getAttribute("r")),r]));
-      const tplFirst=rowMap.get(5),tplMid=rowMap.get(6),tplLast=rowMap.get(7);
-      if(!tplFirst||!tplMid||!tplLast)throw new Error("Excel 模板第 5~7 列不存在");
-      const styleByCol={};
-      for(const tr of [tplFirst,tplMid,tplLast])for(const c of [...tr.getElementsByTagNameNS(NS,"c")]){
-        const col=(c.getAttribute("r")||"").replace(/\d+/g,"");
-        if(!styleByCol[col])styleByCol[col]=c.getAttribute("s")||"";
+    const sheetCount=Math.min(5,wb.worksheets.length);
+    for(let si=0;si<sheetCount;si++){
+      const ws=wb.worksheets[si];
+
+      // 只解除明細區原本的合併；標題、日期、廠商、頁尾全部保留。
+      const merges=[];
+      if(ws.model&&Array.isArray(ws.model.merges)) merges.push(...ws.model.merges);
+      for(const ref of merges){
+        const nums=(String(ref).match(/\d+/g)||[]).map(Number);
+        if(nums.some(n=>n>=5&&n<=22)){
+          try{ws.unMergeCells(ref)}catch(_e){}
+        }
       }
-      const makeCell=(col,row,val,type,formula,styleCol=col)=>{
-        const c=doc.createElementNS(NS,"c");c.setAttribute("r",col+row);
-        const st=styleByCol[styleCol];if(st)c.setAttribute("s",st);
-        if(formula){const f=doc.createElementNS(NS,"f");f.textContent=formula;c.appendChild(f);const v=doc.createElementNS(NS,"v");v.textContent=String(Number(val||0));c.appendChild(v);}
-        else if(type==="n"){const v=doc.createElementNS(NS,"v");v.textContent=String(Number(val||0));c.appendChild(v);}
-        else if(val!==""&&val!=null){c.setAttribute("t","inlineStr");const is=doc.createElementNS(NS,"is"),t=doc.createElementNS(NS,"t");t.setAttribute("xml:space","preserve");t.textContent=String(val);is.appendChild(t);c.appendChild(is);}
-        return c;
+
+      // 保存模板每欄的格式。使用原模板第 5~7 列作為首/中/尾列樣式來源。
+      const styleRows=[5,6,7];
+      const styleCache={};
+      for(const rr of styleRows){
+        styleCache[rr]={height:ws.getRow(rr).height,cells:{}};
+        for(let c=1;c<=9;c++){
+          const cell=ws.getCell(rr,c);
+          styleCache[rr].cells[c]={
+            style:JSON.parse(JSON.stringify(cell.style||{})),
+            numFmt:cell.numFmt,
+            alignment:cell.alignment?JSON.parse(JSON.stringify(cell.alignment)):undefined,
+            border:cell.border?JSON.parse(JSON.stringify(cell.border)):undefined,
+            fill:cell.fill?JSON.parse(JSON.stringify(cell.fill)):undefined,
+            font:cell.font?JSON.parse(JSON.stringify(cell.font)):undefined,
+            protection:cell.protection?JSON.parse(JSON.stringify(cell.protection)):undefined
+          };
+        }
+      }
+      const applyStyle=(cell,src)=>{
+        const st=styleCache[src].cells[cell.col];
+        if(!st)return;
+        cell.style=JSON.parse(JSON.stringify(st.style||{}));
+        if(st.numFmt)cell.numFmt=st.numFmt;
       };
-      // 每張工作表保留 5~22 共 18 列明細空間；依實際銷貨單筆數動態分配，不再限制每組 3 筆。
-      for(let r=5;r<=22;r++){const old=rowMap.get(r);if(old)sheetData.removeChild(old);}
-      let cursor=5,seq=si*100+1; const merges=[];
+
+      // 清除明細內容，但不碰列高、欄寬、頁尾與列印設定。
+      for(let r=5;r<=22;r++){
+        for(let c=1;c<=9;c++) ws.getCell(r,c).value=null;
+      }
+
+      let cursor=5;
       while(gi<prepared.length){
-        const item=prepared[gi],n=Math.max(1,item.p.visible.length);
+        const {g,p}=prepared[gi];
+        const n=Math.max(1,p.visible.length);
         if(cursor+n-1>22)break;
-        const rs=cursor,re=cursor+n-1,{g,p}=item,proj=projects.find(x=>x.key===g.projectKey);
+        const rs=cursor,re=cursor+n-1;
+        const proj=projects.find(x=>x.key===g.projectKey);
         const job=proj?[proj.no,proj.caseName].filter(Boolean).join("｜"):"";
+
         p.visible.forEach((it,j)=>{
           const rr=rs+j;
-          const src=j===0?tplFirst:(j===n-1?tplLast:tplMid);
-          const row=doc.createElementNS(NS,"row");row.setAttribute("r",String(rr));
-          if(src.getAttribute("ht")){row.setAttribute("ht",src.getAttribute("ht"));row.setAttribute("customHeight",src.getAttribute("customHeight")||"1");}
-          if(j===0)row.appendChild(makeCell("A",rr,gi+1,"n",null,"A"));
-          row.appendChild(makeCell("B",rr,it.name||"","s",null,"B"));
-          row.appendChild(makeCell("D",rr,+it.qty||0,"n",null,"D"));
-          row.appendChild(makeCell("E",rr,it.unit||"","s",null,"E"));
-          row.appendChild(makeCell("F",rr,+it.price||0,"n",null,"F"));
-          const sum=Math.round((+it.qty||0)*(+it.price||0));row.appendChild(makeCell("G",rr,sum,"n",`F${rr}*D${rr}`,"G"));
+          const src=j===0?5:(j===n-1?7:6);
+          if(styleCache[src].height)ws.getRow(rr).height=styleCache[src].height;
+          for(let c=1;c<=9;c++)applyStyle(ws.getCell(rr,c),src);
+
+          if(j===0)ws.getCell(`A${rr}`).value=gi+1;
+          ws.getCell(`B${rr}`).value=it.name||"";
+          ws.getCell(`D${rr}`).value=Number(it.qty)||0;
+          ws.getCell(`E${rr}`).value=it.unit||"";
+          ws.getCell(`F${rr}`).value=Number(it.price)||0;
+          const sum=Math.round((Number(it.qty)||0)*(Number(it.price)||0));
+          ws.getCell(`G${rr}`).value={formula:`F${rr}*D${rr}`,result:sum};
+
           if(j===0){
-            const last=re;let formula="";
-            if(p.discount!==1){const beforeLast=rs+p.beforeCount-1,afterStart=beforeLast+1;const left=p.beforeCount>0?(p.beforeCount===1?`G${rs}`:`SUM(G${rs}:G${beforeLast})`):"0";const right=afterStart<=last?(afterStart===last?`+G${last}`:`+SUM(G${afterStart}:G${last})`):"";formula=`${left}*${p.discount}${right}`;}
-            else formula=n===1?`G${rs}`:`SUM(G${rs}:G${last})`;
-            row.appendChild(makeCell("H",rr,p.total,"n",formula,"H"));row.appendChild(makeCell("I",rr,job,"s",null,"I"));
+            let formula="";
+            if(p.discount!==1){
+              const beforeLast=rs+p.beforeCount-1;
+              const afterStart=beforeLast+1;
+              const left=p.beforeCount>0?(p.beforeCount===1?`G${rs}`:`SUM(G${rs}:G${beforeLast})`):"0";
+              const right=afterStart<=re?(afterStart===re?`+G${re}`:`+SUM(G${afterStart}:G${re})`):"";
+              formula=`${left}*${p.discount}${right}`;
+            }else formula=n===1?`G${rs}`:`SUM(G${rs}:G${re})`;
+            ws.getCell(`H${rr}`).value={formula,result:p.total};
+            ws.getCell(`I${rr}`).value=job;
           }
-          // insert before first footer row (>22)
-          const footer=[...sheetData.getElementsByTagNameNS(NS,"row")].find(x=>Number(x.getAttribute("r"))>22);
-          sheetData.insertBefore(row,footer||null);
         });
-        // 只有跨 2 列以上才建立縱向合併；A5:A5 / H5:H5 / I5:I5 這種單格 merge 會讓 Excel 判定工作表需要修復。
+
+        // 每個實際貨品列的「型號品名」橫向合併 B:C；總計/單號案名依整組列數縱向合併。
+        for(let r=rs;r<=re;r++)ws.mergeCells(`B${r}:C${r}`);
         if(n>1){
-          merges.push(`A${rs}:A${re}`,`H${rs}:H${re}`,`I${rs}:I${re}`);
+          ws.mergeCells(`A${rs}:A${re}`);
+          ws.mergeCells(`H${rs}:H${re}`);
+          ws.mergeCells(`I${rs}:I${re}`);
         }
-        // 型號品名固定橫向合併 B:C。
-        for(let r=rs;r<=re;r++)merges.push(`B${r}:C${r}`);
-        cursor=re+1;gi++;seq++;
+        cursor=re+1;gi++;
       }
-      // 清掉剩餘空白列，仍建立有框線的空白列。
+
+      // 剩餘空白列維持模板框線，B:C 仍橫向合併。
       for(let rr=cursor;rr<=22;rr++){
-        const row=doc.createElementNS(NS,"row");row.setAttribute("r",String(rr));
-        for(const col of ["A","B","D","E","F","G","H","I"])row.appendChild(makeCell(col,rr,"","s",null,col));
-        const footer=[...sheetData.getElementsByTagNameNS(NS,"row")].find(x=>Number(x.getAttribute("r"))>22);sheetData.insertBefore(row,footer||null);
-        merges.push(`B${rr}:C${rr}`);
+        const src=6;
+        if(styleCache[src].height)ws.getRow(rr).height=styleCache[src].height;
+        for(let c=1;c<=9;c++){applyStyle(ws.getCell(rr,c),src);ws.getCell(rr,c).value=null;}
+        try{ws.mergeCells(`B${rr}:C${rr}`)}catch(_e){}
       }
-      let mc=doc.getElementsByTagNameNS(NS,"mergeCells")[0];
-      if(!mc){mc=doc.createElementNS(NS,"mergeCells");const pm=doc.getElementsByTagNameNS(NS,"pageMargins")[0];doc.documentElement.insertBefore(mc,pm||null);}
-      // 保留標題/頁尾既有合併，只重建明細區 5~22。
-      const oldRefs=[...mc.getElementsByTagNameNS(NS,"mergeCell")].map(x=>x.getAttribute("ref")).filter(ref=>{const nums=(ref.match(/\d+/g)||[]).map(Number);return !nums.some(n=>n>=5&&n<=22);});
-      while(mc.firstChild)mc.removeChild(mc.firstChild);
-      [...oldRefs,...merges].forEach(ref=>{const x=doc.createElementNS(NS,"mergeCell");x.setAttribute("ref",ref);mc.appendChild(x);});mc.setAttribute("count",String(oldRefs.length+merges.length));
-      zip.file(path,new XMLSerializer().serializeToString(doc));
-    }
-    // 公式由 Excel 開啟時重新計算；避免模板原有快取值與新公式不一致。
-    const wbPath="xl/workbook.xml";
-    if(zip.file(wbPath)){
-      let wbXml=await zip.file(wbPath).async("string");
-      if(/<calcPr\b/.test(wbXml)){
-        wbXml=wbXml.replace(/<calcPr\b([^>]*)\/?>(?:<\/calcPr>)?/,m=>{
-          let x=m.replace(/\s+calcMode="[^"]*"/g,"").replace(/\s+fullCalcOnLoad="[^"]*"/g,"").replace(/\s+forceFullCalc="[^"]*"/g,"");
-          if(x.endsWith("/>")) return x.slice(0,-2)+' calcMode="auto" fullCalcOnLoad="1" forceFullCalc="1"/>';
-          return x;
-        });
-      }
-      zip.file(wbPath,wbXml);
     }
     if(gi<prepared.length)throw new Error(`資料共 ${prepared.length} 組，5 張模板頁仍放不下；目前已排入 ${gi} 組`);
-    const blob=await zip.generateAsync({type:"blob",compression:"DEFLATE"});
-    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="浤富採購單_系統匯出.xlsx";document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);
+
+    const buf=await wb.xlsx.writeBuffer();
+    const blob=new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="浤富採購單_系統匯出.xlsx";
+    document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);
   }catch(e){console.error(e);alert("Excel 產生失敗："+e.message)}
 }
 
