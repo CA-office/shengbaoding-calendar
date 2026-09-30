@@ -2130,9 +2130,21 @@ async function poDownloadExcel(){
     await wb.xlsx.load(u8.buffer);
     wb.calcProperties.fullCalcOnLoad=true; wb.calcProperties.forceFullCalc=true; wb.calcProperties.calcMode='auto';
 
-    // PDF 幾頁，Excel 就保留幾個工作頁。原模板已有 5 個同版型工作頁。
+    // PDF 幾頁，Excel 就自動產生幾個工作頁；不足時以第 1 個模板工作頁複製版型。
     while(wb.worksheets.length>pageCount) wb.removeWorksheet(wb.worksheets[wb.worksheets.length-1].id);
-    if(wb.worksheets.length<pageCount) throw new Error(`模板工作頁不足：PDF ${pageCount} 頁，但模板只有 ${wb.worksheets.length} 頁`);
+    const cloneTemplateSheet=(source,name)=>{
+      const ws=wb.addWorksheet(name,{properties:JSON.parse(JSON.stringify(source.properties||{})),pageSetup:JSON.parse(JSON.stringify(source.pageSetup||{})),views:JSON.parse(JSON.stringify(source.views||[]))});
+      ws.state=source.state;
+      ws.headerFooter=JSON.parse(JSON.stringify(source.headerFooter||{}));
+      ws.pageMargins=JSON.parse(JSON.stringify(source.pageMargins||{}));
+      source.columns.forEach((col,i)=>{const d=ws.getColumn(i+1);d.width=col.width;d.hidden=col.hidden;d.outlineLevel=col.outlineLevel;d.style=JSON.parse(JSON.stringify(col.style||{}));});
+      source.eachRow({includeEmpty:true},(row,r)=>{const dr=ws.getRow(r);dr.height=row.height;dr.hidden=row.hidden;dr.outlineLevel=row.outlineLevel;row.eachCell({includeEmpty:true},(cell,c)=>{const dc=dr.getCell(c);dc.value=cell.value;dc.style=JSON.parse(JSON.stringify(cell.style||{}));dc.numFmt=cell.numFmt;dc.alignment=JSON.parse(JSON.stringify(cell.alignment||{}));dc.border=JSON.parse(JSON.stringify(cell.border||{}));dc.fill=JSON.parse(JSON.stringify(cell.fill||{}));dc.font=JSON.parse(JSON.stringify(cell.font||{}));dc.protection=JSON.parse(JSON.stringify(cell.protection||{}));});});
+      const merges=(source.model&&Array.isArray(source.model.merges))?source.model.merges:[];
+      merges.forEach(ref=>{try{ws.mergeCells(ref)}catch(_e){}});
+      return ws;
+    };
+    const templateSource=wb.worksheets[0];
+    while(wb.worksheets.length<pageCount) cloneTemplateSheet(templateSource,`工作頁${wb.worksheets.length+1}`);
     wb.worksheets.forEach((ws,i)=>{ws.name=`工作頁${i+1}`});
     wb.views=[{activeTab:0,firstSheet:0}];
 
@@ -2149,10 +2161,26 @@ async function poDownloadExcel(){
       title.alignment={horizontal:'center',vertical:'middle'};
       ws.getRow(1).height=36;
 
+      // 本頁需要多少明細列就自動延伸多少列（模板原本 5~22 共 18 列）。
+      const neededRows=pageGroups.reduce((sum,x)=>sum+Math.max(1,x.p.visible.length),0);
+      const baseDetailRows=18, extraRows=Math.max(0,neededRows-baseDetailRows);
+      if(extraRows>0){
+        const inserts=Array.from({length:extraRows},()=>[]);
+        ws.insertRows(23,inserts,'i');
+        for(let rr=23;rr<23+extraRows;rr++){
+          ws.getRow(rr).height=ws.getRow(6).height;
+          for(let c=1;c<=9;c++){
+            const srcCell=ws.getCell(6,c),dst=ws.getCell(rr,c);
+            dst.style=JSON.parse(JSON.stringify(srcCell.style||{}));
+            dst.font={...(dst.font||{}),name:'Noto Sans HK'};
+          }
+        }
+      }
+      const detailEnd=22+extraRows;
       const merges=[]; if(ws.model&&Array.isArray(ws.model.merges)) merges.push(...ws.model.merges);
       for(const ref of merges){
         const nums=(String(ref).match(/\d+/g)||[]).map(Number);
-        if(nums.some(n=>n>=5&&n<=22)){try{ws.unMergeCells(ref)}catch(_e){}}
+        if(nums.some(n=>n>=5&&n<=detailEnd)){try{ws.unMergeCells(ref)}catch(_e){}}
       }
       const styleRows=[5,6,7],styleCache={};
       for(const rr of styleRows){
@@ -2163,11 +2191,11 @@ async function poDownloadExcel(){
         }
       }
       const applyStyle=(cell,src)=>{const st=styleCache[src].cells[cell.col];if(!st)return;cell.style=JSON.parse(JSON.stringify(st.style||{}));};
-      for(let r=5;r<=22;r++)for(let c=1;c<=9;c++)ws.getCell(r,c).value=null;
+      for(let r=5;r<=detailEnd;r++)for(let c=1;c<=9;c++)ws.getCell(r,c).value=null;
 
       let cursor=5, seq=1;
       for(const {g,p} of pageGroups){
-        const n=Math.max(1,p.visible.length); if(cursor+n-1>22)throw new Error(`PDF 第 ${si+1} 頁資料超過模板可用列數`);
+        const n=Math.max(1,p.visible.length);
         const rs=cursor,re=cursor+n-1,proj=projects.find(x=>x.key===g.projectKey),job=proj?[proj.no,proj.caseName].filter(Boolean).join('｜'):'';
         p.visible.forEach((it,j)=>{
           const rr=rs+j,src=j===0?5:(j===n-1?7:6);
@@ -2187,7 +2215,7 @@ async function poDownloadExcel(){
         if(n>1){ws.mergeCells(`A${rs}:A${re}`);ws.mergeCells(`H${rs}:H${re}`);ws.mergeCells(`I${rs}:I${re}`);}
         cursor=re+1;seq++;
       }
-      for(let rr=cursor;rr<=22;rr++){for(let c=1;c<=9;c++){applyStyle(ws.getCell(rr,c),6);ws.getCell(rr,c).value=null;ws.getCell(rr,c).font={...(ws.getCell(rr,c).font||{}),name:'Noto Sans HK'};}try{ws.mergeCells(`B${rr}:C${rr}`)}catch(_e){}}
+      for(let rr=cursor;rr<=detailEnd;rr++){for(let c=1;c<=9;c++){applyStyle(ws.getCell(rr,c),6);ws.getCell(rr,c).value=null;ws.getCell(rr,c).font={...(ws.getCell(rr,c).font||{}),name:'Noto Sans HK'};}try{ws.mergeCells(`B${rr}:C${rr}`)}catch(_e){}}
       // 全頁字體統一，但不改字級/粗體等其他設定。
       for(let r=1;r<=Math.max(ws.rowCount||0,35);r++)for(let c=1;c<=Math.max(ws.columnCount||0,15);c++){const cell=ws.getCell(r,c);cell.font={...(cell.font||{}),name:'Noto Sans HK'};}
     }
