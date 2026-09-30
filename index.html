@@ -2016,6 +2016,17 @@ function poProjectSave(){
   const i=a.findIndex(x=>x.key===key); if(i>=0)a[i]=rec; else a.unshift(rec);
   poSaveProjects(a);poProjectEditKey=key;poRenderProjects();poRenderGroups();
 }
+
+// 單號／案名管理：輸入完成後按 Enter 直接儲存
+["poNo","poCase","poCaseAmount"].forEach(id=>{
+  const el=$(id);
+  if(el) el.addEventListener("keydown",e=>{
+    if(e.key==="Enter"){
+      e.preventDefault();
+      poProjectSave();
+    }
+  });
+});
 function poRenderProjects(){
   const b=$("poProjectRecords");if(!b)return;const a=poProjects();
   b.innerHTML=a.map(r=>`<tr><td><button data-a="edit" data-k="${r.key}">修改</button><button data-a="del" data-k="${r.key}">刪除</button></td><td>${poEsc(r.no)}</td><td>${poEsc(r.caseName)}</td><td>${poFmt(r.caseAmount)}</td></tr>`).join("");
