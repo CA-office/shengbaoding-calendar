@@ -2095,9 +2095,18 @@ function poDownloadExcel(){
     const per=18;
     wb.SheetNames.forEach((sn,si)=>{
       const ws=wb.Sheets[sn];
-      for(let r=5;r<=22;r++)["A","B","D","E","F","G","H","I"].forEach(c=>{if(ws[c+r])ws[c+r].v="";else ws[c+r]={t:"s",v:""}});
+      for(let r=5;r<=22;r++)["A","B","D","E","F","G","H","I"].forEach(c=>{if(ws[c+r]){ws[c+r].v="";}else{ws[c+r]={t:"s",v:""};}});
       flat.slice(si*per,(si+1)*per).forEach((x,j)=>{
-        const r=5+j;ws["A"+r]={t:"s",v:x.groupFirst?String(j+1):""};ws["B"+r]={t:"s",v:x.name||""};ws["D"+r]={t:"n",v:+x.qty||0};ws["E"+r]={t:"s",v:x.unit||""};ws["F"+r]={t:"n",v:+x.price||0};ws["G"+r]={t:"n",v:(+x.qty||0)*(+x.price||0)};ws["H"+r]={t:typeof x.total==="number"?"n":"s",v:x.total};ws["I"+r]={t:"s",v:x.job||""};
+        const r=5+j;
+        const setv=(addr,t,v)=>{if(!ws[addr])ws[addr]={t,v};else{ws[addr].t=t;ws[addr].v=v;}};
+        setv("A"+r,"s",x.groupFirst?String(j+1):"");
+        setv("B"+r,"s",x.name||"");
+        setv("D"+r,"n",+x.qty||0);
+        setv("E"+r,"s",x.unit||"");
+        setv("F"+r,"n",+x.price||0);
+        setv("G"+r,"n",(+x.qty||0)*(+x.price||0));
+        setv("H"+r,typeof x.total==="number"?"n":"s",x.total);
+        setv("I"+r,"s",x.job||"");
       });
     });
     XLSX.writeFile(wb,"浤富採購單_系統匯出.xlsx",{cellStyles:true});
