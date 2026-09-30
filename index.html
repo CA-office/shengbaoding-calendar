@@ -2015,7 +2015,10 @@ function poProjectSave(){
   const a=poProjects(), key=poProjectEditKey||Date.now().toString();
   const rec={key,no,caseName,caseAmount,updatedAt:new Date().toISOString()};
   const i=a.findIndex(x=>x.key===key); if(i>=0)a[i]=rec; else a.unshift(rec);
-  poSaveProjects(a);poProjectEditKey=key;poRenderProjects();poRenderGroups();
+  poSaveProjects(a);poProjectEditKey=null;poRenderProjects();poRenderGroups();
+  // 儲存後直接進入下一筆新增狀態：保留目前前綴，其餘欄位清空，游標回到單號數字欄
+  $("poNo").value="";$("poCase").value="";$("poCaseAmount").value="";
+  requestAnimationFrame(()=>{const el=$("poNo");if(el){el.focus();el.select();}});
 }
 function poRenderProjects(){
   const b=$("poProjectRecords");if(!b)return;const a=poProjects();
