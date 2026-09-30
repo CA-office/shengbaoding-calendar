@@ -2120,59 +2120,87 @@ async function poDownloadExcel(){
     if(typeof JSZip==="undefined")throw new Error("Excel 模板元件尚未載入");
     const projects=poProjects();
     const prepared=poGroups.map(g=>({g,p:poPreparedGroup(g)}));
-    const blocks=[[5,7],[8,10],[11,12],[13,15],[16,17],[18,20],[21,22]];
-    const maxGroups=blocks.length*5;
-    if(prepared.length>maxGroups)throw new Error(`本模板最多可放 ${maxGroups} 組銷貨單`);
-    for(const x of prepared){if(x.p.visible.length>3)throw new Error(`銷貨單 ${x.g.salesNo||""} 扣除現金扣%後仍超過 3 筆，請先確認模板區塊`);}
-
-    const bin=atob(PO_TEMPLATE_B64), u8=new Uint8Array(bin.length);
+    const bin=atob(PO_TEMPLATE_B64),u8=new Uint8Array(bin.length);
     for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
     const zip=await JSZip.loadAsync(u8);
-
+    const NS="http://schemas.openxmlformats.org/spreadsheetml/2006/main";
+    let gi=0;
     for(let si=0;si<5;si++){
       const path=`xl/worksheets/sheet${si+1}.xml`;
-      let xml=await zip.file(path).async("string");
-      for(let bi=0;bi<blocks.length;bi++){
-        const [rs,re]=blocks[bi];
-        const item=prepared[si*blocks.length+bi];
-        // 清空此模板群組的資料，但保留原儲存格 style、框線、合併格、列高等 XML。
-        for(let r=rs;r<=re;r++)for(const c of ["A","B","C","D","E","F","G","H","I"])xml=poSetXmlCell(xml,c+r,"s","");
-        if(!item)continue;
-        const {g,p}=item, proj=projects.find(x=>x.key===g.projectKey);
-        if(p.visible.length>(re-rs+1))throw new Error(`銷貨單 ${g.salesNo||""} 有 ${p.visible.length} 筆，但模板第 ${bi+1} 組只有 ${re-rs+1} 列`);
-        const job=proj?[proj.no,proj.caseName].filter(Boolean).join("｜"):"";
-        xml=poSetXmlCell(xml,"A"+rs,"n",si*blocks.length+bi+1);
-        xml=poSetXmlCell(xml,"I"+rs,"s",job);
-        p.visible.forEach((r,j)=>{
-          const rr=rs+j, sum=Math.round((+r.qty||0)*(+r.price||0));
-          xml=poSetXmlCell(xml,"B"+rr,"s",r.name||"");
-          xml=poSetXmlCell(xml,"D"+rr,"n",+r.qty||0);
-          xml=poSetXmlCell(xml,"E"+rr,"s",r.unit||"");
-          xml=poSetXmlCell(xml,"F"+rr,"n",+r.price||0);
-          xml=poSetXmlCell(xml,"G"+rr,"n",sum,`F${rr}*D${rr}`);
-        });
-        let formula="";
-        const last=rs+p.visible.length-1;
-        if(p.discount!==1){
-          const beforeLast=rs+p.beforeCount-1;
-          const afterStart=beforeLast+1;
-          const left=p.beforeCount>0?(p.beforeCount===1?`G${rs}`:`SUM(G${rs}:G${beforeLast})`):"0";
-          const right=afterStart<=last?(afterStart===last?`+G${last}`:`+SUM(G${afterStart}:G${last})`):"";
-          formula=`${left}*${p.discount}${right}`;
-        }else formula=p.visible.length===1?`G${rs}`:`SUM(G${rs}:G${last})`;
-        xml=poSetXmlCell(xml,"H"+rs,"n",p.total,formula);
+      const raw=await zip.file(path).async("string");
+      const doc=new DOMParser().parseFromString(raw,"application/xml");
+      const sheetData=doc.getElementsByTagNameNS(NS,"sheetData")[0];
+      const rows=[...sheetData.getElementsByTagNameNS(NS,"row")];
+      const rowMap=new Map(rows.map(r=>[Number(r.getAttribute("r")),r]));
+      const tplFirst=rowMap.get(5),tplMid=rowMap.get(6),tplLast=rowMap.get(7);
+      if(!tplFirst||!tplMid||!tplLast)throw new Error("Excel 模板第 5~7 列不存在");
+      const styleByCol={};
+      for(const tr of [tplFirst,tplMid,tplLast])for(const c of [...tr.getElementsByTagNameNS(NS,"c")]){
+        const col=(c.getAttribute("r")||"").replace(/\d+/g,"");
+        if(!styleByCol[col])styleByCol[col]=c.getAttribute("s")||"";
       }
-      zip.file(path,xml);
+      const makeCell=(col,row,val,type,formula,styleCol=col)=>{
+        const c=doc.createElementNS(NS,"c");c.setAttribute("r",col+row);
+        const st=styleByCol[styleCol];if(st)c.setAttribute("s",st);
+        if(formula){const f=doc.createElementNS(NS,"f");f.textContent=formula;c.appendChild(f);const v=doc.createElementNS(NS,"v");v.textContent=String(Number(val||0));c.appendChild(v);}
+        else if(type==="n"){const v=doc.createElementNS(NS,"v");v.textContent=String(Number(val||0));c.appendChild(v);}
+        else if(val!==""&&val!=null){c.setAttribute("t","inlineStr");const is=doc.createElementNS(NS,"is"),t=doc.createElementNS(NS,"t");t.setAttribute("xml:space","preserve");t.textContent=String(val);is.appendChild(t);c.appendChild(is);}
+        return c;
+      };
+      // 每張工作表保留 5~22 共 18 列明細空間；依實際銷貨單筆數動態分配，不再限制每組 3 筆。
+      for(let r=5;r<=22;r++){const old=rowMap.get(r);if(old)sheetData.removeChild(old);}
+      let cursor=5,seq=si*100+1; const merges=[];
+      while(gi<prepared.length){
+        const item=prepared[gi],n=Math.max(1,item.p.visible.length);
+        if(cursor+n-1>22)break;
+        const rs=cursor,re=cursor+n-1,{g,p}=item,proj=projects.find(x=>x.key===g.projectKey);
+        const job=proj?[proj.no,proj.caseName].filter(Boolean).join("｜"):"";
+        p.visible.forEach((it,j)=>{
+          const rr=rs+j;
+          const src=j===0?tplFirst:(j===n-1?tplLast:tplMid);
+          const row=doc.createElementNS(NS,"row");row.setAttribute("r",String(rr));
+          if(src.getAttribute("ht")){row.setAttribute("ht",src.getAttribute("ht"));row.setAttribute("customHeight",src.getAttribute("customHeight")||"1");}
+          if(j===0)row.appendChild(makeCell("A",rr,gi+1,"n",null,"A"));
+          row.appendChild(makeCell("B",rr,it.name||"","s",null,"B"));
+          row.appendChild(makeCell("D",rr,+it.qty||0,"n",null,"D"));
+          row.appendChild(makeCell("E",rr,it.unit||"","s",null,"E"));
+          row.appendChild(makeCell("F",rr,+it.price||0,"n",null,"F"));
+          const sum=Math.round((+it.qty||0)*(+it.price||0));row.appendChild(makeCell("G",rr,sum,"n",`F${rr}*D${rr}`,"G"));
+          if(j===0){
+            const last=re;let formula="";
+            if(p.discount!==1){const beforeLast=rs+p.beforeCount-1,afterStart=beforeLast+1;const left=p.beforeCount>0?(p.beforeCount===1?`G${rs}`:`SUM(G${rs}:G${beforeLast})`):"0";const right=afterStart<=last?(afterStart===last?`+G${last}`:`+SUM(G${afterStart}:G${last})`):"";formula=`${left}*${p.discount}${right}`;}
+            else formula=n===1?`G${rs}`:`SUM(G${rs}:G${last})`;
+            row.appendChild(makeCell("H",rr,p.total,"n",formula,"H"));row.appendChild(makeCell("I",rr,job,"s",null,"I"));
+          }
+          // insert before first footer row (>22)
+          const footer=[...sheetData.getElementsByTagNameNS(NS,"row")].find(x=>Number(x.getAttribute("r"))>22);
+          sheetData.insertBefore(row,footer||null);
+        });
+        merges.push(`A${rs}:A${re}`,`H${rs}:H${re}`,`I${rs}:I${re}`);
+        for(let r=rs;r<=re;r++)merges.push(`B${r}:C${r}`);
+        cursor=re+1;gi++;seq++;
+      }
+      // 清掉剩餘空白列，仍建立有框線的空白列。
+      for(let rr=cursor;rr<=22;rr++){
+        const row=doc.createElementNS(NS,"row");row.setAttribute("r",String(rr));
+        for(const col of ["A","B","D","E","F","G","H","I"])row.appendChild(makeCell(col,rr,"","s",null,col));
+        const footer=[...sheetData.getElementsByTagNameNS(NS,"row")].find(x=>Number(x.getAttribute("r"))>22);sheetData.insertBefore(row,footer||null);
+        merges.push(`B${rr}:C${rr}`);
+      }
+      let mc=doc.getElementsByTagNameNS(NS,"mergeCells")[0];
+      if(!mc){mc=doc.createElementNS(NS,"mergeCells");const pm=doc.getElementsByTagNameNS(NS,"pageMargins")[0];doc.documentElement.insertBefore(mc,pm||null);}
+      // 保留標題/頁尾既有合併，只重建明細區 5~22。
+      const oldRefs=[...mc.getElementsByTagNameNS(NS,"mergeCell")].map(x=>x.getAttribute("ref")).filter(ref=>{const nums=(ref.match(/\d+/g)||[]).map(Number);return !nums.some(n=>n>=5&&n<=22);});
+      while(mc.firstChild)mc.removeChild(mc.firstChild);
+      [...oldRefs,...merges].forEach(ref=>{const x=doc.createElementNS(NS,"mergeCell");x.setAttribute("ref",ref);mc.appendChild(x);});mc.setAttribute("count",String(oldRefs.length+merges.length));
+      zip.file(path,new XMLSerializer().serializeToString(doc));
     }
+    if(gi<prepared.length)throw new Error(`資料共 ${prepared.length} 組，5 張模板頁仍放不下；目前已排入 ${gi} 組`);
     const blob=await zip.generateAsync({type:"blob",compression:"DEFLATE"});
     const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="浤富採購單_系統匯出.xlsx";document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);
   }catch(e){console.error(e);alert("Excel 產生失敗："+e.message)}
 }
-$("closeViewBtn").addEventListener("click",()=>$("viewDlg").close());
-$("saveEventBtn").addEventListener("click",saveEvent);$("deleteEventBtn").addEventListener("click",deleteEvent);$("saveNoteBtn").addEventListener("click",saveNote);$("calendarTabBtn").addEventListener("click",()=>showFeature("calendar"));$("quoteTabBtn").addEventListener("click",()=>showFeature("quote"));$("quoteQuickNoteHeaderBtn")?.addEventListener("click",openQuoteQuickNoteFromHeader);$("qQuickNoteToggleBtn")?.addEventListener("click",()=>setQuoteQuickNoteOpen($("qQuickNoteBody")?.classList.contains("hidden")));$("qQuickNoteCopyBtn")?.addEventListener("click",copyQuoteQuickNote);$("installStatsTabBtn").addEventListener("click",()=>showFeature("stats"));$("purchaseTabBtn")?.addEventListener("click",()=>showFeature("purchase"));$("stOrderDate").addEventListener("input",e=>normalizeStatMDInput(e.target));$("stInstallDate").addEventListener("input",e=>normalizeStatMDInput(e.target));$("stBringQuoteBtn")?.addEventListener("click",bringSelectedQuoteToStats);$("stSaveBtn")?.addEventListener("click",saveInstallStat);$("stResetBtn")?.addEventListener("click",resetInstallStatForm);$("stLoadBtn").addEventListener("click",loadInstallStats);$("stShowAll")?.addEventListener("change",loadInstallStats);$("stSyncAllBtn")?.addEventListener("click",async()=>{await syncAllQuotesToInstallStats();await loadInstallStats()});$("stExportBtn").addEventListener("click",exportInstallStatsExcel);
-$("poProjectNewBtn")?.addEventListener("click",poProjectClear);
-$("poProjectSaveBtn")?.addEventListener("click",poProjectSave);
-$("poProjectClearBtn")?.addEventListener("click",poProjectClear);
+
 $("poPdfBtn")?.addEventListener("click",()=>$("poPdfInput").click());
 $("poPdfInput")?.addEventListener("change",e=>{const f=e.target.files?.[0];if(f)poReadPdf(f);e.target.value=""});
 $("poClearBtn")?.addEventListener("click",poClearPdf);
