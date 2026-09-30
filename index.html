@@ -2083,33 +2083,85 @@ async function poReadPdf(file){
     $("poStatus").textContent=`PDF 匯入完成：${poGroups.length} 個銷貨單分組、${poGroups.reduce((n,g)=>n+g.rows.length,0)} 筆貨品。請為每組選擇已建立的「單號／案名」。`;
   }catch(e){console.error(e);$("poStatus").textContent="PDF 讀取失敗："+e.message}
 }
-function poDownloadExcel(){
+async function poDownloadExcel(){
   if(!poGroups.length)return alert("目前沒有 PDF 採購明細");
   try{
-    const wb=XLSX.read(PO_TEMPLATE_B64,{type:"base64",cellStyles:true});
-    const flat=[];const projects=poProjects();
-    poGroups.forEach(g=>{
-      const p=projects.find(x=>x.key===g.projectKey), total=g.rows.reduce((n,r)=>n+(+r.qty||0)*(+r.price||0),0);
-      g.rows.forEach((r,i)=>flat.push({...r,groupFirst:i===0,total:i===0?total:"",job:i===0&&p?[p.no,p.caseName,p.caseAmount?("$"+poFmt(p.caseAmount)):""].filter(Boolean).join(" "):""}));
-    });
-    const per=18;
-    wb.SheetNames.forEach((sn,si)=>{
-      const ws=wb.Sheets[sn];
-      for(let r=5;r<=22;r++)["A","B","D","E","F","G","H","I"].forEach(c=>{if(ws[c+r]){ws[c+r].v="";}else{ws[c+r]={t:"s",v:""};}});
-      flat.slice(si*per,(si+1)*per).forEach((x,j)=>{
-        const r=5+j;
-        const setv=(addr,t,v)=>{if(!ws[addr])ws[addr]={t,v};else{ws[addr].t=t;ws[addr].v=v;}};
-        setv("A"+r,"s",x.groupFirst?String(j+1):"");
-        setv("B"+r,"s",x.name||"");
-        setv("D"+r,"n",+x.qty||0);
-        setv("E"+r,"s",x.unit||"");
-        setv("F"+r,"n",+x.price||0);
-        setv("G"+r,"n",(+x.qty||0)*(+x.price||0));
-        setv("H"+r,typeof x.total==="number"?"n":"s",x.total);
-        setv("I"+r,"s",x.job||"");
-      });
-    });
-    XLSX.writeFile(wb,"浤富採購單_系統匯出.xlsx",{cellStyles:true});
+    // 直接修改原始 xlsx 內的 worksheet XML，不再用 SheetJS 重寫整本 Excel。
+    // 因此原模板的框線、合併格、欄寬、列高、字型、列印設定都會原封不動保留。
+    const bin=atob(PO_TEMPLATE_B64), bytes=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+    const zip=await JSZip.loadAsync(bytes);
+    const projects=poProjects();
+    const escXml=v=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    function setCell(xml,addr,kind,value,formula){
+      const re=new RegExp('(<c\\b[^>]*\\br="'+addr+'"[^>]*)(?:\\/>|>([\\s\\S]*?)<\\/c>)');
+      const m=xml.match(re); if(!m)return xml;
+      let open=m[1].replace(/\\s+t="[^"]*"/g,"");
+      let inner="";
+      if(formula){ inner='<f>'+escXml(formula)+'</f>'; }
+      else if(kind==="s" && value!=="" && value!=null){ open+=' t="inlineStr"'; inner='<is><t xml:space="preserve">'+escXml(value)+'</t></is>'; }
+      else if(kind==="n" && value!=="" && value!=null && Number.isFinite(Number(value))){ inner='<v>'+Number(value)+'</v>'; }
+      return xml.replace(re,open+'>'+inner+'</c>');
+    }
+    function clearCell(xml,addr){return setCell(xml,addr,"s","");}
+
+    // 模板每頁原本就設計好的 7 個合併區塊；只往區塊內填值，不碰 mergeCells / styles。
+    const blocks=[{s:5,e:7},{s:8,e:10},{s:11,e:12},{s:13,e:15},{s:16,e:17},{s:18,e:20},{s:21,e:22}];
+    let gi=0, seq=1;
+    for(let si=1;si<=5;si++){
+      const path='xl/worksheets/sheet'+si+'.xml';
+      let xml=await zip.file(path).async('string');
+      for(let r=5;r<=22;r++)for(const c of ['A','B','D','E','F','G','H','I'])xml=clearCell(xml,c+r);
+      for(const b of blocks){
+        if(gi>=poGroups.length)break;
+        let g=poGroups[gi];
+        // 「現金扣%0.95」是總計計算規則，不在 Excel 貨品列重複顯示。
+        const discountIndex=g.rows.findIndex(x=>/現金扣/.test(String(x.name||'')));
+        const discountRow=discountIndex>=0?g.rows[discountIndex]:null;
+        const rows=g.rows.filter((x,i)=>i!==discountIndex);
+        const cap=b.e-b.s+1;
+        if(rows.length>cap)continue; // 先找下一個足夠大的原模板區塊
+        const p=projects.find(x=>x.key===g.projectKey);
+        xml=setCell(xml,'A'+b.s,'n',seq++);
+        rows.forEach((x,j)=>{
+          const r=b.s+j;
+          xml=setCell(xml,'B'+r,'s',x.name||'');
+          xml=setCell(xml,'D'+r,'n',+x.qty||0);
+          xml=setCell(xml,'E'+r,'s',x.unit||'');
+          xml=setCell(xml,'F'+r,'n',+x.price||0);
+          xml=setCell(xml,'G'+r,'n','',`F${r}*D${r}`);
+        });
+        // 依 PDF 的現金扣位置建立總計公式：折扣前的貨品 * 0.95，再加折扣後的工資等項目。
+        let totalFormula='';
+        if(rows.length){
+          if(discountRow){
+            const beforeCount=discountIndex; // discount row 前面有幾筆
+            const beforeRefs=rows.slice(0,beforeCount).map((x,j)=>'G'+(b.s+j));
+            const afterRefs=rows.slice(beforeCount).map((x,j)=>'G'+(b.s+beforeCount+j));
+            const rateMatch=String(discountRow.name||'').match(/0\\.([0-9]+)/);
+            const rate=rateMatch?('0.'+rateMatch[1]):'0.95';
+            if(beforeRefs.length)totalFormula='SUM('+beforeRefs[0]+':'+beforeRefs[beforeRefs.length-1]+')*'+rate;
+            if(afterRefs.length)totalFormula+=(totalFormula?'+':'')+afterRefs.join('+');
+          }else{
+            totalFormula=rows.length===1?'G'+b.s:`SUM(G${b.s}:G${b.s+rows.length-1})`;
+          }
+          xml=setCell(xml,'H'+b.s,'n','',totalFormula);
+        }
+        const job=p?[p.no,p.caseName,p.caseAmount?('$'+poFmt(p.caseAmount)):''].filter(Boolean).join(' '):'';
+        xml=setCell(xml,'I'+b.s,'s',job);
+        gi++;
+      }
+      zip.file(path,xml);
+    }
+    if(gi<poGroups.length){
+      alert(`有 ${{poGroups.length-gi}} 組銷貨單的貨品超過原模板區塊可容納列數，這次先沒有寫入；我可以再把模板擴充成可自動增加列。`);
+    }
+    // 要求 Excel 開啟時重算公式。
+    let wbxml=await zip.file('xl/workbook.xml').async('string');
+    wbxml=wbxml.replace(/<calcPr[^>]*\\/>/,'<calcPr calcMode="auto" fullCalcOnLoad="1" forceFullCalc="1"/>');
+    zip.file('xl/workbook.xml',wbxml);
+    const blob=await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',compression:'DEFLATE'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='浤富採購單_系統匯出.xlsx';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1500);
   }catch(e){console.error(e);alert("Excel 產生失敗："+e.message)}
 }
 $("closeViewBtn").addEventListener("click",()=>$("viewDlg").close());
