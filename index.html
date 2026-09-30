@@ -1156,13 +1156,19 @@ async function excelQuote(x){
         const oldMerge=[...mergeCells.getElementsByTagNameNS(NS,"mergeCell")].find(n=>n.getAttribute("ref")==="A7:L7");
         if(oldMerge)mergeCells.removeChild(oldMerge);
         const refs=new Set([...mergeCells.getElementsByTagNameNS(NS,"mergeCell")].map(n=>n.getAttribute("ref")));
-        for(const ref of ["A7:I7","J7:K7"]){
+        for(const ref of ["A7:I7","J7:L7"]){
           if(!refs.has(ref)){const mc=doc.createElementNS(NS,"mergeCell");mc.setAttribute("ref",ref);mergeCells.appendChild(mc)}
         }
         mergeCells.setAttribute("count",String(mergeCells.getElementsByTagNameNS(NS,"mergeCell").length));
       }
-      setText("J7","訂單編號：");
-      setText("L7",orderNo);
+      // 只顯示訂單編號數字；黑色、8pt，不顯示「訂單編號：」文字。
+      const c=getCell("J7");clearKids(c);c.setAttribute("t","inlineStr");
+      const is=doc.createElementNS(NS,"is"),r=doc.createElementNS(NS,"r"),rPr=doc.createElementNS(NS,"rPr");
+      const rFont=doc.createElementNS(NS,"rFont");rFont.setAttribute("val","Microsoft JhengHei");rPr.appendChild(rFont);
+      const color=doc.createElementNS(NS,"color");color.setAttribute("rgb","FF000000");rPr.appendChild(color);
+      const sz=doc.createElementNS(NS,"sz");sz.setAttribute("val","8");rPr.appendChild(sz);
+      const t=doc.createElementNS(NS,"t");t.textContent=orderNo;r.appendChild(rPr);r.appendChild(t);is.appendChild(r);c.appendChild(is);
+      setText("L7","");
     }
     setText("C8",m.color_no||"");
     setText("F8",m.product_name||"");
