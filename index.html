@@ -557,7 +557,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
       <button type="button" id="poProjectClearBtn">清空</button>
     </div>
     <div class="purchaseMeta">
-      <label>單號<input id="poNo" placeholder="例如 G5DE260810001"></label>
+      <label>單號<div style="display:flex;gap:6px"><select id="poNoPrefix" style="width:92px;flex:0 0 92px"><option value="G5DD">G5DD</option><option value="G5DE" selected>G5DE</option></select><input id="poNo" inputmode="numeric" placeholder="後面輸入數字" style="min-width:0;flex:1"></div></label>
       <label>案名<input id="poCase" placeholder="例如 遵櫃-三峽"></label>
       <label>案件金額<input id="poCaseAmount" inputmode="decimal" placeholder="例如 68088"></label>
     </div>
@@ -2006,33 +2006,23 @@ const poEsc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":
 
 function poProjects(){try{return JSON.parse(localStorage.getItem("sbd_purchase_projects")||"[]")}catch(e){return []}}
 function poSaveProjects(a){localStorage.setItem("sbd_purchase_projects",JSON.stringify(a))}
-function poProjectClear(){poProjectEditKey=null;$("poNo").value="";$("poCase").value="";$("poCaseAmount").value="";}
+function poProjectClear(){poProjectEditKey=null;if($("poNoPrefix"))$("poNoPrefix").value="G5DE";$("poNo").value="";$("poCase").value="";$("poCaseAmount").value="";}
 function poProjectSave(){
   if(!isAdminAccount())return;
-  const no=$("poNo").value.trim(), caseName=$("poCase").value.trim(), caseAmount=Number(String($("poCaseAmount").value).replace(/,/g,"")||0);
+  const noSuffix=$("poNo").value.trim();
+  const no=noSuffix ? (($("poNoPrefix")?.value||"")+noSuffix) : "", caseName=$("poCase").value.trim(), caseAmount=Number(String($("poCaseAmount").value).replace(/,/g,"")||0);
   if(!no&&!caseName)return alert("請輸入單號或案名");
   const a=poProjects(), key=poProjectEditKey||Date.now().toString();
   const rec={key,no,caseName,caseAmount,updatedAt:new Date().toISOString()};
   const i=a.findIndex(x=>x.key===key); if(i>=0)a[i]=rec; else a.unshift(rec);
   poSaveProjects(a);poProjectEditKey=key;poRenderProjects();poRenderGroups();
 }
-
-// 單號／案名管理：輸入完成後按 Enter 直接儲存
-["poNo","poCase","poCaseAmount"].forEach(id=>{
-  const el=$(id);
-  if(el) el.addEventListener("keydown",e=>{
-    if(e.key==="Enter"){
-      e.preventDefault();
-      poProjectSave();
-    }
-  });
-});
 function poRenderProjects(){
   const b=$("poProjectRecords");if(!b)return;const a=poProjects();
   b.innerHTML=a.map(r=>`<tr><td><button data-a="edit" data-k="${r.key}">修改</button><button data-a="del" data-k="${r.key}">刪除</button></td><td>${poEsc(r.no)}</td><td>${poEsc(r.caseName)}</td><td>${poFmt(r.caseAmount)}</td></tr>`).join("");
   b.querySelectorAll("button").forEach(btn=>btn.onclick=()=>{
     const a=poProjects(),r=a.find(x=>x.key===btn.dataset.k);
-    if(btn.dataset.a==="edit"&&r){poProjectEditKey=r.key;$("poNo").value=r.no||"";$("poCase").value=r.caseName||"";$("poCaseAmount").value=r.caseAmount||""}
+    if(btn.dataset.a==="edit"&&r){poProjectEditKey=r.key;const savedNo=String(r.no||"");const m=savedNo.match(/^(G5DD|G5DE)(.*)$/);if($("poNoPrefix"))$("poNoPrefix").value=m?m[1]:"G5DE";$("poNo").value=m?m[2]:savedNo;$("poCase").value=r.caseName||"";$("poCaseAmount").value=r.caseAmount||""}
     if(btn.dataset.a==="del"){if(!confirm("確定刪除這個單號／案名？"))return;poSaveProjects(a.filter(x=>x.key!==btn.dataset.k));poRenderProjects();poRenderGroups()}
   });
 }
@@ -2240,6 +2230,14 @@ $("purchaseTabBtn")?.addEventListener("click",()=>showFeature("purchase"));
 $("poProjectNewBtn")?.addEventListener("click",poProjectClear);
 $("poProjectClearBtn")?.addEventListener("click",poProjectClear);
 $("poProjectSaveBtn")?.addEventListener("click",poProjectSave);
+["poNo","poCase","poCaseAmount"].forEach(id=>{
+  $(id)?.addEventListener("keydown",e=>{
+    if(e.key==="Enter"){
+      e.preventDefault();
+      poProjectSave();
+    }
+  });
+});
 
 $("poPdfBtn")?.addEventListener("click",()=>$("poPdfInput").click());
 $("poPdfInput")?.addEventListener("change",e=>{const f=e.target.files?.[0];if(f)poReadPdf(f);e.target.value=""});
