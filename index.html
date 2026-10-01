@@ -901,6 +901,13 @@ function userEmail(){return String(currentUser&&currentUser.email||"").trim().to
 function isAdminAccount(){return userEmail()==="zara.feng.oo@gmail.com" || (profile&&profile.role==="admin")}
 function isUser1(){return userEmail()==="a0985029910@gmail.com"}
 function isUser2(){return userEmail()==="numberoneaustin@yahoo.com.tw"}
+function overtimeMasterByAccount(){
+  const e=userEmail();
+  if(e==="a0985029910@gmail.com") return "陳建成";   // 使用者1
+  if(e==="rman770212@yahoo.com.tw") return "楊春龍"; // 使用者3
+  if(e==="gen20312@gmail.com") return "洪聖凱";      // 使用者4
+  return "";
+}
 function canEditCalendar(){return isAdminAccount()||isUser1()}
 function canUseOuting(){return isAdminAccount()}
 function canUseOvertime(){
@@ -2531,14 +2538,20 @@ initInstallerPicker();updateMasterBillingRange();renderStatsEditingPreviewRow();
     if(!allowed())return;
     editId=null;$o("otDlgTitle").textContent="新增加班";
     $o("otDate").value=new Date().toISOString().slice(0,10);
-    $o("otMaster").value=(typeof profile!=="undefined" && profile?.display_name)||"";
+    const fixedMaster=(typeof overtimeMasterByAccount==="function"?overtimeMasterByAccount():"");
+    $o("otMaster").value=fixedMaster || ((typeof profile!=="undefined" && profile?.display_name)||"");
+    $o("otMaster").disabled=!!fixedMaster;
     $o("otStart").value="";$o("otEnd").value="";
     $o("otDeleteBtn").classList.add("hidden");$o("otDlg").showModal();
   }
   window.otEdit=function(id){
     if(!allowed())return; const x=get().find(v=>String(v.id)===String(id));if(!x)return;
     editId=id;$o("otDlgTitle").textContent="修改加班";
-    $o("otDate").value=x.date||"";$o("otMaster").value=x.master||"";$o("otStart").value=x.start||"";$o("otEnd").value=x.end||"";
+    $o("otDate").value=x.date||"";
+    const fixedMaster=(typeof overtimeMasterByAccount==="function"?overtimeMasterByAccount():"");
+    $o("otMaster").value=fixedMaster || (x.master||"");
+    $o("otMaster").disabled=!!fixedMaster;
+    $o("otStart").value=x.start||"";$o("otEnd").value=x.end||"";
     $o("otDeleteBtn").classList.remove("hidden");$o("otDlg").showModal();
   };
   window.otRemove=function(id){
@@ -2547,7 +2560,8 @@ initInstallerPicker();updateMasterBillingRange();renderStatsEditingPreviewRow();
   };
   function save(){
     if(!allowed())return;
-    const rec={date:$o("otDate").value,master:$o("otMaster").value.trim(),start:$o("otStart").value,end:$o("otEnd").value};
+    const fixedMaster=(typeof overtimeMasterByAccount==="function"?overtimeMasterByAccount():"");
+    const rec={date:$o("otDate").value,master:fixedMaster || $o("otMaster").value.trim(),start:$o("otStart").value,end:$o("otEnd").value};
     if(!rec.date){alert("請選擇日期");return}
     if(!rec.start||!rec.end){alert("請輸入上班、下班時間");return}
     const a=get();
@@ -2570,7 +2584,12 @@ initInstallerPicker();updateMasterBillingRange();renderStatsEditingPreviewRow();
     const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="超時打卡統計.xls";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
   }
   document.addEventListener("DOMContentLoaded",()=>{
-    $o("overtimeTabBtn")?.addEventListener("click",()=>{if(allowed()){showFeature("overtime");render()}});
+    $o("overtimeTabBtn")?.addEventListener("click",()=>{if(allowed()){
+      const fixedMaster=(typeof overtimeMasterByAccount==="function"?overtimeMasterByAccount():"");
+      if(fixedMaster && $o("otMasterFilter")){$o("otMasterFilter").value=fixedMaster;$o("otMasterFilter").disabled=true}
+      else if($o("otMasterFilter")){$o("otMasterFilter").disabled=false}
+      showFeature("overtime");render()
+    }});
     $o("otAddBtn")?.addEventListener("click",openNew);
   $o("otMasterFilter")?.addEventListener("change",render);
     $o("otSaveBtn")?.addEventListener("click",save);
