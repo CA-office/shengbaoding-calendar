@@ -478,6 +478,8 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
 @media(max-width:700px){.purchaseMeta{grid-template-columns:1fr}.purchaseWrap{padding:0 5px}.purchaseActions button{flex:1 1 140px}}
 </style>
 
+
+<style id="overtime-polish">#overtimeView .ot-table{table-layout:fixed;border-collapse:separate;border-spacing:0}#overtimeView .ot-table th:nth-child(4),#overtimeView .ot-table td:nth-child(4),#overtimeView .ot-table th:nth-child(5),#overtimeView .ot-table td:nth-child(5){width:4cm!important;min-width:4cm!important;max-width:4cm!important}#overtimeView .ot-action-btn{appearance:none;border:1px solid #cbd5e1;border-radius:10px;padding:9px 15px;min-height:40px;background:#fff;color:#17324d;font-weight:700;box-shadow:0 2px 8px rgba(15,23,42,.08);display:inline-flex;align-items:center;justify-content:center;gap:7px;cursor:pointer}#overtimeView .ot-add-btn{background:#17324d;border-color:#17324d;color:#fff}#overtimeView .ot-download-btn{background:#fff;border-color:#17324d;color:#17324d}</style>
 </head>
 <body>
 <div id="pullRefreshIndicator" aria-hidden="true"><div class="pull-spinner"></div></div>
@@ -2556,71 +2558,7 @@ initInstallerPicker();updateMasterBillingRange();renderStatsEditingPreviewRow();
       const h=hoursBetween(x.start,x.end),wi=weekNo(x.date)-1; map[n].w[wi]+=h;map[n].total+=h;
     });
     const rows=Object.values(map);
-    let html='<html><head><meta charset="UTF-8">
-<style id="overtime-polish">
-#overtimeView .ot-table{
-  table-layout:fixed;
-  border-collapse:separate;
-  border-spacing:0;
-}
-#overtimeView .ot-table th:nth-child(1),
-#overtimeView .ot-table td:nth-child(1){width:4.2cm;min-width:4.2cm}
-#overtimeView .ot-table th:nth-child(2),
-#overtimeView .ot-table td:nth-child(2){width:3.4cm;min-width:3.4cm}
-#overtimeView .ot-table th:nth-child(3),
-#overtimeView .ot-table td:nth-child(3){width:3.5cm;min-width:3.5cm}
-#overtimeView .ot-table th:nth-child(4),
-#overtimeView .ot-table td:nth-child(4),
-#overtimeView .ot-table th:nth-child(5),
-#overtimeView .ot-table td:nth-child(5){
-  width:4cm!important;
-  min-width:4cm!important;
-  max-width:4cm!important;
-}
-#overtimeView .ot-action-btn{
-  appearance:none;
-  border:1px solid #cbd5e1;
-  border-radius:10px;
-  padding:9px 15px;
-  min-height:40px;
-  background:#fff;
-  color:#17324d;
-  font-weight:700;
-  font-size:14px;
-  letter-spacing:.2px;
-  box-shadow:0 2px 8px rgba(15,23,42,.08);
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap:7px;
-  cursor:pointer;
-  transition:transform .12s ease,box-shadow .12s ease,background .12s ease;
-}
-#overtimeView .ot-action-btn:hover{
-  transform:translateY(-1px);
-  box-shadow:0 5px 14px rgba(15,23,42,.12);
-}
-#overtimeView .ot-add-btn{
-  background:#17324d;
-  border-color:#17324d;
-  color:#fff;
-}
-#overtimeView .ot-download-btn{
-  background:#fff;
-  border-color:#17324d;
-  color:#17324d;
-}
-#overtimeView .ot-btn-icon{
-  font-size:18px;
-  line-height:1;
-  font-weight:500;
-}
-@media(max-width:700px){
-  #overtimeView .ot-action-btn{min-height:38px;padding:8px 12px;border-radius:9px}
-}
-</style>
-<style id="hide-outing-records">#outingRecords{display:none!important}</style>
-</head><body><table border="1"><tr><th>姓名</th><th>職務</th><th colspan="5">加班時數</th><th>超時時數</th><th>合計</th><th>備註</th></tr><tr><th></th><th></th><th>第一週</th><th>第二週</th><th>第三週</th><th>第四週</th><th>第五週</th><th></th><th></th><th></th></tr>';
+    let html='<html><head><meta charset="UTF-8"></head><body><table border="1"><tr><th>姓名</th><th>職務</th><th colspan="5">加班時數</th><th>超時時數</th><th>合計</th><th>備註</th></tr><tr><th></th><th></th><th>第一週</th><th>第二週</th><th>第三週</th><th>第四週</th><th>第五週</th><th></th><th></th><th></th></tr>';
     rows.forEach(r=>{html+=`<tr><td>${esc(r.name)}</td><td></td>${r.w.map(v=>`<td>${Math.round(v*10)/10}</td>`).join("")}<td>${Math.round(r.total*10)/10}</td><td>${Math.round(r.total*10)/10}</td><td></td></tr>`});
     html+='</table></body></html>';
     const blob=new Blob(["\ufeff",html],{type:"application/vnd.ms-excel"});
@@ -2677,5 +2615,7 @@ initInstallerPicker();updateMasterBillingRange();renderStatsEditingPreviewRow();
   });
 })();
 </script>
+
+<script id="purchase-tab-direct-fix">(function(){function openPurchase(){if(typeof isAdminAccount==="function"&&!isAdminAccount())return;["calendarView","quoteView","installStatsView","overtimeView"].forEach(id=>document.getElementById(id)?.classList.add("hidden"));document.getElementById("purchaseView")?.classList.remove("hidden");document.getElementById("calendarControls")?.classList.add("hidden");["calendarTabBtn","quoteTabBtn","installStatsTabBtn","overtimeTabBtn"].forEach(id=>document.getElementById(id)?.classList.remove("active"));document.getElementById("purchaseTabBtn")?.classList.add("active");try{if(typeof poRenderProjects==="function")poRenderProjects()}catch(e){console.error(e)}try{if(typeof poRenderGroups==="function")poRenderGroups()}catch(e){console.error(e)}}function bind(){const b=document.getElementById("purchaseTabBtn");if(!b)return;b.onclick=function(e){e.preventDefault();e.stopPropagation();openPurchase()}}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bind);else bind()})();</script>
 </body>
 </html>
