@@ -66,8 +66,6 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
 #purchaseView .purchaseRecords th, #purchaseView .purchaseRecords td{width:4cm;max-width:4cm;}
 #purchaseView .purchaseRecords{table-layout:fixed;width:auto;min-width:16cm;}
 #purchaseView .purchaseRecords th:nth-child(3),#purchaseView .purchaseRecords td:nth-child(3){overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-
-.overtimeView{display:block}.overtimeView.hidden{display:none}.overtimeCard{margin:14px 0;padding:16px}.overtimeHead{display:flex;align-items:center;justify-content:space-between;gap:12px}.overtimeHead h2,.overtimeCard h2{margin:0 0 12px}.overtimeHead button{background:#153a5b;color:#fff;border:0;border-radius:9px;padding:10px 16px;font-weight:700}.otFilter{display:flex;gap:12px;flex-wrap:wrap;margin:10px 0 14px}.otFilter label{display:flex;gap:8px;align-items:center}.otFilter input,.otFilter select{padding:8px;border:1px solid #cbd5e1;border-radius:8px}.otTable{min-width:850px}@media(max-width:700px){.overtimeCard{padding:12px;margin:10px 0}.overtimeHead{align-items:flex-start}.overtimeHead h2{font-size:20px}.otFilter{display:grid;grid-template-columns:1fr 1fr}.otFilter label{display:block}.otFilter input,.otFilter select{width:100%;margin-top:5px}.overtimeView .quoteListWrap{overflow-x:auto}}
 </style>
 
 <style id="quote-note-align-fix">
@@ -690,16 +688,54 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
 </section>
 
 
-<section id="overtimeView" class="hidden overtimeView">
-  <div class="card overtimeCard">
-    <div class="overtimeHead"><h2>超時打卡紀錄</h2><button type="button" id="otAddBtn">＋ 新增紀錄</button></div>
-    <div class="otFilter"><label>月份 <input id="otMonth" type="month"></label><label>師傅 <select id="otMasterFilter"><option value="">全部師傅</option></select></label></div>
-    <div class="quoteListWrap"><table class="quoteList otTable"><thead><tr><th>操作</th><th>日期</th><th>師傅</th><th>超時開始</th><th>超時結束</th><th>超時時數</th><th>請假時數</th><th>備註</th></tr></thead><tbody id="otRows"></tbody></table></div>
+<section id="overtimeView" class="hidden">
+  <div class="card" style="margin-top:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <h2 style="margin:0">超時打卡紀錄</h2>
+      <button type="button" id="otAddBtn" class="primary">＋ 新增加班</button>
+    </div>
+    <h3 style="margin:18px 0 10px">加班</h3>
+    <div style="overflow-x:auto">
+      <table class="quoteList" style="min-width:650px;width:100%">
+        <thead><tr><th>操作</th><th>日期</th><th>師傅</th><th>上班</th><th>下班</th></tr></thead>
+        <tbody id="otRows"></tbody>
+      </table>
+    </div>
+
+    <div id="otAdminStats" class="hidden" style="margin-top:22px">
+      <hr style="border:0;border-top:1px solid #d7e0ea;margin:18px 0">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <h3 style="margin:0">加班／請假統計（管理者）</h3>
+        <button type="button" id="otExcelBtn" class="primary">下載 Excel</button>
+      </div>
+      <p style="color:#718096;margin:8px 0 12px">此區只有管理者可以查看與下載。</p>
+      <div style="overflow-x:auto">
+        <table class="quoteList" style="min-width:760px;width:100%">
+          <thead><tr><th>姓名</th><th>第一週</th><th>第二週</th><th>第三週</th><th>第四週</th><th>第五週</th><th>超時時數</th><th>合計</th><th>備註</th></tr></thead>
+          <tbody id="otStatsRows"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
-  <div class="card overtimeCard"><h2>每週超時統計</h2><div class="quoteListWrap"><table class="quoteList"><thead><tr><th>姓名</th><th>職務</th><th>第一週</th><th>第二週</th><th>第三週</th><th>第四週</th><th>第五週</th><th>超時時數</th><th>合計</th><th>備註</th></tr></thead><tbody id="otWeeklyRows"></tbody></table></div></div>
-  <div class="card overtimeCard"><h2>請假統計</h2><div class="quoteListWrap"><table class="quoteList"><thead><tr><th>編號</th><th>姓名</th><th>請假</th><th>時數</th></tr></thead><tbody id="otLeaveRows"></tbody></table></div></div>
 </section>
-<dialog id="otDlg"><form method="dialog" class="dlgForm"><h2 id="otDlgTitle">新增超時打卡紀錄</h2><div class="grid2"><label>日期<input id="otDate" type="date"></label><label>師傅<input id="otMaster" list="otMasterList" placeholder="輸入師傅姓名"><datalist id="otMasterList"></datalist></label><label>超時開始<input id="otStart" type="time"></label><label>超時結束<input id="otEnd" type="time"></label><label>超時時數<input id="otHours" type="number" min="0" step="0.5" placeholder="例如 3.5"></label><label>請假時數<input id="otLeave" type="number" min="0" step="0.5" placeholder="沒有請假可留空"></label></div><label>備註<textarea id="otNote" rows="3"></textarea></label><div class="dlgBtns"><button type="button" id="otDeleteBtn" class="danger hidden">刪除</button><button type="button" id="otCancelBtn">取消</button><button type="button" id="otSaveBtn" class="primary">儲存</button></div></form></dialog>
+
+<dialog id="otDlg">
+  <form method="dialog" class="dlgForm">
+    <h2 id="otDlgTitle">新增加班</h2>
+    <div class="grid2">
+      <label>日期<input id="otDate" type="date"></label>
+      <label>師傅<input id="otMaster" type="text" placeholder="師傅姓名"></label>
+      <label>上班<input id="otStart" type="time"></label>
+      <label>下班<input id="otEnd" type="time"></label>
+    </div>
+    <div class="dlgBtns">
+      <button type="button" id="otDeleteBtn" class="danger hidden">刪除</button>
+      <button type="button" id="otCancelBtn">取消</button>
+      <button type="button" id="otSaveBtn" class="primary">儲存</button>
+    </div>
+  </form>
+</dialog>
+
 </main></section>
 <dialog id="viewDlg">
   <div class="form">
@@ -858,11 +894,12 @@ function userEmail(){return String(currentUser&&currentUser.email||"").trim().to
 function isAdminAccount(){return userEmail()==="zara.feng.oo@gmail.com" || (profile&&profile.role==="admin")}
 function isUser1(){return userEmail()==="a0985029910@gmail.com"}
 function isUser2(){return userEmail()==="numberoneaustin@yahoo.com.tw"}
-function isUser3(){return userEmail()==="rman770212@yahoo.com.tw"}
-function isUser4(){return userEmail()==="gen20312@gmail.com"}
-function canUseOvertime(){return isAdminAccount()||isUser1()||isUser3()||isUser4()}
 function canEditCalendar(){return isAdminAccount()||isUser1()}
 function canUseOuting(){return isAdminAccount()}
+function canUseOvertime(){
+  const e=userEmail();
+  return isAdminAccount() || e==="a0985029910@gmail.com" || e==="rman770212@yahoo.com.tw" || e==="gen20312@gmail.com";
+}
 async function boot(){const {data:{session}}=await sb.auth.getSession();if(!session){$("loginPage").classList.remove("hidden");$("appPage").classList.add("hidden");return}currentUser=session.user;const {data,error}=await sb.from("sbd_users").select("display_name,role,active").eq("user_id",currentUser.id).maybeSingle();if(error||!data||!data.active){await sb.auth.signOut();$("loginErr").textContent="此帳號尚未開通勝寶鼎/新弘股公司權限";$("loginPage").classList.remove("hidden");$("appPage").classList.add("hidden");return}profile=data;document.body.classList.toggle("admin-account",isAdminAccount());$("loginPage").classList.add("hidden");$("appPage").classList.remove("hidden");const roleText=isAdminAccount()?"管理者":"使用者";$("roleLine").textContent=`${profile.display_name||currentUser.email}｜${roleText}`;$("noteBtn").classList.toggle("hidden",!isAdminAccount());$("quoteTabBtn").classList.toggle("hidden",!isAdminAccount());$("quoteQuickNoteHeaderBtn")?.classList.toggle("hidden",!isAdminAccount());$("installStatsTabBtn").classList.toggle("hidden",!isAdminAccount());$("purchaseTabBtn")?.classList.toggle("hidden",!isAdminAccount());$("overtimeTabBtn")?.classList.toggle("hidden",!canUseOvertime());$("outingRecords")?.classList.toggle("hidden",!canUseOuting());showFeature("calendar");await loadMonth();if(canUseOuting()&&window.renderOutingRecords)window.renderOutingRecords()}
 async function loadMonth(){ $("syncText").textContent="讀取中…";const {data:e,error:ee}=await sb.from("sbd_calendar_events").select("id,event_date,event_time,title,details,color,created_at").gte("event_date",firstDay()).lt("event_date",nextMonthFirst()).order("event_date").order("event_time",{ascending:true,nullsFirst:true});if(ee){$("syncText").textContent="讀取行程失敗";return}events=e||[];const {data:n,error:ne}=await sb.from("sbd_month_notes").select("id,month_start,note").eq("month_start",firstDay()).maybeSingle();currentNoteRow=ne?null:n;render();$("syncText").textContent="資料已同步" }
 function render(){const y=view.getFullYear(),m=view.getMonth()+1;$("monthTitle").textContent=`${y} 年 ${m} 月`;const last=new Date(y,m,0).getDate(),first=(new Date(y,m-1,1).getDay()+6)%7,h=holidayMap(y,m);let out="";for(let r=0;r<6;r++){out+='<div class="week">';for(let c=0;c<7;c++){const n=r*7+c-first+1;if(n<1||n>last){out+='<div class="day blank"></div>';continue}const key=`${ym()}-${pad(n)}`,a=events.filter(x=>x.event_date===key),upper=a.filter(x=>eventInstall(x)==="勝寶鼎"),lower=a.filter(x=>eventInstall(x)==="外包"),isRed=!!h[n]||c>=5;const chip=x=>{const t=(x.event_time?x.event_time.slice(0,5)+" ":"")+esc(x.title);return `<div class="event ${esc(x.color)} adminEvent" data-id="${x.id}">${t}</div>`};const canAdd=canEditCalendar();out+=`<div class="day${isRed?" holiday":""}" data-date="${key}"><div class="dateLine${canAdd?" canAdd":""}"${canAdd?` data-date="${key}" role="button" tabindex="0" aria-label="新增 ${key} 行程"`:""}><div class="date">${n}${h[n]?`<span class="holidayName">${esc(h[n])}</span>`:""}</div>${canAdd?`<span class="dayAdd">＋</span>`:""}</div>${upper.map(chip).join("")}<div class="split"></div>${lower.map(chip).join("")}</div>`}out+='</div>'}$("weeks").innerHTML=out;$("weeks").querySelectorAll(".adminEvent").forEach(el=>el.addEventListener("click",ev=>{ev.stopPropagation();if(canEditCalendar())openEditEvent(el.dataset.id);else openViewEvent(el.dataset.id)}));$("weeks").querySelectorAll(".dateLine.canAdd").forEach(el=>{el.addEventListener("click",ev=>{ev.stopPropagation();openNewEvent(el.dataset.date)});el.addEventListener("keydown",ev=>{if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();openNewEvent(el.dataset.date)}})});const note=(currentNoteRow?.note||"").trim();$("noteText").textContent=note;$("noteBox").classList.toggle("show",!!note)}
@@ -933,7 +970,6 @@ function qMeta(){return {case_name:$("qCaseName").value.trim(),install_date:qDat
 function showFeature(name){
   const quote=name==="quote", stats=name==="stats", purchase=name==="purchase", overtime=name==="overtime";
   if((stats||purchase)&&!isAdminAccount())return;
-  if(overtime&&!canUseOvertime())return;
   $("calendarView").classList.toggle("hidden",quote||stats||purchase||overtime);
   $("quoteView").classList.toggle("hidden",!quote);
   $("installStatsView").classList.toggle("hidden",!stats);
@@ -948,7 +984,6 @@ function showFeature(name){
   if(quote&&["admin","editor"].includes(profile?.role)){resetQuoteForm();loadQuoteOptions();loadQuotes()}
   if(stats&&isAdminAccount()){(async()=>{await loadQuotesForStats();await syncAllQuotesToInstallStats();await loadInstallStats()})()}
   if(purchase&&isAdminAccount()){poRenderProjects();poRenderGroups();}
-  if(overtime)otRender();
 }
 function addQuoteItem(item={}){const tr=document.createElement("tr");const totalCm=item.total_cm??item.qty??0;tr.innerHTML=`<td class="qidx"></td><td><input class="qname" list="qNameOptionsList" placeholder="選擇或直接輸入" value="${esc(fmtQName(item.name||item.description||""))}"></td><td><input class="qsize" value="${esc(item.process_size||"")}"></td><td><input class="qcm" type="number" min="0" step="0.01" value="${Number(totalCm||0)}"></td><td><select class="qunit"><option value=""></option><option value="cm" ${String(item.unit||"").toLowerCase()==="cm"?"selected":""}>cm</option><option value="式" ${String(item.unit||"")==="式"?"selected":""}>式</option></select></td><td><input class="qprice" type="number" min="0" step="0.01" value="${Number(item.price||0)}"></td><td class="qamount">0</td><td><button type="button" class="qremove">刪</button></td>`;$("qItemsBody").appendChild(tr);tr.querySelectorAll("input,select").forEach(i=>i.addEventListener("input",calcQuote));const qi=tr.querySelector(".qname");qi?.addEventListener("blur",()=>{qi.value=fmtQName(qi.value);calcQuote()});tr.querySelector(".qremove").addEventListener("click",()=>{tr.remove();renumberQuoteItems();calcQuote()});renumberQuoteItems();calcQuote()}
 function renumberQuoteItems(){[...$("qItemsBody").children].forEach((tr,i)=>tr.querySelector(".qidx").textContent=i+1)}
@@ -1116,38 +1151,7 @@ table{width:100%;border-collapse:collapse;border:1.4px solid #111;table-layout:f
 </head><body><div class="page"><div class="title">勝鈔環保科技股份有限公司報價單</div><div class="header"><div class="case">案名：${esc(m.case_name||x.contact_name||"")}</div><div class="number">編號：${esc(x.quote_no||"")}</div><div class="customer">客戶名稱：${(()=>{const v=String(x.customer_name||"").trim(),mm=v.match(/^([A-Za-z0-9_-]+)\s*(.*)$/);return mm?`<span class="customerCode">${esc(mm[1])}</span>${mm[2]?` <span class="customerName">${esc(mm[2])}</span>`:""}`:`<span class="customerName">${esc(v)}</span>`})()}</div><div class="date">日期：${esc(qDateDisplay(x.quote_date))}</div><div class="customer">聯絡人電話：<span class="customerPhone">${esc(m.contact_phone||x.phone||"")}</span></div><div class="install">實際安裝日期：${esc(qDateDisplay(m.install_date))}</div><div class="address">安裝地址：${esc(x.address||"")}</div><div class="install">安裝時段：${esc(m.install_period||"")}${m.order_no?`<div style="margin-top:3.3mm">訂單編號：${esc(m.order_no)}</div>`:""}</div></div><div class="hint" style="color:#ff0000 !important;font-size:14px !important;font-weight:700 !important;">此為初估計價　實際價格會依實際色號、尺寸、作法變動</div><div class="mat"><div>色 號</div><div class="value">${esc(m.color_no||"")}</div><div>品 名</div><div class="value">${esc(m.product_name||"")}</div><div class="edge">前緣 <span class="edgeNum">${esc(m.front_edge||"")}</span> <span class="cmUnit">cm</span> ／ 背牆 <span class="edgeNum">${esc(m.back_wall||"")}</span> <span class="cmUnit">cm</span></div></div><table><thead><tr><th>項數</th><th>名稱</th><th>加工尺寸 (CM)</th><th>總公分數</th><th>單位</th><th>單價</th><th>小計</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td></td><td colspan="3" class="left">備註：此價格為實價計價</td><td colspan="2">合計</td><td>${qMoney(x.subtotal)}</td></tr><tr><td></td><td colspan="3"></td><td colspan="2">稅金5%</td><td>${qMoney(x.tax_amount)}</td></tr><tr><td></td><td colspan="3"></td><td colspan="2">總計</td><td>${qMoney(x.total_amount)}</td></tr></tfoot></table><div class="notes"><div>備註：　1.本報價單有效期間為30天</div><div style="padding-left:11mm"><span style="display:inline-block;width:1.45em;text-align:right;margin-right:.18em">2.</span>付款方式:月結40天，未月結客戶安裝完工收現，稅外加不扣%</div><div style="padding-left:11mm"><span style="display:inline-block;width:1.45em;text-align:right;margin-right:.18em">3.</span>開發票為總計金額</div><div style="padding-left:11mm"><span style="display:inline-block;width:1.45em;text-align:right;margin-right:.18em">4.</span>本公司產品款項未結清資產屬勝鈔環保科技股份有限公司所有權</div></div><div class="sign"><div>勝鈔環保科技股份有限公司<br>TEL:02-26771176<br>FAX:02-26772076<br><br><br>業務代表簽名:</div><div>客戶簽名:</div></div></div>
 
 
-<script id="overtime-record-module">
-(function(){
- const KEY="sbd_overtime_records_v1"; let editId=null;
- const $o=id=>document.getElementById(id), pad=n=>String(n).padStart(2,"0");
- const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
- function get(){try{return JSON.parse(localStorage.getItem(KEY)||"[]")}catch(e){return[]}}
- function put(a){localStorage.setItem(KEY,JSON.stringify(a))}
- function month(){return $o("otMonth")?.value||new Date().toISOString().slice(0,7)}
- function filtered(){const m=month(),master=$o("otMasterFilter")?.value||"";return get().filter(x=>(!m||String(x.date||"").slice(0,7)===m)&&(!master||x.master===master)).sort((a,b)=>String(a.date).localeCompare(String(b.date)))}
- function calcHours(start,end){if(!start||!end)return "";let [a,b]=[start,end].map(t=>{const p=t.split(":").map(Number);return p[0]*60+p[1]});if(b<a)b+=1440;return Math.max(0,Math.round((b-a)/30)/2)}
- function weekOf(d){const day=Number(String(d).slice(8,10))||1;return Math.min(5,Math.floor((day-1)/7)+1)}
- function masters(){return [...new Set(get().map(x=>x.master).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"zh-Hant"))}
- window.otRender=function(){
-   if(!$o("otRows"))return;
-   const ms=masters(),cur=$o("otMasterFilter").value;
-   $o("otMasterFilter").innerHTML='<option value="">全部師傅</option>'+ms.map(x=>'<option value="'+esc(x)+'"'+(x===cur?' selected':'')+'>'+esc(x)+'</option>').join('');
-   $o("otMasterList").innerHTML=ms.map(x=>'<option value="'+esc(x)+'"></option>').join('');
-   const rows=filtered();
-   $o("otRows").innerHTML=rows.length?rows.map(x=>'<tr><td><button type="button" onclick="otEdit(&quot;'+x.id+'&quot;)">修改</button></td><td>'+esc(x.date)+'</td><td>'+esc(x.master)+'</td><td>'+esc(x.start)+'</td><td>'+esc(x.end)+'</td><td>'+esc(x.hours||0)+'</td><td>'+esc(x.leave||0)+'</td><td>'+esc(x.note)+'</td></tr>').join(''):'<tr><td colspan="8" style="text-align:center;padding:18px;color:#64748b">目前沒有紀錄</td></tr>';
-   const by={};
-   rows.forEach(x=>{if(!x.master)return;by[x.master]??={w:[0,0,0,0,0],ot:0,leave:0,note:[]};const h=Number(x.hours||0),l=Number(x.leave||0);by[x.master].w[weekOf(x.date)-1]+=h;by[x.master].ot+=h;by[x.master].leave+=l;if(x.note)by[x.master].note.push(x.note)});
-   const names=Object.keys(by);
-   $o("otWeeklyRows").innerHTML=names.length?names.map(n=>{const z=by[n];return '<tr><td>'+esc(n)+'</td><td>人造石</td>'+z.w.map(v=>'<td>'+(v||0)+'</td>').join('')+'<td>'+(z.ot||0)+'</td><td>'+(z.ot||0)+'</td><td>'+esc(z.note.join('、'))+'</td></tr>'}).join(''):'<tr><td colspan="10" style="text-align:center">尚無統計資料</td></tr>';
-   $o("otLeaveRows").innerHTML=names.length?names.map((n,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(n)+'</td><td>'+(by[n].leave?'請假':'')+'</td><td>'+(by[n].leave||0)+'</td></tr>').join(''):'<tr><td colspan="4" style="text-align:center">尚無請假資料</td></tr>';
- }
- window.otEdit=function(id){const x=get().find(r=>r.id===id);if(!x)return;editId=id;$o("otDlgTitle").textContent="修改超時打卡紀錄";$o("otDate").value=x.date||"";$o("otMaster").value=x.master||"";$o("otStart").value=x.start||"";$o("otEnd").value=x.end||"";$o("otHours").value=x.hours??"";$o("otLeave").value=x.leave??"";$o("otNote").value=x.note||"";$o("otDeleteBtn").classList.remove("hidden");$o("otDlg").showModal()}
- function add(){editId=null;$o("otDlgTitle").textContent="新增超時打卡紀錄";[$o("otMaster"),$o("otStart"),$o("otEnd"),$o("otHours"),$o("otLeave"),$o("otNote")].forEach(x=>x.value="");$o("otDate").value=new Date().toISOString().slice(0,10);$o("otDeleteBtn").classList.add("hidden");$o("otDlg").showModal()}
- function save(){const rec={date:$o("otDate").value,master:$o("otMaster").value.trim(),start:$o("otStart").value,end:$o("otEnd").value,hours:Number($o("otHours").value||0),leave:Number($o("otLeave").value||0),note:$o("otNote").value.trim()};if(!rec.date||!rec.master){alert("請輸入日期與師傅");return}if(!rec.hours&&rec.start&&rec.end)rec.hours=calcHours(rec.start,rec.end);let a=get();if(editId){const i=a.findIndex(x=>x.id===editId);if(i>=0)a[i]={...a[i],...rec}}else a.push({id:String(Date.now()),...rec});put(a);$o("otDlg").close();otRender()}
- function del(){if(!editId||!confirm("確定刪除這筆紀錄？"))return;put(get().filter(x=>x.id!==editId));$o("otDlg").close();otRender()}
- document.addEventListener("DOMContentLoaded",()=>{if($o("otMonth"))$o("otMonth").value=new Date().toISOString().slice(0,7);$o("otAddBtn")?.addEventListener("click",add);$o("otCancelBtn")?.addEventListener("click",()=>$o("otDlg").close());$o("otSaveBtn")?.addEventListener("click",save);$o("otDeleteBtn")?.addEventListener("click",del);$o("otMonth")?.addEventListener("change",otRender);$o("otMasterFilter")?.addEventListener("change",otRender);["otStart","otEnd"].forEach(id=>$o(id)?.addEventListener("change",()=>{const h=calcHours($o("otStart").value,$o("otEnd").value);if(h!=="")$o("otHours").value=h}))});
-})();
-</script>
+
 </body></html>`
 }
 function printQuote(x){const w=window.open("","_blank");if(!w){alert("瀏覽器阻擋新視窗，請允許彈出視窗");return}w.document.write(quotePrintHtml(x));w.document.close();w.onload=()=>setTimeout(()=>w.print(),300)}
@@ -2340,7 +2344,6 @@ $("calendarTabBtn")?.addEventListener("click",()=>showFeature("calendar"));
 $("quoteTabBtn")?.addEventListener("click",()=>showFeature("quote"));
 $("installStatsTabBtn")?.addEventListener("click",()=>showFeature("stats"));
 $("purchaseTabBtn")?.addEventListener("click",()=>showFeature("purchase"));
-$("overtimeTabBtn")?.addEventListener("click",()=>showFeature("overtime"));
 $("poProjectNewBtn")?.addEventListener("click",poProjectClear);
 $("poProjectFilter")?.addEventListener("change",poRenderProjects);
 $("poProjectSaveBtn")?.addEventListener("click",poProjectSave);
@@ -2471,5 +2474,102 @@ initInstallerPicker();updateMasterBillingRange();renderStatsEditingPreviewRow();
   document.addEventListener("touchcancel", function(){ tracking=false; }, {passive:true});
 })();
 </script>
+
+<script id="overtime-simple-module">
+(function(){
+  const KEY="sbd_overtime_simple_v1";
+  let editId=null;
+  const $o=id=>document.getElementById(id);
+  const allowed=()=>typeof canUseOvertime==="function" && canUseOvertime();
+  function get(){try{return JSON.parse(localStorage.getItem(KEY)||"[]")}catch(e){return []}}
+  function put(a){localStorage.setItem(KEY,JSON.stringify(a))}
+  function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
+  function isOtAdmin(){ return typeof isAdminAccount==="function" && isAdminAccount(); }
+  function hoursBetween(a,b){
+    if(!a||!b)return 0;
+    const [ah,am]=a.split(":").map(Number),[bh,bm]=b.split(":").map(Number);
+    let mins=(bh*60+bm)-(ah*60+am); if(mins<0)mins+=1440;
+    return Math.round((mins/60)*10)/10;
+  }
+  function weekNo(date){
+    const d=parseInt(String(date||"").slice(8,10),10)||1;
+    return Math.min(5,Math.floor((d-1)/7)+1);
+  }
+  function renderStats(){
+    const box=$o("otAdminStats"); if(!box)return;
+    box.classList.toggle("hidden",!isOtAdmin());
+    if(!isOtAdmin())return;
+    const map={};
+    get().forEach(x=>{
+      const n=x.master||"未填姓名"; if(!map[n])map[n]={name:n,w:[0,0,0,0,0],total:0};
+      const h=hoursBetween(x.start,x.end), wi=weekNo(x.date)-1;
+      map[n].w[wi]+=h; map[n].total+=h;
+    });
+    const rows=Object.values(map).sort((a,b)=>a.name.localeCompare(b.name,"zh-Hant"));
+    const tb=$o("otStatsRows"); if(tb)tb.innerHTML=rows.length?rows.map(r=>`<tr><td>${esc(r.name)}</td>${r.w.map(v=>`<td>${v?Math.round(v*10)/10:0}</td>`).join("")}<td>${Math.round(r.total*10)/10}</td><td>${Math.round(r.total*10)/10}</td><td></td></tr>`).join(""):'<tr><td colspan="9" style="text-align:center;padding:18px;color:#718096">尚無資料</td></tr>';
+  }
+  function render(){
+    const tb=$o("otRows"); if(!tb)return;
+    const a=get().sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")) || String(b.start||"").localeCompare(String(a.start||"")));
+    tb.innerHTML=a.length?a.map(x=>`<tr>
+      <td><button type="button" onclick="otEdit('${x.id}')">修改</button> <button type="button" class="danger" onclick="otRemove('${x.id}')">刪除</button></td>
+      <td>${esc(x.date)}</td><td>${esc(x.master)}</td><td>${esc(x.start)}</td><td>${esc(x.end)}</td>
+    </tr>`).join(""):'<tr><td colspan="5" style="text-align:center;padding:18px;color:#718096">目前沒有加班打卡紀錄</td></tr>';
+    renderStats();
+  }
+  function openNew(){
+    if(!allowed())return;
+    editId=null;$o("otDlgTitle").textContent="新增加班";
+    $o("otDate").value=new Date().toISOString().slice(0,10);
+    $o("otMaster").value=(typeof profile!=="undefined" && profile?.display_name)||"";
+    $o("otStart").value="";$o("otEnd").value="";
+    $o("otDeleteBtn").classList.add("hidden");$o("otDlg").showModal();
+  }
+  window.otEdit=function(id){
+    if(!allowed())return; const x=get().find(v=>String(v.id)===String(id));if(!x)return;
+    editId=id;$o("otDlgTitle").textContent="修改加班";
+    $o("otDate").value=x.date||"";$o("otMaster").value=x.master||"";$o("otStart").value=x.start||"";$o("otEnd").value=x.end||"";
+    $o("otDeleteBtn").classList.remove("hidden");$o("otDlg").showModal();
+  };
+  window.otRemove=function(id){
+    if(!allowed()||!confirm("確定刪除這筆加班紀錄？"))return;
+    put(get().filter(x=>String(x.id)!==String(id)));render();
+  };
+  function save(){
+    if(!allowed())return;
+    const rec={date:$o("otDate").value,master:$o("otMaster").value.trim(),start:$o("otStart").value,end:$o("otEnd").value};
+    if(!rec.date){alert("請選擇日期");return}
+    if(!rec.start||!rec.end){alert("請輸入上班、下班時間");return}
+    const a=get();
+    if(editId){const i=a.findIndex(x=>String(x.id)===String(editId));if(i>=0)a[i]={...a[i],...rec}}
+    else a.push({id:String(Date.now()),...rec});
+    put(a);$o("otDlg").close();render();
+  }
+  function downloadOtExcel(){
+    if(!isOtAdmin())return;
+    const map={};
+    get().forEach(x=>{
+      const n=x.master||"未填姓名"; if(!map[n])map[n]={name:n,w:[0,0,0,0,0],total:0};
+      const h=hoursBetween(x.start,x.end),wi=weekNo(x.date)-1; map[n].w[wi]+=h;map[n].total+=h;
+    });
+    const rows=Object.values(map);
+    let html='<html><head><meta charset="UTF-8"></head><body><table border="1"><tr><th>姓名</th><th>職務</th><th colspan="5">加班時數</th><th>超時時數</th><th>合計</th><th>備註</th></tr><tr><th></th><th></th><th>第一週</th><th>第二週</th><th>第三週</th><th>第四週</th><th>第五週</th><th></th><th></th><th></th></tr>';
+    rows.forEach(r=>{html+=`<tr><td>${esc(r.name)}</td><td></td>${r.w.map(v=>`<td>${Math.round(v*10)/10}</td>`).join("")}<td>${Math.round(r.total*10)/10}</td><td>${Math.round(r.total*10)/10}</td><td></td></tr>`});
+    html+='</table></body></html>';
+    const blob=new Blob(["\ufeff",html],{type:"application/vnd.ms-excel"});
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="超時打卡統計.xls";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  }
+  document.addEventListener("DOMContentLoaded",()=>{
+    $o("overtimeTabBtn")?.addEventListener("click",()=>{if(allowed()){showFeature("overtime");render()}});
+    $o("otAddBtn")?.addEventListener("click",openNew);
+    $o("otSaveBtn")?.addEventListener("click",save);
+    $o("otCancelBtn")?.addEventListener("click",()=> $o("otDlg").close());
+    $o("otDeleteBtn")?.addEventListener("click",()=>{if(editId)window.otRemove(editId); if($o("otDlg").open)$o("otDlg").close()});
+    $o("otExcelBtn")?.addEventListener("click",downloadOtExcel);
+    render();
+  });
+})();
+</script>
+
 </body>
 </html>
