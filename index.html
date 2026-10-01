@@ -534,7 +534,12 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
     <div class="quoteDownloadBtns"><button type="button" id="qPreviewPdfBtn">下載報價單 PDF</button><button type="button" id="qPreviewExcelBtn">下載報價單 Excel</button></div>
   </div>
   <div class="quoteCard">
-    <h2 class="quoteTitle">報價單紀錄</h2>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+  <h2 class="quoteTitle" style="margin-right:6px">報價單紀錄</h2>
+  <select id="quoteCustomerFilter" style="width:4cm;min-width:4cm;max-width:4cm;padding:7px 9px;border:1px solid #cbd5e1;border-radius:8px;background:#fff">
+    <option value="">全部客戶</option>
+  </select>
+</div>
     <div class="quoteListWrap"><table class="quoteList"><thead><tr><th>操作</th><th>編號</th><th>客戶</th><th>案名</th><th>色號</th><th>品名</th><th>地址</th><th>名稱</th></tr></thead><tbody id="quoteListBody"></tbody></table></div>
     <div id="quoteEmpty" class="quoteEmpty hidden">目前沒有報價單</div>
   </div>
@@ -696,7 +701,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
       <h2 style="margin:0">超時打卡紀錄</h2>
       <button type="button" id="otAddBtn" class="ot-action-btn ot-add-btn"><span class="ot-btn-icon">＋</span>新增加班</button>
     </div>
-    <h3 style="margin:18px 0 10px">加班</h3>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:18px 0 10px"><h3 style="margin:0">加班</h3><select id="otMasterFilter" style="width:4cm;min-width:4cm;max-width:4cm;padding:7px 10px;border:1px solid #cbd5de;border-radius:8px;background:#fff"><option value="">全部師傅</option><option value="洪聖凱">洪聖凱</option><option value="楊春龍">楊春龍</option><option value="陳建成">陳建成</option><option value="阿日">阿日</option></select></div>
     <div style="overflow-x:auto">
       <table class="quoteList ot-table" style="width:auto;min-width:0">
         <thead><tr><th>操作</th><th>日期</th><th>師傅</th><th>上班</th><th>下班</th></tr></thead>
@@ -726,7 +731,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
     <h2 id="otDlgTitle">新增加班</h2>
     <div class="grid2">
       <label>日期<input id="otDate" type="date"></label>
-      <label>師傅<input id="otMaster" type="text" placeholder="師傅姓名"></label>
+      <label>師傅<select id="otMaster"><option value="">請選擇師傅</option><option value="洪聖凱">洪聖凱</option><option value="楊春龍">楊春龍</option><option value="陳建成">陳建成</option><option value="阿日">阿日</option></select></label>
       <label>上班<input id="otStart" type="time" style="width:4cm;max-width:4cm"></label>
       <label>下班<input id="otEnd" type="time" style="width:4cm;max-width:4cm"></label>
     </div>
@@ -2515,7 +2520,7 @@ initInstallerPicker();updateMasterBillingRange();renderStatsEditingPreviewRow();
   }
   function render(){
     const tb=$o("otRows"); if(!tb)return;
-    const a=get().sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")) || String(b.start||"").localeCompare(String(a.start||"")));
+    const selectedMaster=$o("otMasterFilter")?.value||""; const a=get().filter(x=>!selectedMaster||String(x.master||"")===selectedMaster).sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")) || String(b.start||"").localeCompare(String(a.start||"")));
     tb.innerHTML=a.length?a.map(x=>`<tr>
       <td><button type="button" onclick="otEdit('${x.id}')">修改</button> <button type="button" class="danger" onclick="otRemove('${x.id}')">刪除</button></td>
       <td>${esc(x.date)}</td><td>${esc(x.master)}</td><td>${esc(x.start)}</td><td>${esc(x.end)}</td>
@@ -2567,6 +2572,7 @@ initInstallerPicker();updateMasterBillingRange();renderStatsEditingPreviewRow();
   document.addEventListener("DOMContentLoaded",()=>{
     $o("overtimeTabBtn")?.addEventListener("click",()=>{if(allowed()){showFeature("overtime");render()}});
     $o("otAddBtn")?.addEventListener("click",openNew);
+  $o("otMasterFilter")?.addEventListener("change",render);
     $o("otSaveBtn")?.addEventListener("click",save);
     $o("otCancelBtn")?.addEventListener("click",()=> $o("otDlg").close());
     $o("otDeleteBtn")?.addEventListener("click",()=>{if(editId)window.otRemove(editId); if($o("otDlg").open)$o("otDlg").close()});
