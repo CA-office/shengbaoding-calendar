@@ -541,11 +541,11 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
     <div class="quoteQuickNoteHead">
       <h2 class="quoteTitle">記事本</h2>
       <div class="quoteQuickNoteActions">
-        <button type="button" id="qQuickNoteToggleBtn">展開記事本</button>
-        <button type="button" id="qQuickNoteCopyBtn" class="primary hidden">複製內容</button>
+        <button type="button" id="qQuickNoteToggleBtn">收合記事本</button>
+        <button type="button" id="qQuickNoteCopyBtn" class="primary">複製內容</button>
       </div>
     </div>
-    <div id="qQuickNoteBody" class="quoteQuickNoteBody hidden">
+    <div id="qQuickNoteBody" class="quoteQuickNoteBody">
       <textarea id="qQuickNoteText" readonly spellcheck="false"></textarea>
     </div>
   </div>
@@ -1019,6 +1019,7 @@ function setQuoteQuickNoteOpen(open){
   if(toggle)toggle.textContent=open?"收合記事本":"展開記事本";
   if(open)refreshQuoteQuickNote();
 }
+document.addEventListener("DOMContentLoaded",()=>{setTimeout(()=>{try{setQuoteQuickNoteOpen(true)}catch(e){}},300)});
 function openQuoteQuickNoteFromHeader(){
   if(!["admin","editor"].includes(profile?.role))return;
   showFeature("quote");
@@ -2096,6 +2097,8 @@ $("loginBtn").addEventListener("click",signIn);$("passkeyBtn").addEventListener(
     }
   });
 });$("logoutBtn").addEventListener("click",logout);$("prevBtn").addEventListener("click",()=>{view.setMonth(view.getMonth()-1);loadMonth()});$("nextBtn").addEventListener("click",()=>{view.setMonth(view.getMonth()+1);loadMonth()});$("todayBtn").addEventListener("click",()=>{view=new Date();view.setDate(1);loadMonth()});$("noteBtn").addEventListener("click",openNote);
+$("saveEventBtn")?.addEventListener("click",saveEvent);
+$("deleteEventBtn")?.addEventListener("click",deleteEvent);
 $("fdate").addEventListener("blur",()=>{
   const iso=normalizeDateInput($("fdate").value);
   if(iso) $("fdate").value=displayDateInput(iso);
