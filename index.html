@@ -483,7 +483,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
 <div id="pullRefreshIndicator" aria-hidden="true"><div class="pull-spinner"></div></div>
 <section id="loginPage" class="loginWrap"><div class="loginCard"><h1>勝寶鼎/新弘股公司</h1><label class="field">Email<input id="loginEmail" type="email" autocomplete="username"></label><label class="field">密碼<input id="loginPassword" type="password" autocomplete="current-password"></label><button id="loginBtn" class="loginBtn">登入</button><button id="passkeyBtn" class="loginBtn" type="button" style="margin-top:10px;background:#fff;border:1px solid #81D8D0">使用 Face ID／裝置解鎖登入</button><div id="loginErr" class="err"></div></div></section>
 <section id="appPage" class="hidden"><header><div class="toprow"><div class="brand">勝寶鼎/新弘股公司｜行事曆</div><button id="logoutBtn" class="userBtn">登出</button></div><div id="roleLine" class="roleLine"></div><div class="featureTabs"><button id="calendarTabBtn" class="active">行事曆</button><button id="quoteTabBtn" class="hidden">報價單</button><button id="quoteQuickNoteHeaderBtn" class="hidden">記事本／複製</button><button id="installStatsTabBtn" class="hidden">安裝統計表</button><button id="purchaseTabBtn" class="hidden">採購單</button><button id="overtimeTabBtn" class="hidden">超時打卡紀錄</button></div><div class="controls" id="calendarControls"><button id="prevBtn">‹</button><div id="monthTitle" class="month"></div><button id="nextBtn">›</button><button id="todayBtn">本月</button><button id="noteBtn" class="hidden">備註</button></div><div class="legend"><span class="lg"><i class="dot" style="background:#20aa5a"></i>綠－石英石</span><span class="lg"><i class="dot" style="background:#2196f3"></i>藍－人造石</span><span class="lg"><i class="dot" style="background:#e52424"></i>紅－維修</span><span class="lg"><i class="dot" style="background:#ff851b"></i>橘－草屯接單</span><span class="lg"><i class="dot" style="background:#8c35d5"></i>紫－浤富代裝石英</span><span class="lg"><i class="dot" style="background:#e5b800"></i>黃－自安送料</span><span class="lg"><i class="dot" style="background:#8b5a2b"></i>咖啡－我司單草屯代裝</span><span class="lg symbolLegend">☑</span><span class="lg symbolLegend">☒</span><span class="lg symbolLegend">➜</span><span class="lg symbolLegend">●</span><span class="lg symbolLegend">▲</span><span class="lg symbolLegend">✔</span><span class="lg symbolLegend">✘</span></div></header><main>
-<div id="calendarView"><section class="calendar"><div class="weekhead"><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div class="weekend">六</div><div class="weekend">日</div></div><div id="weeks"></div></section><section class="outing-card" id="outingRecords">
+<div id="calendarView"><section class="calendar"><div class="weekhead"><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div class="weekend">六</div><div class="weekend">日</div></div><div id="weeks"></div></section><section class="outing-card" id="outingRecords" style="display:none!important">
 <h3>外出紀錄</h3>
 <table class="outing-table"><colgroup><col><col><col><col><col></colgroup><thead><tr>
 <th><button type="button" class="outing-add" onclick="addOutingRecord()">＋ 新增</button> 日期</th>
@@ -2616,6 +2616,7 @@ initInstallerPicker();updateMasterBillingRange();renderStatsEditingPreviewRow();
   #overtimeView .ot-action-btn{min-height:38px;padding:8px 12px;border-radius:9px}
 }
 </style>
+<style id="hide-outing-records">#outingRecords{display:none!important}</style>
 </head><body><table border="1"><tr><th>姓名</th><th>職務</th><th colspan="5">加班時數</th><th>超時時數</th><th>合計</th><th>備註</th></tr><tr><th></th><th></th><th>第一週</th><th>第二週</th><th>第三週</th><th>第四週</th><th>第五週</th><th></th><th></th><th></th></tr>';
     rows.forEach(r=>{html+=`<tr><td>${esc(r.name)}</td><td></td>${r.w.map(v=>`<td>${Math.round(v*10)/10}</td>`).join("")}<td>${Math.round(r.total*10)/10}</td><td>${Math.round(r.total*10)/10}</td><td></td></tr>`});
     html+='</table></body></html>';
@@ -2634,5 +2635,44 @@ initInstallerPicker();updateMasterBillingRange();renderStatsEditingPreviewRow();
 })();
 </script>
 
+
+<script id="quote-customer-filter-module">
+(function(){
+  function getTable(){
+    const sel=document.getElementById("quoteCustomerFilter"); if(!sel)return null;
+    const wrap=sel.closest(".card")||sel.parentElement?.parentElement?.parentElement;
+    return wrap?.querySelector("table");
+  }
+  function customerText(row){
+    const cells=row.querySelectorAll("td");
+    // Current quote record layout: 操作, 編號, 客戶, 案名...
+    return (cells[2]?.textContent||"").trim().replace(/^[A-Za-z]+\d+[A-Za-z0-9_-]*\s*/,"").trim();
+  }
+  function rebuild(){
+    const sel=document.getElementById("quoteCustomerFilter"), table=getTable(); if(!sel||!table)return;
+    const keep=sel.value;
+    const names=[...new Set([...table.querySelectorAll("tbody tr")].map(customerText).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"zh-Hant"));
+    sel.innerHTML='<option value="">全部客戶</option>'+names.map(n=>'<option value="'+n.replace(/"/g,'&quot;')+'">'+n+'</option>').join("");
+    if(names.includes(keep))sel.value=keep;
+    apply();
+  }
+  function apply(){
+    const sel=document.getElementById("quoteCustomerFilter"), table=getTable(); if(!sel||!table)return;
+    const v=sel.value;
+    table.querySelectorAll("tbody tr").forEach(r=>r.style.display=(!v||customerText(r)===v)?"":"none");
+  }
+  document.addEventListener("DOMContentLoaded",()=>{
+    const sel=document.getElementById("quoteCustomerFilter");
+    if(!sel)return;
+    sel.addEventListener("change",apply);
+    setTimeout(rebuild,500);
+    const table=getTable();
+    if(table){
+      const ob=new MutationObserver(()=>{const v=sel.value; if(!v) rebuild(); else apply();});
+      ob.observe(table.querySelector("tbody")||table,{childList:true,subtree:true});
+    }
+  });
+})();
+</script>
 </body>
 </html>
