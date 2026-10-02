@@ -585,6 +585,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
       <button type="button" id="poPdfBtn" class="primary">匯入浤富 PDF</button>
       <input type="file" id="poPdfInput" accept=".pdf,application/pdf" class="hidden">
       <button type="button" id="poClearBtn">清空 PDF 明細</button>
+      <button type="button" id="poSaveAllBtn" class="primary">儲存全部配對／明細</button>
       <button type="button" id="poExcelBtn">套用模板下載 Excel</button>
     </div>
     <div id="poStatus" class="purchaseStatus">可以先建立「單號／案名」。收到浤富 PDF 後再匯入，系統會依銷貨單號分組。</div>
@@ -2129,6 +2130,25 @@ let poGroups=[];
 let poPdfPageCount=0;
 let poPdfMonth="";
 let poProjectEditKey=null;
+const PO_WORK_KEY="sbd_purchase_pdf_work_v1";
+function poSaveAllWork(showMsg=true){
+  try{
+    localStorage.setItem(PO_WORK_KEY,JSON.stringify({groups:poGroups,pdfPageCount:poPdfPageCount,pdfMonth:poPdfMonth,savedAt:new Date().toISOString()}));
+    if(showMsg){const n=poGroups.length;const rows=poGroups.reduce((a,g)=>a+(g.rows?.length||0),0);$("poStatus").textContent=`已完整儲存：${n} 個銷貨單分組、${rows} 筆貨品與所有單號／案名配對。下次開啟會自動帶回。`;}
+    return true;
+  }catch(e){console.error(e);if(showMsg)alert("儲存失敗："+(e?.message||e));return false;}
+}
+function poLoadAllWork(){
+  try{
+    const raw=localStorage.getItem(PO_WORK_KEY);if(!raw)return false;
+    const d=JSON.parse(raw);if(!d||!Array.isArray(d.groups))return false;
+    poGroups=d.groups;poPdfPageCount=Number(d.pdfPageCount||0);poPdfMonth=String(d.pdfMonth||"");
+    poRenderGroups();
+    const rows=poGroups.reduce((a,g)=>a+(g.rows?.length||0),0);
+    $("poStatus").textContent=`已載入上次完整存檔：${poGroups.length} 個銷貨單分組、${rows} 筆貨品；單號／案名配對已自動帶回。`;
+    return true;
+  }catch(e){console.error(e);return false;}
+}
 const poFmt=n=>Number(n||0).toLocaleString("zh-TW",{maximumFractionDigits:0});
 const poEsc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 
@@ -2162,7 +2182,12 @@ function poRenderProjects(){
 }
 function poRenderGroups(){
   const host=$("poGroups");if(!host)return;
-  const projects=poProjects();
+  // 單號規則：G5DD/G5DE 後面的數字為 年月日/序號，依數字由小到大排列
+  const poNoNumber=v=>{const m=String(v||"").match(/^(?:G5DD|G5DE)(\d+)/);return m?BigInt(m[1]):0n};
+  const projects=poProjects().slice().sort((x,y)=>{
+    const a=poNoNumber(x.no),b=poNoNumber(y.no);
+    return a<b?-1:a>b?1:String(x.no||"").localeCompare(String(y.no||""));
+  });
   host.innerHTML=poGroups.map((g,gi)=>{
     const options='<option value="">尚未指定</option>'+projects.map(p=>`<option value="${p.key}" ${g.projectKey===p.key?"selected":""}>${poEsc([p.no,p.caseName,(p.caseAmount!==undefined && p.caseAmount!==null && p.caseAmount!=="" ? poFmt(Number(p.caseAmount)||0) : "")].filter(Boolean).join("｜"))}</option>`).join("");
     const total=g.rows.reduce((n,r)=>n+(+r.qty||0)*(+r.price||0),0);
@@ -2179,7 +2204,7 @@ function poRenderGroups(){
     });
   });
 }
-function poClearPdf(){poGroups=[];poRenderGroups();$("poStatus").textContent="PDF 明細已清空；已建立的單號／案名仍保留。";}
+function poClearPdf(){poGroups=[];poPdfPageCount=0;poPdfMonth="";localStorage.removeItem(PO_WORK_KEY);poRenderGroups();$("poStatus").textContent="PDF 明細與完整存檔已清空；已建立的單號／案名仍保留。";}
 
 async function poReadPdf(file){
   if(!isAdminAccount())return;
@@ -2329,7 +2354,7 @@ async function poDownloadExcel(){
       let cursor=5, seq=1;
       for(const {g,p} of pageGroups){
         const n=Math.max(1,p.visible.length);
-        const rs=cursor,re=cursor+n-1,proj=projects.find(x=>x.key===g.projectKey),job=proj?[proj.no,proj.caseName].filter(Boolean).join('｜'):'';
+        const rs=cursor,re=cursor+n-1,proj=projects.find(x=>x.key===g.projectKey),job=proj?[proj.no,proj.caseName,(proj.caseAmount!==undefined&&proj.caseAmount!==null&&proj.caseAmount!==''?poFmt(Number(proj.caseAmount)||0):'')].filter(Boolean).join('｜'):'';
         p.visible.forEach((it,j)=>{
           const rr=rs+j,src=j===0?5:(j===n-1?7:6);
           if(styleCache[src].height)ws.getRow(rr).height=styleCache[src].height;
@@ -2364,6 +2389,7 @@ $("purchaseTabBtn")?.addEventListener("click",()=>showFeature("purchase"));
 $("poProjectNewBtn")?.addEventListener("click",poProjectClear);
 $("poProjectFilter")?.addEventListener("change",poRenderProjects);
 $("poProjectSaveBtn")?.addEventListener("click",poProjectSave);
+$("poSaveAllBtn")?.addEventListener("click",()=>poSaveAllWork(true));
 // 單號／案名管理：在前綴、單號、案名、案件金額任一欄按 Enter 直接儲存
 ["poNoPrefix","poNo","poCase","poCaseAmount"].forEach(id=>{
   const el=$(id);
@@ -2641,6 +2667,7 @@ initInstallerPicker();updateMasterBillingRange();renderStatsEditingPreviewRow();
 })();
 </script>
 
+<script id="purchase-work-restore">(function(){function restore(){try{if(typeof poLoadAllWork==="function")poLoadAllWork()}catch(e){console.error(e)}}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",restore);else setTimeout(restore,0)})();</script>
 <script id="purchase-tab-direct-fix">(function(){function openPurchase(){if(typeof isAdminAccount==="function"&&!isAdminAccount())return;["calendarView","quoteView","installStatsView","overtimeView"].forEach(id=>document.getElementById(id)?.classList.add("hidden"));document.getElementById("purchaseView")?.classList.remove("hidden");document.getElementById("calendarControls")?.classList.add("hidden");["calendarTabBtn","quoteTabBtn","installStatsTabBtn","overtimeTabBtn"].forEach(id=>document.getElementById(id)?.classList.remove("active"));document.getElementById("purchaseTabBtn")?.classList.add("active");try{if(typeof poRenderProjects==="function")poRenderProjects()}catch(e){console.error(e)}try{if(typeof poRenderGroups==="function")poRenderGroups()}catch(e){console.error(e)}}function bind(){const b=document.getElementById("purchaseTabBtn");if(!b)return;b.onclick=function(e){e.preventDefault();e.stopPropagation();openPurchase()}}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bind);else bind()})();</script>
 </body>
 </html>
