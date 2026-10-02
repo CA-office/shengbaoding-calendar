@@ -566,7 +566,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
     <div class="purchaseActions">
       <button type="button" id="poProjectNewBtn">＋ 新增單號／案名</button>
       <button type="button" id="poProjectSaveBtn" class="primary">儲存單號／案名</button>
-      <select id="poProjectFilter" aria-label="單號篩選"><option value="G5DD">G5DD</option><option value="G5DE">G5DE</option></select>
+      <select id="poProjectFilter" aria-label="單號篩選"><option value="">全部單號</option><option value="G5DD">G5DD</option><option value="G5DE">G5DE</option></select>
     </div>
     <div class="purchaseMeta">
       <label>單號<div style="display:flex;gap:6px"><select id="poNoPrefix" style="width:92px;flex:0 0 92px"><option value="G5DD">G5DD</option><option value="G5DE" selected>G5DE</option></select><input id="poNo" inputmode="numeric" placeholder="後面輸入數字" style="min-width:0;flex:1"></div></label>
@@ -2150,9 +2150,9 @@ function poProjectSave(){
 }
 function poRenderProjects(){
   const b=$("poProjectRecords");if(!b)return;
-  const filter=$("poProjectFilter")?.value||"G5DD";
+  const filter=$("poProjectFilter")?.value??"";
   const numPart=v=>{const m=String(v||"").match(/^(?:G5DD|G5DE)(\d+)/);return m?BigInt(m[1]):0n};
-  const a=poProjects().filter(r=>String(r.no||"").startsWith(filter)).sort((x,y)=>{const a=numPart(x.no),b=numPart(y.no);return a<b?-1:a>b?1:String(x.no||"").localeCompare(String(y.no||""));});
+  const a=poProjects().filter(r=>!filter || String(r.no||"").startsWith(filter)).sort((x,y)=>{const a=numPart(x.no),b=numPart(y.no);return a<b?-1:a>b?1:String(x.no||"").localeCompare(String(y.no||""));});
   b.innerHTML=a.map(r=>`<tr><td><button data-a="edit" data-k="${r.key}">修改</button><button data-a="del" data-k="${r.key}">刪除</button></td><td>${poEsc(r.no)}</td><td>${poEsc(r.caseName)}</td><td>${poFmt(r.caseAmount)}</td></tr>`).join("");
   b.querySelectorAll("button").forEach(btn=>btn.onclick=()=>{
     const a=poProjects(),r=a.find(x=>x.key===btn.dataset.k);
