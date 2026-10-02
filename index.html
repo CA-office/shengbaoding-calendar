@@ -2728,10 +2728,29 @@ async function download(){
   for(let r=1;r<=14;r++)ws.getRow(r).height=(r%2===1?(r===13?111.75:114.95):9.95);
   xs.slice(page*perPage,(page+1)*perPage).forEach((x,i)=>{
    const row=1+i*2,cell=ws.getCell('B'+row);
-   let text=(x.company||'')+'\n統編：'+(x.taxId||'')+'\n寄 '+(x.mail||'');
-   if(x.note)text+='\n'+x.note;
-   cell.value=text;
-   cell.font={name:'Calibri',size:18};
+   // 完全依「套用.xlsx」的 Rich Text 格式：中文標楷體18、數字/英文Calibri18、6碼郵遞區號Calibri14。
+   const zh18={name:'標楷體',size:18}, en18={name:'Calibri',size:18}, zip14={name:'Calibri',size:14};
+   const runs=[];
+   function pushMixed(str, firstZip=false){
+    str=String(str||'');
+    let pos=0;
+    if(firstZip){
+      const m=str.match(/^(\d{6})/);
+      if(m){runs.push({font:zip14,text:m[1]});pos=m[1].length;}
+    }
+    const rest=str.slice(pos); let buf='', last=null;
+    const flush=()=>{if(buf){runs.push({font:last==='zh'?zh18:en18,text:buf});buf='';}};
+    for(const ch of rest){
+      const type=/[\u3400-\u9fff\u3000-\u303f：，。；、（）]/.test(ch)?'zh':'en';
+      if(last!==null&&type!==last)flush(); last=type; buf+=ch;
+    }
+    flush();
+   }
+   pushMixed(x.company||'');
+   runs.push({font:zh18,text:'\n統編：'}); pushMixed(x.taxId||'');
+   runs.push({font:zh18,text:'\n寄'}); runs.push({font:en18,text:' '}); pushMixed(x.mail||'',true);
+   if(x.note){runs.push({font:en18,text:'\n'});pushMixed(x.note)}
+   cell.value={richText:runs};
    cell.alignment={vertical:'middle',wrapText:true};
    cell.border={top:{style:'thin'},left:{style:'thin'},bottom:{style:'thin'},right:{style:'thin'}};
   });
