@@ -480,6 +480,10 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
 
 
 <style id="overtime-polish">#overtimeView .ot-table{table-layout:fixed;border-collapse:separate;border-spacing:0}#overtimeView .ot-table th:nth-child(4),#overtimeView .ot-table td:nth-child(4),#overtimeView .ot-table th:nth-child(5),#overtimeView .ot-table td:nth-child(5){width:4cm!important;min-width:4cm!important;max-width:4cm!important}#overtimeView .ot-action-btn{appearance:none;border:1px solid #cbd5e1;border-radius:10px;padding:9px 15px;min-height:40px;background:#fff;color:#17324d;font-weight:700;box-shadow:0 2px 8px rgba(15,23,42,.08);display:inline-flex;align-items:center;justify-content:center;gap:7px;cursor:pointer}#overtimeView .ot-add-btn{background:#17324d;border-color:#17324d;color:#fff}#overtimeView .ot-download-btn{background:#fff;border-color:#17324d;color:#17324d}</style>
+
+<style id="customer-invoice-style">
+.invoiceWrap{max-width:1180px;margin:10px auto 32px;padding:0 8px}.invoiceCard{background:#fff;border:1px solid #d5dee6;border-radius:12px;padding:14px;margin-bottom:12px}.invoiceTitle{font-size:20px;font-weight:900;margin:0 0 12px}.invoiceGrid{display:grid;grid-template-columns:1.2fr .7fr 2fr auto;gap:8px;align-items:end}.invoiceGrid label{font-size:13px;font-weight:800}.invoiceGrid input,.invoiceGrid select{width:100%;padding:9px;border:1px solid #bdc8d2;border-radius:8px;margin-top:4px}.invoiceBtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.invoiceBtns button{padding:9px 13px;border:1px solid #cbd5de;border-radius:8px;background:#fff;font-weight:800}.invoiceBtns .primary{background:#18324d;color:#fff;border-color:#18324d}#ciMulti{width:100%;min-height:260px;padding:7px;border:1px solid #bdc8d2;border-radius:8px}.ciHint{font-size:12px;color:#66788a;margin:7px 0}.ciTableWrap{overflow:auto}.ciTable{width:100%;border-collapse:collapse;min-width:720px}.ciTable th,.ciTable td{border-bottom:1px solid #e0e6eb;padding:8px 6px;text-align:left}.ciTable th{background:#f6f8fa}@media(max-width:700px){.invoiceGrid{grid-template-columns:1fr}.invoiceBtns button{flex:1 1 140px}}
+</style>
 </head>
 <body>
 <div id="pullRefreshIndicator" aria-hidden="true"><div class="pull-spinner"></div></div>
@@ -593,30 +597,12 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
   </div>
 </section>
 
-<section id="invoiceCustomerView" class="purchaseWrap hidden">
-  <div class="purchaseCard">
-    <h2 class="purchaseTitle">客戶發票資料</h2>
-    <div style="display:grid;grid-template-columns:1.2fr .8fr 2fr auto;gap:8px;align-items:end">
-      <label style="font-size:13px;font-weight:800">公司名<input id="ciCompany" style="width:100%;padding:9px;border:1px solid #bdc8d2;border-radius:8px;margin-top:4px" placeholder="公司名"></label>
-      <label style="font-size:13px;font-weight:800">統編<input id="ciTaxId" style="width:100%;padding:9px;border:1px solid #bdc8d2;border-radius:8px;margin-top:4px" placeholder="統一編號"></label>
-      <label style="font-size:13px;font-weight:800">寄（郵遞區＋地址）<input id="ciMail" style="width:100%;padding:9px;border:1px solid #bdc8d2;border-radius:8px;margin-top:4px" placeholder="例如 220 新北市板橋區..."></label>
-      <button type="button" id="ciSaveBtn" class="btn primary" style="height:40px">儲存資料</button>
-    </div>
-    <div id="ciEditHint" style="font-size:12px;color:#66788a;margin:8px 0">Word 客戶名稱已先匯入；統編、郵遞區與地址可直接補上後儲存。</div>
-    <div style="overflow:auto"><table class="purchaseRecords" style="width:100%;min-width:760px"><thead><tr><th>操作</th><th>公司名</th><th>統編</th><th>寄（郵遞區＋地址）</th></tr></thead><tbody id="ciRows"></tbody></table></div>
-  </div>
-  <div class="purchaseCard">
-    <h2 class="purchaseTitle">發票寄送列印</h2>
-    <div style="display:grid;grid-template-columns:minmax(260px,520px) auto auto;gap:8px;align-items:end">
-      <label style="font-size:13px;font-weight:800">客戶複選
-        <select id="ciMulti" multiple size="9" style="width:100%;margin-top:5px;padding:7px;border:1px solid #bdc8d2;border-radius:8px;background:#fff"></select>
-      </label>
-      <button type="button" id="ciSelectAllBtn" class="btn">全部選取</button>
-      <button type="button" id="ciDownloadBtn" class="btn primary">下載 Excel 列印</button>
-    </div>
-    <div style="font-size:12px;color:#66788a;margin-top:8px">電腦可按 Ctrl 複選；手機可逐項點選。選取結果會自動保存，下次開啟仍會保留。</div>
-    <div id="ciSelectedPreview" style="margin-top:12px"></div>
-  </div>
+<section id="invoiceCustomerView" class="invoiceWrap hidden">
+ <div class="invoiceCard"><h2 class="invoiceTitle">客戶發票資料</h2>
+  <div class="invoiceGrid"><label>公司名<input id="ciCompany" placeholder="公司名"></label><label>統編<input id="ciTaxId" placeholder="統編"></label><label>寄（郵遞區＋地址）<input id="ciMail" placeholder="例如 220 新北市板橋區..."></label><button type="button" id="ciSaveBtn" class="btn primary">儲存資料</button></div><div id="ciEditHint" class="ciHint">Word 客戶名稱已先建立；統編與地址可直接補上後儲存。</div>
+  <div class="ciTableWrap"><table class="ciTable"><thead><tr><th>操作</th><th>公司名</th><th>統編</th><th>寄（郵遞區＋地址）</th></tr></thead><tbody id="ciRows"></tbody></table></div>
+ </div>
+ <div class="invoiceCard"><h2 class="invoiceTitle">複選列印客戶</h2><div class="ciHint">Windows：按住 Ctrl 可複選；也可以按「全選」。選取結果會自動保存。</div><select id="ciMulti" multiple></select><div class="invoiceBtns"><button type="button" id="ciSelectAllBtn">全選</button><button type="button" id="ciDownloadBtn" class="primary">下載 Excel 列印檔</button></div><div id="ciSelectedPreview" style="margin-top:12px"></div></div>
 </section>
 <section id="installStatsView" class="statsWrap hidden">
   <div class="statsCard">
@@ -1015,13 +1001,13 @@ function showFeature(name){
   $("quoteView").classList.toggle("hidden",!quote);
   $("installStatsView").classList.toggle("hidden",!stats);
   $("purchaseView")?.classList.toggle("hidden",!purchase);
-  $("overtimeView")?.classList.toggle("hidden",!overtime);
+  $("overtimeView")?.classList.toggle("hidden",!overtime);$("invoiceCustomerView")?.classList.add("hidden");
   $("calendarControls").classList.toggle("hidden",quote||stats||purchase||overtime);
   $("calendarTabBtn").classList.toggle("active",name==="calendar");
   $("quoteTabBtn").classList.toggle("active",quote);
   $("installStatsTabBtn").classList.toggle("active",stats);
   $("purchaseTabBtn")?.classList.toggle("active",purchase);
-  $("overtimeTabBtn")?.classList.toggle("active",overtime);
+  $("overtimeTabBtn")?.classList.toggle("active",overtime);$("invoiceCustomerTabBtn")?.classList.remove("active");
   if(quote&&["admin","editor"].includes(profile?.role)){resetQuoteForm();loadQuoteOptions();loadQuotes()}
   if(stats&&isAdminAccount()){(async()=>{await loadQuotesForStats();await syncAllQuotesToInstallStats();await loadInstallStats()})()}
   if(purchase&&isAdminAccount()){poRenderProjects();poRenderGroups();}
@@ -1193,32 +1179,6 @@ table{width:100%;border-collapse:collapse;border:1.4px solid #111;table-layout:f
 </head><body><div class="page"><div class="title">勝鈔環保科技股份有限公司報價單</div><div class="header"><div class="case">案名：${esc(m.case_name||x.contact_name||"")}</div><div class="number">編號：${esc(x.quote_no||"")}</div><div class="customer">客戶名稱：${(()=>{const v=String(x.customer_name||"").trim(),mm=v.match(/^([A-Za-z0-9_-]+)\s*(.*)$/);return mm?`<span class="customerCode">${esc(mm[1])}</span>${mm[2]?` <span class="customerName">${esc(mm[2])}</span>`:""}`:`<span class="customerName">${esc(v)}</span>`})()}</div><div class="date">日期：${esc(qDateDisplay(x.quote_date))}</div><div class="customer">聯絡人電話：<span class="customerPhone">${esc(m.contact_phone||x.phone||"")}</span></div><div class="install">實際安裝日期：${esc(qDateDisplay(m.install_date))}</div><div class="address">安裝地址：${esc(x.address||"")}</div><div class="install">安裝時段：${esc(m.install_period||"")}${m.order_no?`<div style="margin-top:3.3mm">訂單編號：${esc(m.order_no)}</div>`:""}</div></div><div class="hint" style="color:#ff0000 !important;font-size:14px !important;font-weight:700 !important;">此為初估計價　實際價格會依實際色號、尺寸、作法變動</div><div class="mat"><div>色 號</div><div class="value">${esc(m.color_no||"")}</div><div>品 名</div><div class="value">${esc(m.product_name||"")}</div><div class="edge">前緣 <span class="edgeNum">${esc(m.front_edge||"")}</span> <span class="cmUnit">cm</span> ／ 背牆 <span class="edgeNum">${esc(m.back_wall||"")}</span> <span class="cmUnit">cm</span></div></div><table><thead><tr><th>項數</th><th>名稱</th><th>加工尺寸 (CM)</th><th>總公分數</th><th>單位</th><th>單價</th><th>小計</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td></td><td colspan="3" class="left">備註：此價格為實價計價</td><td colspan="2">合計</td><td>${qMoney(x.subtotal)}</td></tr><tr><td></td><td colspan="3"></td><td colspan="2">稅金5%</td><td>${qMoney(x.tax_amount)}</td></tr><tr><td></td><td colspan="3"></td><td colspan="2">總計</td><td>${qMoney(x.total_amount)}</td></tr></tfoot></table><div class="notes"><div>備註：　1.本報價單有效期間為30天</div><div style="padding-left:11mm"><span style="display:inline-block;width:1.45em;text-align:right;margin-right:.18em">2.</span>付款方式:月結40天，未月結客戶安裝完工收現，稅外加不扣%</div><div style="padding-left:11mm"><span style="display:inline-block;width:1.45em;text-align:right;margin-right:.18em">3.</span>開發票為總計金額</div><div style="padding-left:11mm"><span style="display:inline-block;width:1.45em;text-align:right;margin-right:.18em">4.</span>本公司產品款項未結清資產屬勝鈔環保科技股份有限公司所有權</div></div><div class="sign"><div>勝鈔環保科技股份有限公司<br>TEL:02-26771176<br>FAX:02-26772076<br><br><br>業務代表簽名:</div><div>客戶簽名:</div></div></div>
 
 
-
-
-<script id="customer-invoice-module">
-(function(){
-const KEY='sbd_customer_invoice_v1', SEL='sbd_customer_invoice_selected_v1';
-const seed=['鋒龍','新時尚','里昂','玖泰','富米登-謝先生','33 廚具','九如','谷綠林','青葉','益萊','維豐'];
-let editing=-1;
-const $i=id=>document.getElementById(id);
-function load(){let a=[];try{a=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){};if(!Array.isArray(a)||!a.length){a=seed.map(company=>({company,taxId:'',mail:''}));localStorage.setItem(KEY,JSON.stringify(a))}return a}
-function save(a){localStorage.setItem(KEY,JSON.stringify(a))}
-function esc(v){return String(v??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]))}
-function selected(){try{return JSON.parse(localStorage.getItem(SEL)||'[]')}catch(e){return[]}}
-function render(){const a=load(), body=$i('ciRows'), multi=$i('ciMulti');if(!body||!multi)return;
- body.innerHTML=a.map((x,n)=>`<tr><td><button type="button" onclick="window.ciEdit(${n})">修改</button><button type="button" onclick="window.ciDel(${n})" style="color:#b91c1c">刪除</button></td><td>${esc(x.company)}</td><td>${esc(x.taxId)}</td><td>${esc(x.mail)}</td></tr>`).join('');
- const keep=new Set(selected()); multi.innerHTML=a.map((x,n)=>`<option value="${n}" ${keep.has(x.company)?'selected':''}>${esc(x.company)}｜${esc(x.taxId||'統編未填')}｜${esc(x.mail||'地址未填')}</option>`).join(''); preview();
-}
-window.ciEdit=function(n){const x=load()[n];if(!x)return;editing=n;$i('ciCompany').value=x.company||'';$i('ciTaxId').value=x.taxId||'';$i('ciMail').value=x.mail||'';$i('ciEditHint').textContent='正在修改：'+(x.company||'');$i('ciCompany').focus()}
-window.ciDel=function(n){const a=load();if(!a[n]||!confirm('確定刪除「'+a[n].company+'」？'))return;a.splice(n,1);save(a);editing=-1;render()}
-function doSave(){const company=$i('ciCompany').value.trim(),taxId=$i('ciTaxId').value.trim(),mail=$i('ciMail').value.trim();if(!company){alert('請輸入公司名');return}const a=load();const x={company,taxId,mail};if(editing>=0)a[editing]=x;else{const hit=a.findIndex(v=>v.company===company);if(hit>=0)a[hit]=x;else a.push(x)}save(a);editing=-1;$i('ciCompany').value='';$i('ciTaxId').value='';$i('ciMail').value='';$i('ciEditHint').textContent='已儲存。之後開啟會自動保留，不用重新輸入。';render()}
-function preview(){const a=load(), idx=[...($i('ciMulti')?.selectedOptions||[])].map(o=>+o.value), xs=idx.map(i=>a[i]).filter(Boolean);localStorage.setItem(SEL,JSON.stringify(xs.map(x=>x.company)));const p=$i('ciSelectedPreview');if(p)p.innerHTML=xs.length?`<table class="purchaseRecords" style="width:100%"><thead><tr><th>公司名</th><th>統編</th><th>寄（郵遞區＋地址）</th></tr></thead><tbody>${xs.map(x=>`<tr><td>${esc(x.company)}</td><td>${esc(x.taxId)}</td><td>${esc(x.mail)}</td></tr>`).join('')}</tbody></table>`:'尚未選取客戶';}
-async function download(){const a=load(), idx=[...$i('ciMulti').selectedOptions].map(o=>+o.value), xs=idx.map(i=>a[i]).filter(Boolean);if(!xs.length){alert('請先複選要列印的客戶');return}if(typeof ExcelJS==='undefined'){alert('Excel 元件尚未載入');return}const wb=new ExcelJS.Workbook(), ws=wb.addWorksheet('客戶發票');ws.columns=[{header:'公司名',key:'company',width:28},{header:'統編',key:'taxId',width:18},{header:'寄（郵遞區＋地址）',key:'mail',width:58}];xs.forEach(x=>ws.addRow(x));ws.getRow(1).font={bold:true,size:12};ws.getRow(1).alignment={horizontal:'center',vertical:'middle'};ws.eachRow((r,n)=>{r.height=n===1?24:38;r.alignment={vertical:'middle',wrapText:true};r.eachCell(c=>{c.border={top:{style:'thin'},left:{style:'thin'},bottom:{style:'thin'},right:{style:'thin'}}})});ws.pageSetup={paperSize:9,orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:.3,right:.3,top:.4,bottom:.4,header:.2,footer:.2}};ws.headerFooter.oddFooter='第 &P 頁 / 共 &N 頁';const buf=await wb.xlsx.writeBuffer();const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),u=URL.createObjectURL(blob),link=document.createElement('a');link.href=u;link.download='客戶發票_列印.xlsx';link.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
-function open(){if(typeof isAdminAccount==='function'&&!isAdminAccount())return;['calendarView','quoteView','purchaseView','installStatsView','overtimeView'].forEach(id=>$i(id)?.classList.add('hidden'));$i('invoiceCustomerView')?.classList.remove('hidden');$i('calendarControls')?.classList.add('hidden');document.querySelectorAll('.featureTabs button').forEach(b=>b.classList.remove('active'));$i('invoiceCustomerTabBtn')?.classList.add('active');render()}
-function bind(){const tab=$i('invoiceCustomerTabBtn');if(tab)tab.onclick=e=>{e.preventDefault();open()};$i('ciSaveBtn')?.addEventListener('click',doSave);$i('ciMulti')?.addEventListener('change',preview);$i('ciSelectAllBtn')?.addEventListener('click',()=>{[...$i('ciMulti').options].forEach(o=>o.selected=true);preview()});$i('ciDownloadBtn')?.addEventListener('click',download);render()}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();
-})();
-</script>
 
 </body></html>`
 }
@@ -2721,5 +2681,5 @@ initInstallerPicker();updateMasterBillingRange();renderStatsEditingPreviewRow();
 
 <script id="purchase-work-restore">(function(){function restore(){try{if(typeof poLoadAllWork==="function")poLoadAllWork()}catch(e){console.error(e)}}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",restore);else setTimeout(restore,0)})();</script>
 <script id="purchase-tab-direct-fix">(function(){function openPurchase(){if(typeof isAdminAccount==="function"&&!isAdminAccount())return;["calendarView","quoteView","installStatsView","overtimeView"].forEach(id=>document.getElementById(id)?.classList.add("hidden"));document.getElementById("purchaseView")?.classList.remove("hidden");document.getElementById("calendarControls")?.classList.add("hidden");["calendarTabBtn","quoteTabBtn","installStatsTabBtn","overtimeTabBtn"].forEach(id=>document.getElementById(id)?.classList.remove("active"));document.getElementById("purchaseTabBtn")?.classList.add("active");try{if(typeof poRenderProjects==="function")poRenderProjects()}catch(e){console.error(e)}try{if(typeof poRenderGroups==="function")poRenderGroups()}catch(e){console.error(e)}}function bind(){const b=document.getElementById("purchaseTabBtn");if(!b)return;b.onclick=function(e){e.preventDefault();e.stopPropagation();openPurchase()}}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bind);else bind()})();</script>
-</body>
+\n<script id="customer-invoice-module">\n(function(){\nconst KEY='sbd_customer_invoice_v1', SEL='sbd_customer_invoice_selected_v1';\nconst seed=['鋒龍','新時尚','里昂','玖泰','富米登-謝先生','33 廚具','九如','谷綠林','青葉','益萊','維豐'];\nlet editing=-1; const $i=id=>document.getElementById(id);\nfunction load(){let a=[];try{a=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){}if(!Array.isArray(a)||!a.length){a=seed.map(company=>({company,taxId:'',mail:''}));localStorage.setItem(KEY,JSON.stringify(a))}return a}\nfunction save(a){localStorage.setItem(KEY,JSON.stringify(a))}\nfunction esc(v){return String(v??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]))}\nfunction selected(){try{return JSON.parse(localStorage.getItem(SEL)||'[]')}catch(e){return[]}}\nfunction render(){const a=load(),body=$i('ciRows'),multi=$i('ciMulti');if(!body||!multi)return;body.innerHTML=a.map((x,n)=>'<tr><td><button type="button" data-edit="'+n+'">修改</button> <button type="button" data-del="'+n+'" style="color:#b91c1c">刪除</button></td><td>'+esc(x.company)+'</td><td>'+esc(x.taxId)+'</td><td>'+esc(x.mail)+'</td></tr>').join('');body.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>edit(+b.dataset.edit));body.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>del(+b.dataset.del));const keep=new Set(selected());multi.innerHTML=a.map((x,n)=>'<option value="'+n+'" '+(keep.has(x.company)?'selected':'')+'>'+esc(x.company)+'｜'+esc(x.taxId||'統編未填')+'｜'+esc(x.mail||'地址未填')+'</option>').join('');preview()}\nfunction edit(n){const x=load()[n];if(!x)return;editing=n;$i('ciCompany').value=x.company||'';$i('ciTaxId').value=x.taxId||'';$i('ciMail').value=x.mail||'';$i('ciEditHint').textContent='正在修改：'+(x.company||'');$i('ciCompany').focus()}\nfunction del(n){const a=load();if(!a[n]||!confirm('確定刪除「'+a[n].company+'」？'))return;a.splice(n,1);save(a);editing=-1;render()}\nfunction doSave(){const company=$i('ciCompany').value.trim(),taxId=$i('ciTaxId').value.trim(),mail=$i('ciMail').value.trim();if(!company){alert('請輸入公司名');return}const a=load(),x={company,taxId,mail};if(editing>=0)a[editing]=x;else{const hit=a.findIndex(v=>v.company===company);if(hit>=0)a[hit]=x;else a.push(x)}save(a);editing=-1;$i('ciCompany').value='';$i('ciTaxId').value='';$i('ciMail').value='';$i('ciEditHint').textContent='已儲存。之後開啟會自動保留。';render()}\nfunction preview(){const a=load(),idx=[...($i('ciMulti')?.selectedOptions||[])].map(o=>+o.value),xs=idx.map(i=>a[i]).filter(Boolean);localStorage.setItem(SEL,JSON.stringify(xs.map(x=>x.company)));const p=$i('ciSelectedPreview');if(p)p.innerHTML=xs.length?'<table class="ciTable"><thead><tr><th>公司名</th><th>統編</th><th>寄（郵遞區＋地址）</th></tr></thead><tbody>'+xs.map(x=>'<tr><td>'+esc(x.company)+'</td><td>'+esc(x.taxId)+'</td><td>'+esc(x.mail)+'</td></tr>').join('')+'</tbody></table>':'尚未選取客戶'}\nasync function download(){const a=load(),idx=[...$i('ciMulti').selectedOptions].map(o=>+o.value),xs=idx.map(i=>a[i]).filter(Boolean);if(!xs.length){alert('請先複選要列印的客戶');return}if(typeof ExcelJS==='undefined'){alert('Excel 元件尚未載入');return}const wb=new ExcelJS.Workbook(),ws=wb.addWorksheet('客戶發票');ws.columns=[{header:'公司名',key:'company',width:28},{header:'統編',key:'taxId',width:18},{header:'寄（郵遞區＋地址）',key:'mail',width:58}];xs.forEach(x=>ws.addRow(x));ws.getRow(1).font={bold:true,size:12};ws.eachRow((r,n)=>{r.height=n===1?24:38;r.alignment={vertical:'middle',wrapText:true};r.eachCell(c=>c.border={top:{style:'thin'},left:{style:'thin'},bottom:{style:'thin'},right:{style:'thin'}})});ws.pageSetup={paperSize:9,orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0};const buf=await wb.xlsx.writeBuffer(),blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),u=URL.createObjectURL(blob),link=document.createElement('a');link.href=u;link.download='客戶發票_列印.xlsx';link.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}\nfunction open(){if(typeof isAdminAccount==='function'&&!isAdminAccount())return;['calendarView','quoteView','purchaseView','installStatsView','overtimeView'].forEach(id=>$i(id)?.classList.add('hidden'));$i('invoiceCustomerView')?.classList.remove('hidden');$i('calendarControls')?.classList.add('hidden');document.querySelectorAll('.featureTabs button').forEach(b=>b.classList.remove('active'));$i('invoiceCustomerTabBtn')?.classList.add('active');render()}\nfunction bind(){const tab=$i('invoiceCustomerTabBtn');if(tab)tab.onclick=e=>{e.preventDefault();open()};$i('ciSaveBtn')?.addEventListener('click',doSave);$i('ciMulti')?.addEventListener('change',preview);$i('ciSelectAllBtn')?.addEventListener('click',()=>{[...$i('ciMulti').options].forEach(o=>o.selected=true);preview()});$i('ciDownloadBtn')?.addEventListener('click',download);render()}\nif(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();\n})();\n</script>\n</body>
 </html>
