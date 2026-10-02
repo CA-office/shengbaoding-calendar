@@ -2686,19 +2686,27 @@ initInstallerPicker();updateMasterBillingRange();renderStatsEditingPreviewRow();
 (function(){
 const KEY='sbd_customer_invoice_v2', SEL='sbd_customer_invoice_selected_v2';
 const seed=[
- {company:'遵櫃系統傢俱',taxId:'54838173',mail:'242623新北市新莊區立廷里立信一路 92 號'},
- {company:'奇建企業有限公司',taxId:'97259047',mail:'244001新北市林口區南勢里 4 鄰 59-11 號'},
- {company:'京時系統家具',taxId:'53548078',mail:'116015台北市文山區和平東路四段 69 號'},
- {company:'木禾事業有限公司',taxId:'54846342',mail:'241074新北市三重區溪尾街 325 巷 3 弄 1 號'},
- {company:'仕虹事業有限公司',taxId:'70549614',mail:'103042臺北市大同區重慶北路 3 段 134 號'},
- {company:'森設系統櫥櫃',taxId:'72689793',mail:'247028新北市蘆洲區光華路 46 巷 26 號 4 樓'},
- {company:'皇室空間室內裝修設計',taxId:'30329157',mail:'300028新竹市香山區頂埔里中山路 580 號'},
- {company:'王品優居',taxId:'97558495',mail:'238671新北市樹林區學勤路 264 號 1 樓'},
- {company:'沐淯空間設計',taxId:'90267704',mail:'350012 苗栗縣竹南鎮大埔里大埔十街 69 號'},
- {company:'筑雅企業有限公司',taxId:'60760795',mail:'338012桃園市蘆竹區南山路二段 205 巷 22 弄 1 號'}
+ {company:'雙橡園家飾裝潢有限公司',taxId:'23864962',mail:'新北市新店區中興路三段247號1樓',note:'☆需附回郵'},
+ {company:'曜演工程行',taxId:'91241014',mail:'新北市三重區三和路四段138巷4號',note:''},
+ {company:'筑雅企業有限公司',taxId:'60760795',mail:'桃園市蘆竹區南山路二段205巷22弄1號',note:'☆需附回郵'},
+ {company:'松恆工程行',taxId:'94867032',mail:'新北市汐止區南陽街178號3樓之2',note:''},
+ {company:'良圖智作有限公司',taxId:'94150847',mail:'台北市文山區辛亥路五段25巷3弄9號',note:''},
+ {company:'勇志企業社',taxId:'41086065',mail:'宜蘭縣礁溪鄉奇立丹路129號',note:'勇志企業社-游志勇 收'},
+ {company:'圓屋實業社',taxId:'91179406',mail:'新北市樹林區佳園路一段75巷64號',note:''},
+ {company:'沐淯室內裝修設計有限公司',taxId:'90267704',mail:'苗栗縣竹南鎮大埔十街69號',note:''},
+ {company:'遵櫃傢俱有限公司',taxId:'54838173',mail:'新北市新莊區立廷里立信一街92號',note:''},
+ {company:'盈方企業有限公司',taxId:'54048662',mail:'新北市八里區長坑村長道坑14-9號',note:''},
+ {company:'王品優居有限公司',taxId:'97558495',mail:'新北市樹林北大特區學勤路264號1樓',note:''},
+ {company:'享家空間設計室內裝修有限公司',taxId:'43880764',mail:'新北市板橋區漢生東路299巷26號1樓',note:''},
+ {company:'房的事系統傢俱有限公司',taxId:'68619281',mail:'新北市蘆洲區長安街220巷11弄6號',note:''},
+ {company:'香榭雅櫥企業社',taxId:'92648103',mail:'265009宜蘭縣羅東鎮純精路三段252巷30號1樓',note:''},
+ {company:'樂米系統設計工作室',taxId:'61227428',mail:'新北市三峽區民生街146巷8號6樓之1',note:''},
+ {company:'萬泰工程有限公司',taxId:'60369671',mail:'238016新北市樹林區太平路174巷32弄5號1樓',note:''},
+ {company:'一立室內設計',taxId:'40795791',mail:'屏東縣屏東市北勢里公正街６８號１樓',note:''},
+ {company:'竹成系統廚櫃有限公司',taxId:'50922775',mail:'桃園市大溪區埔仁路343號',note:''}
 ];
 let editing=-1; const $i=id=>document.getElementById(id);
-function load(){let a=[];try{a=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){}if(!Array.isArray(a)||!a.length){a=seed.map(x=>({...x}));localStorage.setItem(KEY,JSON.stringify(a))}return a}
+function load(){let a=[];try{a=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){}if(!Array.isArray(a))a=[];let changed=false;seed.forEach(x=>{const hit=a.findIndex(v=>(x.taxId&&String(v.taxId||'').replace(/\D/g,'')===x.taxId)||String(v.company||'').trim()===x.company);if(hit<0){a.push({...x});changed=true}else{const v=a[hit];if(!v.company&&x.company){v.company=x.company;changed=true}if(!v.taxId&&x.taxId){v.taxId=x.taxId;changed=true}if(!v.mail&&x.mail){v.mail=x.mail;changed=true}if(v.note===undefined){v.note=x.note||'';changed=true}}});if(changed||!localStorage.getItem(KEY))localStorage.setItem(KEY,JSON.stringify(a));return a}
 function save(a){localStorage.setItem(KEY,JSON.stringify(a))}
 function esc(v){return String(v??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]))}
 function selected(){try{const x=JSON.parse(localStorage.getItem(SEL)||'[]');return Array.isArray(x)?x:[]}catch(e){return[]}}
@@ -2707,8 +2715,31 @@ function render(){const a=load(),body=$i('ciRows');if(!body)return;const keep=ne
 function saveChecks(){const a=load(),names=[...document.querySelectorAll('#ciRows [data-check]:checked')].map(b=>a[+b.dataset.check]?.company).filter(Boolean);setSelected(names)}
 function edit(n){const x=load()[n];if(!x)return;editing=n;$i('ciCompany').value=x.company||'';$i('ciTaxId').value=x.taxId||'';$i('ciMail').value=x.mail||'';$i('ciEditHint').textContent='正在修改：'+(x.company||'');$i('ciCompany').focus()}
 function del(n){const a=load();if(!a[n]||!confirm('確定刪除「'+a[n].company+'」？'))return;const name=a[n].company;a.splice(n,1);save(a);setSelected(selected().filter(v=>v!==name));editing=-1;render()}
-function doSave(){const company=$i('ciCompany').value.trim(),taxId=$i('ciTaxId').value.trim(),mail=$i('ciMail').value.trim();if(!company){alert('請輸入公司名');return}const a=load(),x={company,taxId,mail};if(editing>=0){const old=a[editing]?.company;a[editing]=x;if(old&&old!==company)setSelected(selected().map(v=>v===old?company:v))}else{const hit=a.findIndex(v=>v.company===company);if(hit>=0)a[hit]=x;else a.push(x)}save(a);editing=-1;$i('ciCompany').value='';$i('ciTaxId').value='';$i('ciMail').value='';$i('ciEditHint').textContent='已儲存。要列印的客戶直接勾左側小方框。';render()}
-async function download(){saveChecks();const a=load(),keep=new Set(selected()),xs=a.filter(x=>keep.has(x.company));if(!xs.length){alert('請先勾選要列印的客戶');return}if(typeof ExcelJS==='undefined'){alert('Excel 元件尚未載入');return}const wb=new ExcelJS.Workbook(),ws=wb.addWorksheet('客戶發票');ws.columns=[{header:'公司名',key:'company',width:28},{header:'統編',key:'taxId',width:18},{header:'寄（郵遞區＋地址）',key:'mail',width:58}];xs.forEach(x=>ws.addRow(x));ws.getRow(1).font={bold:true,size:12};ws.eachRow((r,n)=>{r.height=n===1?24:38;r.alignment={vertical:'middle',wrapText:true};r.eachCell(c=>c.border={top:{style:'thin'},left:{style:'thin'},bottom:{style:'thin'},right:{style:'thin'}})});ws.pageSetup={paperSize:9,orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0};const buf=await wb.xlsx.writeBuffer(),blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),u=URL.createObjectURL(blob),link=document.createElement('a');link.href=u;link.download='客戶發票_列印.xlsx';link.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
+function doSave(){const company=$i('ciCompany').value.trim(),taxId=$i('ciTaxId').value.trim(),mail=$i('ciMail').value.trim();if(!company){alert('請輸入公司名');return}const a=load(),x={company,taxId,mail,note:editing>=0?(a[editing]?.note||''):''};if(editing>=0){const old=a[editing]?.company;a[editing]=x;if(old&&old!==company)setSelected(selected().map(v=>v===old?company:v))}else{const hit=a.findIndex(v=>v.company===company);if(hit>=0)a[hit]=x;else a.push(x)}save(a);editing=-1;$i('ciCompany').value='';$i('ciTaxId').value='';$i('ciMail').value='';$i('ciEditHint').textContent='已儲存。要列印的客戶直接勾左側小方框。';render()}
+async function download(){
+ saveChecks();const a=load(),keep=new Set(selected()),xs=a.filter(x=>keep.has(x.company));
+ if(!xs.length){alert('請先勾選要列印的客戶');return}
+ if(typeof ExcelJS==='undefined'){alert('Excel 元件尚未載入');return}
+ const wb=new ExcelJS.Workbook();
+ const perPage=7;
+ for(let page=0;page<Math.ceil(xs.length/perPage);page++){
+  const ws=wb.addWorksheet(page===0?'115-07':'115-07-'+(page+1));
+  ws.getColumn(1).width=9;ws.getColumn(2).width=64.75;
+  for(let r=1;r<=14;r++)ws.getRow(r).height=(r%2===1?(r===13?111.75:114.95):9.95);
+  xs.slice(page*perPage,(page+1)*perPage).forEach((x,i)=>{
+   const row=1+i*2,cell=ws.getCell('B'+row);
+   let text=(x.company||'')+'\n統編：'+(x.taxId||'')+'\n寄 '+(x.mail||'');
+   if(x.note)text+='\n'+x.note;
+   cell.value=text;
+   cell.font={name:'Calibri',size:18};
+   cell.alignment={vertical:'middle',wrapText:true};
+   cell.border={top:{style:'thin'},left:{style:'thin'},bottom:{style:'thin'},right:{style:'thin'}};
+  });
+  ws.pageSetup={paperSize:9,orientation:'portrait'};
+  ws.pageMargins={left:0,right:0,top:0,bottom:0,header:0.31496062992125984,footer:0.31496062992125984};
+ }
+ const buf=await wb.xlsx.writeBuffer(),blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),u=URL.createObjectURL(blob),link=document.createElement('a');link.href=u;link.download='客戶發票_列印.xlsx';link.click();setTimeout(()=>URL.revokeObjectURL(u),1000)
+}
 function open(){if(typeof isAdminAccount==='function'&&!isAdminAccount())return;['calendarView','quoteView','purchaseView','installStatsView','overtimeView'].forEach(id=>$i(id)?.classList.add('hidden'));$i('invoiceCustomerView')?.classList.remove('hidden');$i('calendarControls')?.classList.add('hidden');document.querySelectorAll('.featureTabs button').forEach(b=>b.classList.remove('active'));$i('invoiceCustomerTabBtn')?.classList.add('active');render()}
 function bind(){const tab=$i('invoiceCustomerTabBtn');if(tab)tab.onclick=e=>{e.preventDefault();open()};$i('ciSaveBtn')?.addEventListener('click',doSave);$i('ciDownloadBtn')?.addEventListener('click',download);render()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();
