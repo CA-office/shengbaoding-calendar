@@ -784,6 +784,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
   </div>
   <div class="quoteCard">
     <h2 class="quoteTitle">台中採購單</h2>
+    <div style="margin:0 0 12px"><label style="font-size:13px;font-weight:800">指定單號／案名<select id="tcAssignmentSelect" style="width:100%;padding:10px;border:1px solid #bdc8d2;border-radius:8px;margin-top:4px;background:#fff"><option value="">請選擇要指定的單號／案名</option></select></label><div style="font-size:12px;color:var(--muted);margin-top:4px">只做配對，不會把單號／案名帶入下方欄位。</div></div>
     <div class="quoteGrid">
       <label>案名<input id="tcCaseName" placeholder="請輸入案名"></label>
       <label>編號<input id="tcNo" placeholder="請輸入編號"></label>
@@ -2835,14 +2836,19 @@ function tcProjects(){try{return JSON.parse(localStorage.getItem(TC_PROJECT_KEY)
 function tcSaveProjects(a){localStorage.setItem(TC_PROJECT_KEY,JSON.stringify(a))}
 function tcProjectClear(){tcProjectEditKey=null;$t('tcNoPrefix').value='G5DE';$t('tcProjectNo').value='';$t('tcProjectCase').value='';$t('tcProjectAmount').value='';}
 function tcFullNo(){const x=$t('tcProjectNo')?.value.trim()||'';return x?(($t('tcNoPrefix')?.value||'')+x):''}
-function tcProjectSave(){const no=tcFullNo(),caseName=$t('tcProjectCase').value.trim(),caseAmount=$t('tcProjectAmount').value.trim();if(!no&&!caseName)return alert('請輸入單號或案名');const a=tcProjects(),key=tcProjectEditKey||Date.now().toString(),rec={key,no,caseName,caseAmount,updatedAt:new Date().toISOString()};const i=a.findIndex(x=>x.key===key);if(i>=0)a[i]=rec;else a.unshift(rec);tcSaveProjects(a);sessionStorage.setItem('sbd_tc_current_project',key);tcProjectEditKey=null;tcRenderProjects();$t('tcNo').value=no;$t('tcCaseName').value=caseName;tcProjectClear();}
-function tcRenderProjects(){const b=$t('tcProjectRecords');if(!b)return;const filter=$t('tcProjectFilter')?.value||'';const np=v=>{const m=String(v||'').match(/^(?:G5DD|G5DE)(\d+)/);return m?BigInt(m[1]):0n};const a=tcProjects().filter(r=>!filter||String(r.no||'').startsWith(filter)).sort((x,y)=>{const a=np(x.no),b=np(y.no);return a<b?-1:a>b?1:0});b.innerHTML=a.map(r=>`<tr><td><button data-a="use" data-k="${r.key}">帶入</button><button data-a="edit" data-k="${r.key}">修改</button><button data-a="del" data-k="${r.key}">刪除</button></td><td>${String(r.no||'')}</td><td>${String(r.caseName||'')}</td><td>${String(r.caseAmount||'')}</td></tr>`).join('');b.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{const all=tcProjects(),r=all.find(x=>x.key===btn.dataset.k);if(!r)return;if(btn.dataset.a==='use'){sessionStorage.setItem('sbd_tc_current_project',r.key);$t('tcNo').value=r.no||'';$t('tcCaseName').value=r.caseName||'';if(!tcDetailLoad(r.key)){clear();$t('tcNo').value=r.no||'';$t('tcCaseName').value=r.caseName||''}}if(btn.dataset.a==='edit'){tcProjectEditKey=r.key;const m=String(r.no||'').match(/^(G5DD|G5DE)(.*)$/);$t('tcNoPrefix').value=m?m[1]:'G5DE';$t('tcProjectNo').value=m?m[2]:r.no||'';$t('tcProjectCase').value=r.caseName||'';$t('tcProjectAmount').value=r.caseAmount||''}if(btn.dataset.a==='del'){if(!confirm('確定刪除這筆？'))return;tcSaveProjects(all.filter(x=>x.key!==r.key));const ds=tcDetails();delete ds[r.key];tcSaveDetails(ds);tcRenderProjects()}})}
-function tcCurrentProject(){const key=sessionStorage.getItem('sbd_tc_current_project');const a=tcProjects();return a.find(x=>x.key===key)||a.find(x=>x.no===($t('tcNo')?.value||''))||null}
+function tcProjectSave(){const no=tcFullNo(),caseName=$t('tcProjectCase').value.trim(),caseAmount=$t('tcProjectAmount').value.trim();if(!no&&!caseName)return alert('請輸入單號或案名');const a=tcProjects(),key=tcProjectEditKey||Date.now().toString(),rec={key,no,caseName,caseAmount,updatedAt:new Date().toISOString()};const i=a.findIndex(x=>x.key===key);if(i>=0)a[i]=rec;else a.unshift(rec);tcSaveProjects(a);tcProjectEditKey=null;tcRenderProjects();tcProjectClear();}
+function tcRenderAssignmentOptions(){
+ const sel=$t('tcAssignmentSelect');if(!sel)return;const keep=sel.value;
+ const a=tcProjects();sel.innerHTML='<option value="">請選擇要指定的單號／案名</option>'+a.map(r=>`<option value="${r.key}">${String(r.no||'')}｜${String(r.caseName||'')}｜${String(r.caseAmount||'')}</option>`).join('');
+ if(a.some(r=>r.key===keep))sel.value=keep;
+}
+function tcRenderProjects(){const b=$t('tcProjectRecords');if(!b)return;const filter=$t('tcProjectFilter')?.value||'';const np=v=>{const m=String(v||'').match(/^(?:G5DD|G5DE)(\d+)/);return m?BigInt(m[1]):0n};const a=tcProjects().filter(r=>!filter||String(r.no||'').startsWith(filter)).sort((x,y)=>{const a=np(x.no),b=np(y.no);return a<b?-1:a>b?1:0});b.innerHTML=a.map(r=>`<tr><td><button data-a="edit" data-k="${r.key}">修改</button><button data-a="del" data-k="${r.key}">刪除</button></td><td>${String(r.no||'')}</td><td>${String(r.caseName||'')}</td><td>${String(r.caseAmount||'')}</td></tr>`).join('');b.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{const all=tcProjects(),r=all.find(x=>x.key===btn.dataset.k);if(!r)return;if(btn.dataset.a==='edit'){tcProjectEditKey=r.key;const m=String(r.no||'').match(/^(G5DD|G5DE)(.*)$/);$t('tcNoPrefix').value=m?m[1]:'G5DE';$t('tcProjectNo').value=m?m[2]:r.no||'';$t('tcProjectCase').value=r.caseName||'';$t('tcProjectAmount').value=r.caseAmount||''}if(btn.dataset.a==='del'){if(!confirm('確定刪除這筆？'))return;tcSaveProjects(all.filter(x=>x.key!==r.key));const ds=tcDetails();delete ds[r.key];tcSaveDetails(ds);tcRenderProjects()}});tcRenderAssignmentOptions()}
+function tcCurrentProject(){const key=$t('tcAssignmentSelect')?.value||'';return tcProjects().find(x=>x.key===key)||null}
 const TC_DETAIL_KEY='sbd_taichung_purchase_details_v1';
 function tcDetails(){try{return JSON.parse(localStorage.getItem(TC_DETAIL_KEY)||'{}')}catch(e){return {}}}
 function tcSaveDetails(o){localStorage.setItem(TC_DETAIL_KEY,JSON.stringify(o))}
 function tcDetailData(){return {caseName:$t('tcCaseName')?.value||'',no:$t('tcNo')?.value||'',customer:$t('tcCustomer')?.value||'',productName:$t('tcProductName')?.value||'',frontEdge:$t('tcFrontEdge')?.value||'',backWall:$t('tcBackWall')?.value||'',items:items(),updatedAt:new Date().toISOString()}}
-function tcDetailSave(showMsg=true){const p=tcCurrentProject();const key=p?.key||sessionStorage.getItem('sbd_tc_current_project')||($t('tcNo')?.value||'').trim();if(!key)return alert('請先從上方選擇或建立一筆資料');const all=tcDetails();all[key]=tcDetailData();tcSaveDetails(all);if(showMsg)alert('台中採購單已儲存')}
+function tcDetailSave(showMsg=true){const p=tcCurrentProject();if(!p)return alert('請先在「指定單號／案名」選擇要配對的資料');const all=tcDetails();all[p.key]=tcDetailData();tcSaveDetails(all);if(showMsg)alert('台中採購單已儲存並指定到：'+(p.no||'')+'｜'+(p.caseName||''))}
 function tcDetailLoad(key){const d=tcDetails()[key];if(!d)return false;$t('tcCaseName').value=d.caseName||'';$t('tcNo').value=d.no||'';$t('tcCustomer').value=d.customer||'';$t('tcProductName').value=d.productName||'';$t('tcFrontEdge').value=d.frontEdge||'';$t('tcBackWall').value=d.backWall||'';$t('tcItemsBody').innerHTML='';(d.items||[]).forEach(add);if(!(d.items||[]).length)add();calc();return true}
 function add(item={}){
  const tr=document.createElement('tr');
@@ -2861,7 +2867,8 @@ async function download(){
  try{const bin=atob(TC_TEMPLATE_B64),u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);const wb=new ExcelJS.Workbook();await wb.xlsx.load(u8.buffer);
  const anchors=[[6,9,12,13,16,17,19],[6,12,14,20,22],[6,8,9,11,13,15,18],[6,8,13]];
  const order=$t('tcNo').value.trim();
- const quoteUntaxed=String(tcCurrentProject()?.caseAmount??'').trim();
+ const assigned=tcCurrentProject();if(!assigned)return alert('請先在「指定單號／案名」選擇要匯出的配對資料');
+ const quoteUntaxed=String(assigned.caseAmount??'').trim();
  const grandTotal=Math.round(its.reduce((s,x)=>s+x.qty*x.price,0)*100)/100;
  wb.worksheets.forEach((ws,si)=>{
    if(order)ws.getCell('B3').value=order;
@@ -2883,10 +2890,12 @@ async function download(){
  const buf=await wb.xlsx.writeBuffer(),blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=`台中採購單_${($t('tcNo').value||$t('tcCaseName').value||'未命名').replace(/[\/:*?"<>|]/g,'_')}.xlsx`;a.click();setTimeout(()=>URL.revokeObjectURL(u),1200);
  }catch(e){console.error(e);alert('台中採購單 Excel 產生失敗：'+e.message)}
 }
-function bind(){const tab=$t('taichungPurchaseTabBtn');if(tab)tab.onclick=e=>{e.preventDefault();open()};tcRenderProjects();$t('tcProjectNewBtn')?.addEventListener('click',tcProjectClear);$t('tcProjectSaveBtn')?.addEventListener('click',tcProjectSave);$t('tcProjectFilter')?.addEventListener('change',tcRenderProjects);['tcNoPrefix','tcProjectNo','tcProjectCase','tcProjectAmount'].forEach(id=>$t(id)?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcProjectSave()}}));$t('tcAddItemBtn')?.addEventListener('click',()=>add());$t('tcDetailSaveBtn')?.addEventListener('click',()=>tcDetailSave(true));$t('tcExcelBtn')?.addEventListener('click',download);$t('tcClearBtn')?.addEventListener('click',clear);if(!$t('tcItemsBody')?.children.length)clear();
+function bind(){const tab=$t('taichungPurchaseTabBtn');if(tab)tab.onclick=e=>{e.preventDefault();open()};tcRenderProjects();$t('tcProjectNewBtn')?.addEventListener('click',tcProjectClear);$t('tcProjectSaveBtn')?.addEventListener('click',tcProjectSave);$t('tcProjectFilter')?.addEventListener('change',tcRenderProjects);$t('tcAssignmentSelect')?.addEventListener('change',()=>{});['tcNoPrefix','tcProjectNo','tcProjectCase','tcProjectAmount'].forEach(id=>$t(id)?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcProjectSave()}}));$t('tcAddItemBtn')?.addEventListener('click',()=>add());$t('tcDetailSaveBtn')?.addEventListener('click',()=>tcDetailSave(true));$t('tcExcelBtn')?.addEventListener('click',download);$t('tcClearBtn')?.addEventListener('click',clear);if(!$t('tcItemsBody')?.children.length)clear();
  const sync=()=>{if(document.body.classList.contains('admin-account'))tab?.classList.remove('hidden');else tab?.classList.add('hidden')};sync();new MutationObserver(sync).observe(document.body,{attributes:true,attributeFilter:['class']});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();
+// 台中採購單與其他功能頁完全分開：切換其他頁籤時強制隱藏台中採購單。
+document.querySelectorAll('.featureTabs button').forEach(b=>{if(b.id!=='taichungPurchaseTabBtn')b.addEventListener('click',()=>{$t('taichungPurchaseView')?.classList.add('hidden')});});
 })();
 </script>
 </body>
