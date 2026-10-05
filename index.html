@@ -574,8 +574,8 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
   <div class="purchaseCard">
     <h2 class="purchaseTitle">單號／案名管理</h2>
     <div class="purchaseActions">
-      <button type="button" id="poProjectNewBtn">＋ 新增單號／案名</button>
-      <button type="button" id="poProjectSaveBtn" class="primary">儲存單號／案名</button>
+      <button type="button" id="poProjectNewBtn">＋ 新增</button>
+      <button type="button" id="poProjectSaveBtn" class="primary">儲存</button>
       <select id="poProjectFilter" aria-label="單號篩選"><option value="">全部單號</option><option value="G5DD">G5DD</option><option value="G5DE">G5DE</option></select>
     </div>
     <div class="purchaseMeta">
@@ -768,8 +768,8 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
   <div class="purchaseCard">
     <h2 class="purchaseTitle">報價單合計（未稅）</h2>
     <div class="purchaseActions">
-      <button type="button" id="tcProjectNewBtn">＋ 新增單號／案名</button>
-      <button type="button" id="tcProjectSaveBtn" class="primary">儲存單號／案名</button>
+      <button type="button" id="tcProjectNewBtn">＋ 新增</button>
+      <button type="button" id="tcProjectSaveBtn" class="primary">儲存</button>
       <select id="tcProjectFilter" aria-label="單號篩選"><option value="">全部單號</option><option value="G5DD">G5DD</option><option value="G5DE">G5DE</option></select>
     </div>
     <div class="purchaseMeta">
@@ -788,7 +788,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
       <label>案名<input id="tcCaseName" placeholder="請輸入案名"></label>
       <label>編號<input id="tcNo" placeholder="請輸入編號"></label>
       <label>客戶名稱<input id="tcCustomer" placeholder="請輸入客戶名稱"></label>
-      <label>色號<input id="tcColorNo" placeholder="請輸入色號"></label>
+      
       <label>品名<input id="tcProductName" placeholder="請輸入品名"></label>
       <label>前緣（cm）<input id="tcFrontEdge" type="text" placeholder="可輸入數字、英文、符號"></label>
       <label>背牆（cm）<input id="tcBackWall" type="text" placeholder="可輸入數字、英文、符號"></label>
@@ -796,7 +796,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
     <div class="quoteItemsWrap"><table class="quoteItems"><thead><tr><th>項數</th><th>名稱</th><th>尺寸</th><th>總公分數</th><th>單位</th><th>單價</th><th>合計</th><th></th></tr></thead><tbody id="tcItemsBody"></tbody></table></div>
     <div class="quoteManageTools"><button type="button" id="tcAddItemBtn">＋ 新增項目</button><span class="hint">直接輸入資料，不需要 PDF 匯入</span></div>
     <div class="quoteSummary"><span>合計</span><span id="tcSubtotal">0</span></div>
-    <div class="quoteActions"><button type="button" id="tcExcelBtn" class="primary">套用台中採購單範本下載 Excel</button><button type="button" id="tcClearBtn">清空</button></div>
+    <div class="quoteActions"><button type="button" id="tcDetailSaveBtn" class="primary">儲存台中採購單</button><button type="button" id="tcExcelBtn" class="primary">套用台中採購單範本下載 Excel</button><button type="button" id="tcClearBtn">清空</button></div>
   </div>
 </section>
 </main></section>
@@ -2835,9 +2835,15 @@ function tcProjects(){try{return JSON.parse(localStorage.getItem(TC_PROJECT_KEY)
 function tcSaveProjects(a){localStorage.setItem(TC_PROJECT_KEY,JSON.stringify(a))}
 function tcProjectClear(){tcProjectEditKey=null;$t('tcNoPrefix').value='G5DE';$t('tcProjectNo').value='';$t('tcProjectCase').value='';$t('tcProjectAmount').value='';}
 function tcFullNo(){const x=$t('tcProjectNo')?.value.trim()||'';return x?(($t('tcNoPrefix')?.value||'')+x):''}
-function tcProjectSave(){const no=tcFullNo(),caseName=$t('tcProjectCase').value.trim(),caseAmount=$t('tcProjectAmount').value.trim();if(!no&&!caseName)return alert('請輸入單號或案名');const a=tcProjects(),key=tcProjectEditKey||Date.now().toString(),rec={key,no,caseName,caseAmount,updatedAt:new Date().toISOString()};const i=a.findIndex(x=>x.key===key);if(i>=0)a[i]=rec;else a.unshift(rec);tcSaveProjects(a);tcProjectEditKey=null;tcRenderProjects();$t('tcNo').value=no;$t('tcCaseName').value=caseName;tcProjectClear();}
-function tcRenderProjects(){const b=$t('tcProjectRecords');if(!b)return;const filter=$t('tcProjectFilter')?.value||'';const np=v=>{const m=String(v||'').match(/^(?:G5DD|G5DE)(\d+)/);return m?BigInt(m[1]):0n};const a=tcProjects().filter(r=>!filter||String(r.no||'').startsWith(filter)).sort((x,y)=>{const a=np(x.no),b=np(y.no);return a<b?-1:a>b?1:0});b.innerHTML=a.map(r=>`<tr><td><button data-a="use" data-k="${r.key}">帶入</button><button data-a="edit" data-k="${r.key}">修改</button><button data-a="del" data-k="${r.key}">刪除</button></td><td>${String(r.no||'')}</td><td>${String(r.caseName||'')}</td><td>${String(r.caseAmount||'')}</td></tr>`).join('');b.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{const all=tcProjects(),r=all.find(x=>x.key===btn.dataset.k);if(!r)return;if(btn.dataset.a==='use'){$t('tcNo').value=r.no||'';$t('tcCaseName').value=r.caseName||'';sessionStorage.setItem('sbd_tc_current_project',r.key)}if(btn.dataset.a==='edit'){tcProjectEditKey=r.key;const m=String(r.no||'').match(/^(G5DD|G5DE)(.*)$/);$t('tcNoPrefix').value=m?m[1]:'G5DE';$t('tcProjectNo').value=m?m[2]:r.no||'';$t('tcProjectCase').value=r.caseName||'';$t('tcProjectAmount').value=r.caseAmount||''}if(btn.dataset.a==='del'){if(!confirm('確定刪除這筆？'))return;tcSaveProjects(all.filter(x=>x.key!==r.key));tcRenderProjects()}})}
+function tcProjectSave(){const no=tcFullNo(),caseName=$t('tcProjectCase').value.trim(),caseAmount=$t('tcProjectAmount').value.trim();if(!no&&!caseName)return alert('請輸入單號或案名');const a=tcProjects(),key=tcProjectEditKey||Date.now().toString(),rec={key,no,caseName,caseAmount,updatedAt:new Date().toISOString()};const i=a.findIndex(x=>x.key===key);if(i>=0)a[i]=rec;else a.unshift(rec);tcSaveProjects(a);sessionStorage.setItem('sbd_tc_current_project',key);tcProjectEditKey=null;tcRenderProjects();$t('tcNo').value=no;$t('tcCaseName').value=caseName;tcProjectClear();}
+function tcRenderProjects(){const b=$t('tcProjectRecords');if(!b)return;const filter=$t('tcProjectFilter')?.value||'';const np=v=>{const m=String(v||'').match(/^(?:G5DD|G5DE)(\d+)/);return m?BigInt(m[1]):0n};const a=tcProjects().filter(r=>!filter||String(r.no||'').startsWith(filter)).sort((x,y)=>{const a=np(x.no),b=np(y.no);return a<b?-1:a>b?1:0});b.innerHTML=a.map(r=>`<tr><td><button data-a="use" data-k="${r.key}">帶入</button><button data-a="edit" data-k="${r.key}">修改</button><button data-a="del" data-k="${r.key}">刪除</button></td><td>${String(r.no||'')}</td><td>${String(r.caseName||'')}</td><td>${String(r.caseAmount||'')}</td></tr>`).join('');b.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{const all=tcProjects(),r=all.find(x=>x.key===btn.dataset.k);if(!r)return;if(btn.dataset.a==='use'){sessionStorage.setItem('sbd_tc_current_project',r.key);$t('tcNo').value=r.no||'';$t('tcCaseName').value=r.caseName||'';if(!tcDetailLoad(r.key)){clear();$t('tcNo').value=r.no||'';$t('tcCaseName').value=r.caseName||''}}if(btn.dataset.a==='edit'){tcProjectEditKey=r.key;const m=String(r.no||'').match(/^(G5DD|G5DE)(.*)$/);$t('tcNoPrefix').value=m?m[1]:'G5DE';$t('tcProjectNo').value=m?m[2]:r.no||'';$t('tcProjectCase').value=r.caseName||'';$t('tcProjectAmount').value=r.caseAmount||''}if(btn.dataset.a==='del'){if(!confirm('確定刪除這筆？'))return;tcSaveProjects(all.filter(x=>x.key!==r.key));const ds=tcDetails();delete ds[r.key];tcSaveDetails(ds);tcRenderProjects()}})}
 function tcCurrentProject(){const key=sessionStorage.getItem('sbd_tc_current_project');const a=tcProjects();return a.find(x=>x.key===key)||a.find(x=>x.no===($t('tcNo')?.value||''))||null}
+const TC_DETAIL_KEY='sbd_taichung_purchase_details_v1';
+function tcDetails(){try{return JSON.parse(localStorage.getItem(TC_DETAIL_KEY)||'{}')}catch(e){return {}}}
+function tcSaveDetails(o){localStorage.setItem(TC_DETAIL_KEY,JSON.stringify(o))}
+function tcDetailData(){return {caseName:$t('tcCaseName')?.value||'',no:$t('tcNo')?.value||'',customer:$t('tcCustomer')?.value||'',productName:$t('tcProductName')?.value||'',frontEdge:$t('tcFrontEdge')?.value||'',backWall:$t('tcBackWall')?.value||'',items:items(),updatedAt:new Date().toISOString()}}
+function tcDetailSave(showMsg=true){const p=tcCurrentProject();const key=p?.key||sessionStorage.getItem('sbd_tc_current_project')||($t('tcNo')?.value||'').trim();if(!key)return alert('請先從上方選擇或建立一筆資料');const all=tcDetails();all[key]=tcDetailData();tcSaveDetails(all);if(showMsg)alert('台中採購單已儲存')}
+function tcDetailLoad(key){const d=tcDetails()[key];if(!d)return false;$t('tcCaseName').value=d.caseName||'';$t('tcNo').value=d.no||'';$t('tcCustomer').value=d.customer||'';$t('tcProductName').value=d.productName||'';$t('tcFrontEdge').value=d.frontEdge||'';$t('tcBackWall').value=d.backWall||'';$t('tcItemsBody').innerHTML='';(d.items||[]).forEach(add);if(!(d.items||[]).length)add();calc();return true}
 function add(item={}){
  const tr=document.createElement('tr');
  tr.innerHTML=`<td class="tcidx"></td><td><input class="tcname" list="qNameOptionsList" placeholder="選擇或直接輸入" value="${String(item.name||'').replace(/"/g,'&quot;')}"></td><td><input class="tcsize" value="${String(item.size||'').replace(/"/g,'&quot;')}"></td><td><input class="tcqty" type="number" min="0" step="0.01" value="${item.qty??0}"></td><td><select class="tcunit"><option value=""></option><option value="cm">cm</option><option value="式">式</option><option value="片">片</option><option value="支">支</option><option value="個">個</option></select></td><td><input class="tcprice" type="number" min="0" step="0.01" value="${item.price??0}"></td><td class="tcamt">0</td><td><button type="button" class="tcdel">刪</button></td>`;
@@ -2877,7 +2883,7 @@ async function download(){
  const buf=await wb.xlsx.writeBuffer(),blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=`台中採購單_${($t('tcNo').value||$t('tcCaseName').value||'未命名').replace(/[\/:*?"<>|]/g,'_')}.xlsx`;a.click();setTimeout(()=>URL.revokeObjectURL(u),1200);
  }catch(e){console.error(e);alert('台中採購單 Excel 產生失敗：'+e.message)}
 }
-function bind(){const tab=$t('taichungPurchaseTabBtn');if(tab)tab.onclick=e=>{e.preventDefault();open()};tcRenderProjects();$t('tcProjectNewBtn')?.addEventListener('click',tcProjectClear);$t('tcProjectSaveBtn')?.addEventListener('click',tcProjectSave);$t('tcProjectFilter')?.addEventListener('change',tcRenderProjects);['tcNoPrefix','tcProjectNo','tcProjectCase','tcProjectAmount'].forEach(id=>$t(id)?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcProjectSave()}}));$t('tcAddItemBtn')?.addEventListener('click',()=>add());$t('tcExcelBtn')?.addEventListener('click',download);$t('tcClearBtn')?.addEventListener('click',clear);if(!$t('tcItemsBody')?.children.length)clear();
+function bind(){const tab=$t('taichungPurchaseTabBtn');if(tab)tab.onclick=e=>{e.preventDefault();open()};tcRenderProjects();$t('tcProjectNewBtn')?.addEventListener('click',tcProjectClear);$t('tcProjectSaveBtn')?.addEventListener('click',tcProjectSave);$t('tcProjectFilter')?.addEventListener('change',tcRenderProjects);['tcNoPrefix','tcProjectNo','tcProjectCase','tcProjectAmount'].forEach(id=>$t(id)?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcProjectSave()}}));$t('tcAddItemBtn')?.addEventListener('click',()=>add());$t('tcDetailSaveBtn')?.addEventListener('click',()=>tcDetailSave(true));$t('tcExcelBtn')?.addEventListener('click',download);$t('tcClearBtn')?.addEventListener('click',clear);if(!$t('tcItemsBody')?.children.length)clear();
  const sync=()=>{if(document.body.classList.contains('admin-account'))tab?.classList.remove('hidden');else tab?.classList.add('hidden')};sync();new MutationObserver(sync).observe(document.body,{attributes:true,attributeFilter:['class']});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();
