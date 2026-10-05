@@ -791,8 +791,6 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
       <label>客戶名稱<input id="tcCustomer" placeholder="請輸入客戶名稱"></label>
       
       <label>品名<input id="tcProductName" placeholder="請輸入品名"></label>
-      <label>前緣（cm）<input id="tcFrontEdge" type="text" placeholder="可輸入數字、英文、符號"></label>
-      <label>背牆（cm）<input id="tcBackWall" type="text" placeholder="可輸入數字、英文、符號"></label>
     </div>
     <div class="quoteItemsWrap"><table class="quoteItems"><thead><tr><th>項數</th><th>名稱</th><th>尺寸</th><th>總公分數</th><th>單位</th><th>單價</th><th>合計</th><th></th></tr></thead><tbody id="tcItemsBody"></tbody></table></div>
     <div class="quoteManageTools"><button type="button" id="tcAddItemBtn">＋ 新增項目</button><span class="hint">直接輸入資料，不需要 PDF 匯入</span></div>
@@ -803,7 +801,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
     <h2 class="purchaseTitle">台中採購單明細表</h2>
     <div class="purchaseTableWrap" style="max-height:none">
       <table class="purchaseTable" style="min-width:1250px">
-        <thead><tr><th>操作</th><th>指定單號</th><th>指定案名</th><th>客戶名稱</th><th>品名</th><th>前緣</th><th>背牆</th><th>明細內容</th><th>合計</th></tr></thead>
+        <thead><tr><th>操作</th><th>指定單號</th><th>指定案名</th><th>客戶名稱</th><th>品名</th><th>明細內容</th><th>合計</th></tr></thead>
         <tbody id="tcSavedDetailRows"></tbody>
       </table>
     </div>
@@ -2857,16 +2855,16 @@ function tcCurrentProject(){const key=$t('tcAssignmentSelect')?.value||'';return
 const TC_DETAIL_KEY='sbd_taichung_purchase_details_v1';
 function tcDetails(){try{return JSON.parse(localStorage.getItem(TC_DETAIL_KEY)||'{}')}catch(e){return {}}}
 function tcSaveDetails(o){localStorage.setItem(TC_DETAIL_KEY,JSON.stringify(o))}
-function tcDetailData(){return {caseName:$t('tcCaseName')?.value||'',no:$t('tcNo')?.value||'',customer:$t('tcCustomer')?.value||'',productName:$t('tcProductName')?.value||'',frontEdge:$t('tcFrontEdge')?.value||'',backWall:$t('tcBackWall')?.value||'',items:items(),updatedAt:new Date().toISOString()}}
+function tcDetailData(){return {caseName:$t('tcCaseName')?.value||'',no:$t('tcNo')?.value||'',customer:$t('tcCustomer')?.value||'',productName:$t('tcProductName')?.value||'',items:items(),updatedAt:new Date().toISOString()}}
 function tcDetailSave(showMsg=true){const p=tcCurrentProject();if(!p)return alert('請先在「指定單號／案名」選擇要配對的資料');const all=tcDetails();all[p.key]=tcDetailData();tcSaveDetails(all);tcRenderSavedDetails();if(showMsg)alert('台中採購單已儲存並指定到：'+(p.no||'')+'｜'+(p.caseName||''))}
-function tcDetailLoad(key){const d=tcDetails()[key];if(!d)return false;$t('tcCaseName').value=d.caseName||'';$t('tcNo').value=d.no||'';$t('tcCustomer').value=d.customer||'';$t('tcProductName').value=d.productName||'';$t('tcFrontEdge').value=d.frontEdge||'';$t('tcBackWall').value=d.backWall||'';$t('tcItemsBody').innerHTML='';(d.items||[]).forEach(add);if(!(d.items||[]).length)add();calc();return true}
+function tcDetailLoad(key){const d=tcDetails()[key];if(!d)return false;$t('tcCaseName').value=d.caseName||'';$t('tcNo').value=d.no||'';$t('tcCustomer').value=d.customer||'';$t('tcProductName').value=d.productName||'';$t('tcItemsBody').innerHTML='';(d.items||[]).forEach(add);if(!(d.items||[]).length)add();calc();return true}
 function tcEsc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function tcRenderSavedDetails(){
  const body=$t('tcSavedDetailRows'),empty=$t('tcSavedDetailEmpty');if(!body)return;
  const ds=tcDetails(),ps=tcProjects(),rows=[];
  Object.keys(ds).forEach(key=>{const d=ds[key]||{},p=ps.find(x=>x.key===key)||{};const its=Array.isArray(d.items)?d.items:[];const total=its.reduce((n,x)=>n+Number(x.qty||0)*Number(x.price||0),0);const detail=its.length?its.map((x,i)=>`${i+1}. ${x.name||''}${x.size?'｜尺寸 '+x.size:''}${x.qty!==''&&x.qty!=null?'｜'+x.qty+' '+(x.unit||''):''}${x.price!==''&&x.price!=null?'｜單價 '+money(x.price):''}${x.qty!==''&&x.qty!=null&&x.price!==''&&x.price!=null?'｜合計 '+money(Number(x.qty||0)*Number(x.price||0)):''}`).join('<br>'):'—';rows.push({key,d,p,total,detail})});
  rows.sort((a,b)=>String(b.d.updatedAt||'').localeCompare(String(a.d.updatedAt||'')));
- body.innerHTML=rows.map(r=>`<tr><td style="white-space:nowrap"><button type="button" data-tc-act="edit" data-k="${tcEsc(r.key)}">修改</button> <button type="button" data-tc-act="del" data-k="${tcEsc(r.key)}" style="background:#d62d2d;color:#fff;border-color:#d62d2d">刪除</button></td><td>${tcEsc(r.p.no||'')}</td><td>${tcEsc(r.p.caseName||'')}</td><td>${tcEsc(r.d.customer||'')}</td><td>${tcEsc(r.d.productName||'')}</td><td>${tcEsc(r.d.frontEdge||'')}</td><td>${tcEsc(r.d.backWall||'')}</td><td style="text-align:left;white-space:normal;min-width:420px;line-height:1.65">${r.detail}</td><td>${money(r.total)}</td></tr>`).join('');
+ body.innerHTML=rows.map(r=>`<tr><td style="white-space:nowrap"><button type="button" data-tc-act="edit" data-k="${tcEsc(r.key)}">修改</button> <button type="button" data-tc-act="del" data-k="${tcEsc(r.key)}" style="background:#d62d2d;color:#fff;border-color:#d62d2d">刪除</button></td><td>${tcEsc(r.p.no||'')}</td><td>${tcEsc(r.p.caseName||'')}</td><td>${tcEsc(r.d.customer||'')}</td><td>${tcEsc(r.d.productName||'')}</td><td style="text-align:left;white-space:normal;min-width:420px;line-height:1.65">${r.detail}</td><td>${money(r.total)}</td></tr>`).join('');
  if(empty)empty.classList.toggle('hidden',rows.length>0);
  body.querySelectorAll('button[data-tc-act]').forEach(btn=>btn.onclick=()=>{const key=btn.dataset.k;if(btn.dataset.tcAct==='edit'){if($t('tcAssignmentSelect'))$t('tcAssignmentSelect').value=key;tcDetailLoad(key);$t('taichungPurchaseView')?.scrollIntoView({behavior:'smooth',block:'start'});}else{const p=ps.find(x=>x.key===key)||{};if(!confirm(`確定刪除 ${p.no||''} ${p.caseName||''} 的台中採購單明細？`))return;const all=tcDetails();delete all[key];tcSaveDetails(all);if($t('tcAssignmentSelect')?.value===key)clear();tcRenderSavedDetails();}});
 }
@@ -2879,17 +2877,22 @@ function add(item={}){
 function renum(){[...$t('tcItemsBody').children].forEach((r,i)=>r.querySelector('.tcidx').textContent=i+1)}
 function items(){return [...$t('tcItemsBody').children].map(r=>({name:r.querySelector('.tcname').value.trim(),size:r.querySelector('.tcsize').value.trim(),qty:Number(r.querySelector('.tcqty').value||0),unit:r.querySelector('.tcunit').value,price:Number(r.querySelector('.tcprice').value||0)})).filter(x=>x.name||x.size||x.qty||x.price)}
 function calc(){let n=0;[...$t('tcItemsBody').children].forEach(r=>{const a=Number(r.querySelector('.tcqty').value||0)*Number(r.querySelector('.tcprice').value||0);r.querySelector('.tcamt').textContent=money(a);n+=a});$t('tcSubtotal').textContent=money(n)}
-function clear(){['tcCaseName','tcNo','tcCustomer','tcColorNo','tcProductName','tcFrontEdge','tcBackWall'].forEach(id=>{if($t(id))$t(id).value=''});$t('tcItemsBody').innerHTML='';add()}
+function clear(){['tcCaseName','tcNo','tcCustomer','tcColorNo','tcProductName'].forEach(id=>{if($t(id))$t(id).value=''});$t('tcItemsBody').innerHTML='';add()}
 function open(){if(typeof isAdminAccount==='function'&&!isAdminAccount())return;if(typeof renderQNameDatalist==='function')renderQNameDatalist();['calendarView','quoteView','purchaseView','installStatsView','overtimeView','invoiceCustomerView'].forEach(id=>$t(id)?.classList.add('hidden'));$t('taichungPurchaseView').classList.remove('hidden');$t('calendarControls')?.classList.add('hidden');document.querySelectorAll('.featureTabs button').forEach(b=>b.classList.remove('active'));$t('taichungPurchaseTabBtn').classList.add('active');tcRenderSavedDetails()}
 function copyStyle(src,dst){dst.style=JSON.parse(JSON.stringify(src.style||{}));dst.numFmt=src.numFmt;dst.alignment=JSON.parse(JSON.stringify(src.alignment||{}));dst.border=JSON.parse(JSON.stringify(src.border||{}));dst.fill=JSON.parse(JSON.stringify(src.fill||{}));dst.font=JSON.parse(JSON.stringify(src.font||{}));dst.protection=JSON.parse(JSON.stringify(src.protection||{}));}
 async function download(){
- const its=items();if(!its.length)return alert('請先輸入至少一筆採購項目');if(typeof ExcelJS==='undefined')return alert('Excel 元件尚未載入');
+ const assigned=tcCurrentProject();if(!assigned)return alert('請先在「指定單號／案名」選擇要匯出的配對資料');
+ let its=items();
+ const saved=tcDetails()[assigned.key]||null;
+ // 下載時直接使用目前畫面明細；若畫面沒有明細，就自動抓這個指定單號已儲存的明細，不必重新輸入。
+ if(!its.length&&saved&&Array.isArray(saved.items))its=saved.items;
+ if(!its.length)return alert('這個指定單號目前沒有已儲存的台中採購明細');
+ if(typeof ExcelJS==='undefined')return alert('Excel 元件尚未載入');
  try{const bin=atob(TC_TEMPLATE_B64),u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);const wb=new ExcelJS.Workbook();await wb.xlsx.load(u8.buffer);
  const anchors=[[6,9,12,13,16,17,19],[6,12,14,20,22],[6,8,9,11,13,15,18],[6,8,13]];
- const order=$t('tcNo').value.trim();
- const assigned=tcCurrentProject();if(!assigned)return alert('請先在「指定單號／案名」選擇要匯出的配對資料');
+ const order=String((saved&&saved.no)||assigned.no||$t('tcNo').value||'').trim();
  const quoteUntaxed=String(assigned.caseAmount??'').trim();
- const grandTotal=Math.round(its.reduce((s,x)=>s+x.qty*x.price,0)*100)/100;
+ const grandTotal=Math.round(its.reduce((s,x)=>s+Number(x.qty||0)*Number(x.price||0),0)*100)/100;
  wb.worksheets.forEach((ws,si)=>{
    if(order)ws.getCell('B3').value=order;
    const rows=anchors[si]||[];
@@ -2907,7 +2910,7 @@ async function download(){
      ws.getCell('J'+r).value=quoteUntaxed;
    });
  });
- const buf=await wb.xlsx.writeBuffer(),blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=`台中採購單_${($t('tcNo').value||$t('tcCaseName').value||'未命名').replace(/[\/:*?"<>|]/g,'_')}.xlsx`;a.click();setTimeout(()=>URL.revokeObjectURL(u),1200);
+ const buf=await wb.xlsx.writeBuffer(),blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=`台中採購單_${(order||assigned.caseName||'未命名').replace(/[\/:*?"<>|]/g,'_')}.xlsx`;a.click();setTimeout(()=>URL.revokeObjectURL(u),1200);
  }catch(e){console.error(e);alert('台中採購單 Excel 產生失敗：'+e.message)}
 }
 function bind(){const tab=$t('taichungPurchaseTabBtn');if(tab)tab.onclick=e=>{e.preventDefault();open()};tcRenderProjects();$t('tcProjectNewBtn')?.addEventListener('click',tcProjectClear);$t('tcProjectSaveBtn')?.addEventListener('click',tcProjectSave);$t('tcProjectFilter')?.addEventListener('change',tcRenderProjects);$t('tcAssignmentSelect')?.addEventListener('change',()=>{});['tcNoPrefix','tcProjectNo','tcProjectCase','tcProjectAmount'].forEach(id=>$t(id)?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcProjectSave()}}));$t('tcAddItemBtn')?.addEventListener('click',()=>add());$t('tcDetailSaveBtn')?.addEventListener('click',()=>tcDetailSave(true));$t('tcExcelBtn')?.addEventListener('click',download);$t('tcClearBtn')?.addEventListener('click',clear);if(!$t('tcItemsBody')?.children.length)clear();
