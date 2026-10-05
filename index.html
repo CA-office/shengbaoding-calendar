@@ -582,9 +582,10 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
       <label>單號<div style="display:flex;gap:6px"><select id="poNoPrefix" style="width:92px;flex:0 0 92px"><option value="G5DD">G5DD</option><option value="G5DE" selected>G5DE</option></select><input id="poNo" inputmode="numeric" placeholder="後面輸入數字" style="min-width:0;flex:1"></div></label>
       <label>案名<input id="poCase" placeholder="例如 遵櫃-三峽"></label>
       <label>案件金額<input id="poCaseAmount" inputmode="decimal" placeholder="例如 68088"></label>
+      <label>報價單合計（未稅）<input id="poQuoteUntaxed" type="text" placeholder="可輸入中文、數字、英文、符號"></label>
     </div>
     <table class="purchaseRecords">
-      <thead><tr><th>操作</th><th>單號</th><th>案名</th><th>案件金額</th></tr></thead>
+      <thead><tr><th>操作</th><th>單號</th><th>案名</th><th>案件金額</th><th>報價單合計（未稅）</th></tr></thead>
       <tbody id="poProjectRecords"></tbody>
     </table>
   </div>
@@ -778,7 +779,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
     </div>
     <div class="quoteCard" style="margin-top:12px;padding:12px">
       <div class="quoteGrid" style="grid-template-columns:minmax(220px,420px)">
-        <label>報價單合計（未稅）<input id="tcQuoteUntaxed" type="number" min="0" step="1" inputmode="decimal" placeholder="請輸入報價單未稅合計"></label>
+        <label>報價單合計（未稅）<input id="tcQuoteUntaxed" type="text" placeholder="可輸入中文、數字、英文、符號"></label>
       </div>
     </div>
     <div class="quoteItemsWrap"><table class="quoteItems"><thead><tr><th>項數</th><th>名稱</th><th>尺寸</th><th>總公分數</th><th>單位</th><th>單價</th><th>合計</th><th></th></tr></thead><tbody id="tcItemsBody"></tbody></table></div>
@@ -2197,18 +2198,18 @@ const poEsc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":
 
 function poProjects(){try{return JSON.parse(localStorage.getItem("sbd_purchase_projects")||"[]")}catch(e){return []}}
 function poSaveProjects(a){localStorage.setItem("sbd_purchase_projects",JSON.stringify(a))}
-function poProjectClear(){poProjectEditKey=null;if($("poNoPrefix"))$("poNoPrefix").value="G5DE";$("poNo").value="";$("poCase").value="";$("poCaseAmount").value="";}
+function poProjectClear(){poProjectEditKey=null;if($("poNoPrefix"))$("poNoPrefix").value="G5DE";$("poNo").value="";$("poCase").value="";$("poCaseAmount").value="";if($("poQuoteUntaxed"))$("poQuoteUntaxed").value="";if($("poQuoteUntaxed"))$("poQuoteUntaxed").value="";}
 function poProjectSave(){
   if(!isAdminAccount())return;
   const noSuffix=$("poNo").value.trim();
-  const no=noSuffix ? (($("poNoPrefix")?.value||"")+noSuffix) : "", caseName=$("poCase").value.trim(), caseAmount=Number(String($("poCaseAmount").value).replace(/,/g,"")||0);
+  const no=noSuffix ? (($("poNoPrefix")?.value||"")+noSuffix) : "", caseName=$("poCase").value.trim(), caseAmount=Number(String($("poCaseAmount").value).replace(/,/g,"")||0), quoteUntaxed=($("poQuoteUntaxed")?.value||"").trim();
   if(!no&&!caseName)return alert("請輸入單號或案名");
   const a=poProjects(), key=poProjectEditKey||Date.now().toString();
-  const rec={key,no,caseName,caseAmount,updatedAt:new Date().toISOString()};
+  const rec={key,no,caseName,caseAmount,quoteUntaxed,updatedAt:new Date().toISOString()};
   const i=a.findIndex(x=>x.key===key); if(i>=0)a[i]=rec; else a.unshift(rec);
   poSaveProjects(a);poProjectEditKey=null;poRenderProjects();poRenderGroups();
   // 儲存後直接進入下一筆新增狀態：保留目前前綴，其餘欄位清空，游標回到單號數字欄
-  $("poNo").value="";$("poCase").value="";$("poCaseAmount").value="";
+  $("poNo").value="";$("poCase").value="";$("poCaseAmount").value="";if($("poQuoteUntaxed"))$("poQuoteUntaxed").value="";
   requestAnimationFrame(()=>{const el=$("poNo");if(el){el.focus();el.select();}});
 }
 function poRenderProjects(){
@@ -2216,10 +2217,10 @@ function poRenderProjects(){
   const filter=$("poProjectFilter")?.value??"";
   const numPart=v=>{const m=String(v||"").match(/^(?:G5DD|G5DE)(\d+)/);return m?BigInt(m[1]):0n};
   const a=poProjects().filter(r=>!filter || String(r.no||"").startsWith(filter)).sort((x,y)=>{const a=numPart(x.no),b=numPart(y.no);return a<b?-1:a>b?1:String(x.no||"").localeCompare(String(y.no||""));});
-  b.innerHTML=a.map(r=>`<tr><td><button data-a="edit" data-k="${r.key}">修改</button><button data-a="del" data-k="${r.key}">刪除</button></td><td>${poEsc(r.no)}</td><td>${poEsc(r.caseName)}</td><td>${poFmt(r.caseAmount)}</td></tr>`).join("");
+  b.innerHTML=a.map(r=>`<tr><td><button data-a="edit" data-k="${r.key}">修改</button><button data-a="del" data-k="${r.key}">刪除</button></td><td>${poEsc(r.no)}</td><td>${poEsc(r.caseName)}</td><td>${poFmt(r.caseAmount)}</td><td>${poEsc(r.quoteUntaxed||"")}</td></tr>`).join("");
   b.querySelectorAll("button").forEach(btn=>btn.onclick=()=>{
     const a=poProjects(),r=a.find(x=>x.key===btn.dataset.k);
-    if(btn.dataset.a==="edit"&&r){poProjectEditKey=r.key;const savedNo=String(r.no||"");const m=savedNo.match(/^(G5DD|G5DE)(.*)$/);if($("poNoPrefix"))$("poNoPrefix").value=m?m[1]:"G5DE";$("poNo").value=m?m[2]:savedNo;$("poCase").value=r.caseName||"";$("poCaseAmount").value=r.caseAmount||""}
+    if(btn.dataset.a==="edit"&&r){poProjectEditKey=r.key;const savedNo=String(r.no||"");const m=savedNo.match(/^(G5DD|G5DE)(.*)$/);if($("poNoPrefix"))$("poNoPrefix").value=m?m[1]:"G5DE";$("poNo").value=m?m[2]:savedNo;$("poCase").value=r.caseName||"";$("poCaseAmount").value=r.caseAmount||"";if($("poQuoteUntaxed"))$("poQuoteUntaxed").value=r.quoteUntaxed||""}
     if(btn.dataset.a==="del"){if(!confirm("確定刪除這個單號／案名？"))return;poSaveProjects(poProjects().filter(x=>x.key!==btn.dataset.k));poRenderProjects();poRenderGroups()}
   });
 }
@@ -2434,7 +2435,7 @@ $("poProjectFilter")?.addEventListener("change",poRenderProjects);
 $("poProjectSaveBtn")?.addEventListener("click",poProjectSave);
 $("poSaveAllBtn")?.addEventListener("click",()=>poSaveAllWork(true));
 // 單號／案名管理：在前綴、單號、案名、案件金額任一欄按 Enter 直接儲存
-["poNoPrefix","poNo","poCase","poCaseAmount"].forEach(id=>{
+["poNoPrefix","poNo","poCase","poCaseAmount","poQuoteUntaxed"].forEach(id=>{
   const el=$(id);
   if(!el)return;
   el.addEventListener("keydown",e=>{
@@ -2834,7 +2835,7 @@ async function download(){
  try{const bin=atob(TC_TEMPLATE_B64),u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);const wb=new ExcelJS.Workbook();await wb.xlsx.load(u8.buffer);
  const anchors=[[6,9,12,13,16,17,19],[6,12,14,20,22],[6,8,9,11,13,15,18],[6,8,13]];
  const order=$t('tcNo').value.trim();
- const quoteUntaxed=Number($t('tcQuoteUntaxed')?.value||0);
+ const quoteUntaxed=String($t('tcQuoteUntaxed')?.value||'').trim();
  const grandTotal=Math.round(its.reduce((s,x)=>s+x.qty*x.price,0)*100)/100;
  wb.worksheets.forEach((ws,si)=>{
    if(order)ws.getCell('B3').value=order;
