@@ -509,9 +509,9 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
       <label>案名<input id="qCaseName" placeholder="請輸入案名"></label>
       <label>編號<input id="qNo" placeholder="自動產生，可修改"></label>
       <label>客戶名稱<input id="qCustomer" list="qCustomerOptionsList" placeholder="請選擇或輸入客戶名稱"><datalist id="qCustomerOptionsList"></datalist><div class="quoteManageTools"><button type="button" id="qCustomerManageBtn">客戶選項管理</button><span class="hint">之後新增「客戶資料」時會共用這份名單</span></div></label>
-      <label>日期<input id="qDate" type="text" inputmode="numeric" maxlength="10" placeholder="YYYY/MM/DD"></label>
+      <label>日期<input id="qDate" type="text" inputmode="numeric" maxlength="10" placeholder="例如 1005 → 2026/10/05"></label>
       <label>聯絡人電話<input id="qContactPhone" type="tel" placeholder="請輸入聯絡人電話"></label>
-      <label>實際安裝日期<input id="qInstallDate" type="text" inputmode="numeric" maxlength="10" placeholder="YYYY/MM/DD"></label>
+      <label>實際安裝日期<input id="qInstallDate" type="text" inputmode="numeric" maxlength="10" placeholder="例如 1015 → 2026/10/15"></label>
       <label>安裝地址<div style="display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:8px"><input id="qAddress" placeholder="請輸入安裝地址"><input id="qFileAddress" placeholder="檔名地址" title="只用於 PDF / Excel 下載檔名，不顯示在報價單"></div><div style="font-size:12px;color:var(--muted);margin-top:4px;text-align:right">右側只用於下載檔名</div></label>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><label>安裝時段<select id="qInstallPeriod" style="width:100%;padding:10px;border:1px solid #bdc8d2;border-radius:8px;margin-top:4px;background:#fff"><option value="">請選擇</option><option value="早上安裝">早上安裝</option><option value="下午安裝">下午安裝</option></select></label><label>訂單編號<input id="qOrderNo" type="text" placeholder="請輸入訂單編號"></label></div>
       <label>色號<input id="qColorNo" placeholder="請輸入色號"></label>
@@ -786,7 +786,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
     <h2 class="quoteTitle">台中採購單</h2>
     <div style="margin:0 0 12px"><label style="font-size:13px;font-weight:800">指定單號／案名<select id="tcAssignmentSelect" style="width:100%;padding:10px;border:1px solid #bdc8d2;border-radius:8px;margin-top:4px;background:#fff"><option value="">請選擇要指定的單號／案名</option></select></label><div style="font-size:12px;color:var(--muted);margin-top:4px">只做配對，不會把單號／案名帶入下方欄位。</div></div>
     <div class="quoteItemsWrap"><table class="quoteItems"><thead><tr><th>項數</th><th>名稱</th><th>尺寸</th><th>總公分數</th><th>單位</th><th>單價</th><th>合計</th><th></th></tr></thead><tbody id="tcItemsBody"></tbody></table></div>
-    <div class="quoteManageTools"><button type="button" id="tcAddItemBtn">＋ 新增項目</button><span class="hint">直接輸入資料，不需要 PDF 匯入</span></div>
+    <div class="quoteManageTools"><button type="button" id="tcAddItemBtn">＋ 新增項目</button><button type="button" id="tcNameManageBtn">名稱選項管理</button><span class="hint">直接輸入資料，不需要 PDF 匯入</span></div>
     <div class="quoteSummary"><span>合計</span><span id="tcSubtotal">0</span></div>
     <div class="quoteActions"><button type="button" id="tcDetailSaveBtn" class="primary">儲存台中採購單</button><button type="button" id="tcExcelBtn" class="primary">套用台中採購單範本下載 Excel</button><button type="button" id="tcClearBtn">清空</button></div>
   </div>
@@ -814,6 +814,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
 </dialog>
 <dialog id="eventDlg"><form class="form" method="dialog"><h2 id="eventDlgTitle">新增行程</h2><div class="eventGrid"><label>日期<input id="fdate" type="text" inputmode="numeric" placeholder="例如：20260901 或 2026/09/01"></label><label>時間<input id="ftime" type="text" inputmode="numeric" placeholder="例如：0830 或 08:30"></label><label>案名<input id="ftitle" placeholder="例如：工地會勘"></label><label>顏色<select id="fcolor"><option value="blue">藍色－人造石</option><option value="green">綠色－石英石</option><option value="red">紅色</option><option value="orange">橘色－草屯接單</option><option value="purple">紫色－浤富代裝石英</option><option value="yellow">黃色－自安送料</option><option value="black">咖啡－我司單草屯代裝</option></select></label><label id="installField">安裝<select id="finstall"><option value="勝寶鼎">勝寶鼎</option><option value="外包">外包</option></select><div style="margin-top:5px;color:var(--muted);font-size:12px">勝寶鼎、外包</div></label><label>師傅<select id="fmaster"><option value="">請選擇師傅</option><option value="__ADD__">＋ 新增師傅</option></select></label><label class="full">詳細內容<textarea id="fdetail" placeholder="地點、人員、工作內容、備註……"></textarea></label></div><div class="formActions"><button id="deleteEventBtn" type="button" class="danger hidden">刪除</button><button value="cancel">取消</button><button id="saveEventBtn" type="button" class="primary">儲存</button></div></form></dialog>
 <dialog id="qNameDlg"><div class="form"><h2>名稱選項管理</h2><div class="manageEditor"><label>名稱選項<input id="qNameOptionInput" placeholder="例如：L型檯面: D"></label><button type="button" id="qNameOptionSaveBtn" class="primary">新增</button><button type="button" id="qNameOptionCancelBtn" class="hidden">取消修改</button></div><div style="font-size:12px;color:var(--muted)">固定名稱會出現在下拉選單；實際報價時仍可直接輸入尺寸，例如 L型檯面: D60。</div><div id="qNameOptionList" class="manageList"></div><div class="formActions"><button type="button" id="qNameDlgCloseBtn">關閉</button></div></div></dialog>
+<dialog id="tcNameDlg"><div class="form"><h2>台中採購單｜名稱選項管理</h2><div class="manageEditor"><label>名稱選項<input id="tcNameOptionInput" placeholder="輸入名稱選項"></label><button type="button" id="tcNameOptionSaveBtn" class="primary">新增</button><button type="button" id="tcNameOptionCancelBtn" class="hidden">取消修改</button></div><div style="font-size:12px;color:var(--muted)">此清單只套用台中採購單，不影響報價單。</div><div id="tcNameOptionList" class="manageList"></div><div class="formActions"><button type="button" id="tcNameDlgCloseBtn">關閉</button></div></div></dialog>
 <dialog id="qCustomerDlg"><div class="form"><h2>客戶選項管理</h2><div class="manageEditor"><label>客戶名稱<input id="qCustomerOptionInput" placeholder="輸入客戶名稱"></label><button type="button" id="qCustomerOptionSaveBtn" class="primary">新增</button><button type="button" id="qCustomerOptionCancelBtn" class="hidden">取消修改</button></div><div style="font-size:12px;color:var(--muted)">這份客戶名單會保留給之後的「客戶資料」功能共用。</div><div id="qCustomerOptionList" class="manageList"></div><div class="formActions"><button type="button" id="qCustomerDlgCloseBtn">關閉</button></div></div></dialog>
 <dialog id="noteDlg"><form class="form" method="dialog"><h2>備註</h2><label>內容<textarea id="fnote" placeholder="輸入這個月份的備註……"></textarea></label><div class="formActions"><button value="cancel">取消</button><button id="saveNoteBtn" type="button" class="primary">儲存</button></div></form></dialog>
 <script>
@@ -999,14 +1000,20 @@ let quoteCustomerOptions=[];
 let editingQuoteNameOptionId=null,editingQuoteCustomerId=null;
 function fmtQName(v){return String(v||"").trim().replace(/\s*:\s*/g,": ")}
 function renderQNameDatalist(){const d=$("qNameOptionsList");if(!d)return;d.innerHTML=quoteNameOptions.filter(x=>x.active!==false).sort((a,b)=>(+a.sort_order||999)-(+b.sort_order||999)).map(x=>`<option value="${esc(fmtQName(x.name))}"></option>`).join("");renderTCNameDatalist()}
-function renderTCNameDatalist(){
- const d=$("tcNameOptionsList");if(!d)return;
- const top=["U5500檯面","U8122檯面","U8528檯面","AS8672檯面","AS8610檯面","AS8691檯面"];
+const TC_NAME_KEY="sbd_tc_name_options_v1";
+const TC_DEFAULT_TOP=["U5500檯面","U8122檯面","U8528檯面","AS8672檯面","AS8610檯面","AS8691檯面"];
+let tcEditingNameIndex=-1;
+function tcBaseNames(){
  const removeShapes=["一字型檯面: D","ㄇ字型檯面: D","L型檯面: D","中島型檯面: D"];
  const rest=quoteNameOptions.filter(x=>x.active!==false&&!removeShapes.includes(String(x.name||"").trim())).sort((a,b)=>(+a.sort_order||999)-(+b.sort_order||999)).map(x=>fmtQName(x.name));
- const names=[...top,...rest.filter(n=>!top.includes(n))];
- d.innerHTML=names.map(n=>`<option value="${esc(n)}"></option>`).join("");
+ return [...TC_DEFAULT_TOP,...rest.filter(n=>!TC_DEFAULT_TOP.includes(n))];
 }
+function tcNameOptions(){try{const a=JSON.parse(localStorage.getItem(TC_NAME_KEY)||"null");if(Array.isArray(a)&&a.length)return a}catch(e){}return tcBaseNames()}
+function tcSaveNameOptions(a){localStorage.setItem(TC_NAME_KEY,JSON.stringify(a));renderTCNameDatalist();renderTCNameManager()}
+function renderTCNameDatalist(){const d=$("tcNameOptionsList");if(!d)return;d.innerHTML=tcNameOptions().map(n=>`<option value="${esc(n)}"></option>`).join("")}
+function renderTCNameManager(){const box=$("tcNameOptionList");if(!box)return;box.innerHTML=tcNameOptions().map((n,i)=>`<div class="manageRow"><div>${esc(n)}</div><button type="button" data-tcn-edit="${i}">修改</button><button type="button" class="danger" data-tcn-del="${i}">刪除</button></div>`).join("");box.querySelectorAll("[data-tcn-edit]").forEach(b=>b.onclick=()=>{tcEditingNameIndex=Number(b.dataset.tcnEdit);$("tcNameOptionInput").value=tcNameOptions()[tcEditingNameIndex]||"";$("tcNameOptionSaveBtn").textContent="儲存修改";$("tcNameOptionCancelBtn").classList.remove("hidden")});box.querySelectorAll("[data-tcn-del]").forEach(b=>b.onclick=()=>{const a=tcNameOptions(),i=Number(b.dataset.tcnDel);if(!confirm(`確定刪除「${a[i]}」？`))return;a.splice(i,1);tcSaveNameOptions(a)})}
+function tcResetNameEditor(){tcEditingNameIndex=-1;$("tcNameOptionInput").value="";$("tcNameOptionSaveBtn").textContent="新增";$("tcNameOptionCancelBtn").classList.add("hidden")}
+function tcSaveNameOption(){const v=$("tcNameOptionInput").value.trim();if(!v)return alert("請輸入名稱選項");const a=tcNameOptions();if(tcEditingNameIndex>=0)a[tcEditingNameIndex]=v;else if(!a.includes(v))a.push(v);tcSaveNameOptions(a);tcResetNameEditor()}
 
 function renderQCustomerDatalist(){const d=$("qCustomerOptionsList");if(!d)return;d.innerHTML=quoteCustomerOptions.filter(x=>x.active!==false).sort((a,b)=>String(a.name).localeCompare(String(b.name),"zh-Hant")).map(x=>`<option value="${esc(x.name)}"></option>`).join("")}
 async function loadQuoteOptions(){if(!["admin","editor"].includes(profile?.role))return;
@@ -1039,6 +1046,8 @@ function qDateDisplay(v){
 function qDateStorage(v){
   const s=String(v||"").trim(); if(!s)return "";
   const d=s.replace(/\D/g,"");
+  // 快速輸入 MMDD，例如 1005 -> 當年度 2026/10/05
+  if(d.length===4){const y=new Date().getFullYear(),m=+d.slice(0,2),day=+d.slice(2,4),dt=new Date(y,m-1,day);if(dt.getFullYear()===y&&dt.getMonth()===m-1&&dt.getDate()===day)return `${y}-${d.slice(0,2)}-${d.slice(2,4)}`}
   if(d.length===8){const y=+d.slice(0,4),m=+d.slice(4,6),day=+d.slice(6,8),dt=new Date(y,m-1,day);if(dt.getFullYear()===y&&dt.getMonth()===m-1&&dt.getDate()===day)return `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}`}
   const m=s.match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})$/);
   if(m){const y=+m[1],mo=+m[2],day=+m[3],dt=new Date(y,mo-1,day);if(dt.getFullYear()===y&&dt.getMonth()===mo-1&&dt.getDate()===day)return `${m[1]}-${pad(mo)}-${pad(day)}`}
@@ -1277,11 +1286,20 @@ async function excelQuote(x){
       if(formula){const f=doc.createElementNS(NS,"f");f.textContent=formula;c.appendChild(f)}
       const v=doc.createElementNS(NS,"v");v.textContent=String(Number(val)||0);c.appendChild(v);
     }
+    function setCustomerExcel(addr,val){
+      const c=getCell(addr),style=c.getAttribute("s");clearKids(c);c.setAttribute("t","inlineStr");if(style!==null)c.setAttribute("s",style);
+      const is=doc.createElementNS(NS,"is"),v=String(val||"").trim(),mm=v.match(/^([A-Za-z0-9_-]+)(\s*)(.*)$/);
+      if(mm){
+        const r1=doc.createElementNS(NS,"r"),rp=doc.createElementNS(NS,"rPr"),sz=doc.createElementNS(NS,"sz"),t1=doc.createElementNS(NS,"t");sz.setAttribute("val","14");rp.appendChild(sz);t1.setAttribute("xml:space","preserve");t1.textContent=mm[1]+(mm[2]||"");r1.appendChild(rp);r1.appendChild(t1);is.appendChild(r1);
+        if(mm[3]){const r2=doc.createElementNS(NS,"r"),t2=doc.createElementNS(NS,"t");t2.setAttribute("xml:space","preserve");t2.textContent=mm[3];r2.appendChild(t2);is.appendChild(r2)}
+      }else{const t=doc.createElementNS(NS,"t");t.textContent=v;is.appendChild(t)}
+      c.appendChild(is);
+    }
     const money=n=>Number(String(n??0).replace(/,/g,""))||0;
     // 原始範本真正的填值位置（只改內容，不動版型）
     setText("F3",m.case_name||x.contact_name||"");
     setText("L3",x.quote_no||"");
-    setText("C4",x.customer_name||"");
+    setCustomerExcel("C4",x.customer_name||"");
     setText("L4",qDateDisplay(x.quote_date));
     setText("C5",m.contact_phone||x.phone||"");
     setText("L5",qDateDisplay(m.install_date));
@@ -1354,6 +1372,13 @@ async function excelQuote(x){
       setNum("L"+r,qty*price,`IF(OR(I${r}=\"\",K${r}=\"\"),\"\",I${r}*K${r})`);
     }
     setNum("L18",money(x.subtotal),"SUM(L10:L17)");setNum("L19",money(x.tax_amount),"ROUND(L18*0.05,0)");setNum("L20",money(x.total_amount),"SUM(L18:L19)");
+
+    // 安裝時段值欄取消原範本網底色，保留字型、邊框、對齊等其他格式。
+    {
+      const stylesPath="xl/styles.xml",stylesText=await zip.file(stylesPath).async("string"),stylesDoc=new DOMParser().parseFromString(stylesText,"application/xml"),cellXfs=stylesDoc.getElementsByTagNameNS(NS,"cellXfs")[0];
+      const c=getCell("L6"),base=Number(c.getAttribute("s")||0),xfs=[...cellXfs.getElementsByTagNameNS(NS,"xf")],xf=(xfs[base]||xfs[0]).cloneNode(true);
+      xf.setAttribute("fillId","0");xf.setAttribute("applyFill","0");cellXfs.appendChild(xf);cellXfs.setAttribute("count",String(cellXfs.getElementsByTagNameNS(NS,"xf").length));c.setAttribute("s",String(cellXfs.getElementsByTagNameNS(NS,"xf").length-1));zip.file(stylesPath,new XMLSerializer().serializeToString(stylesDoc));
+    }
 
     // Excel 列印預設：將工作表放入單一頁面（1 頁寬 × 1 頁高）
     let sheetPr=doc.getElementsByTagNameNS(NS,"sheetPr")[0];
@@ -2936,7 +2961,7 @@ async function download(){
    a.href=u;a.download=`台中採購單_${(assigned.no||assigned.caseName||'未命名').replace(/[\\/:*?"<>|]/g,'_')}.xlsx`;a.click();setTimeout(()=>URL.revokeObjectURL(u),1200);
  }catch(e){console.error(e);alert('台中採購單 Excel 產生失敗：'+e.message)}
 }
-function bind(){const tab=$t('taichungPurchaseTabBtn');if(tab)tab.onclick=e=>{e.preventDefault();open()};tcRenderProjects();$t('tcProjectNewBtn')?.addEventListener('click',tcProjectClear);$t('tcProjectSaveBtn')?.addEventListener('click',tcProjectSave);$t('tcProjectFilter')?.addEventListener('change',tcRenderProjects);$t('tcAssignmentSelect')?.addEventListener('change',()=>{});['tcNoPrefix','tcProjectNo','tcProjectCase','tcProjectAmount'].forEach(id=>$t(id)?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcProjectSave()}}));$t('tcAddItemBtn')?.addEventListener('click',()=>add());$t('tcDetailSaveBtn')?.addEventListener('click',()=>tcDetailSave(true));$t('tcExcelBtn')?.addEventListener('click',download);$t('tcClearBtn')?.addEventListener('click',clear);if(!$t('tcItemsBody')?.children.length)clear();
+function bind(){const tab=$t('taichungPurchaseTabBtn');if(tab)tab.onclick=e=>{e.preventDefault();open()};tcRenderProjects();$t('tcProjectNewBtn')?.addEventListener('click',tcProjectClear);$t('tcProjectSaveBtn')?.addEventListener('click',tcProjectSave);$t('tcProjectFilter')?.addEventListener('change',tcRenderProjects);$t('tcAssignmentSelect')?.addEventListener('change',()=>{});['tcNoPrefix','tcProjectNo','tcProjectCase','tcProjectAmount'].forEach(id=>$t(id)?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcProjectSave()}}));$t('tcAddItemBtn')?.addEventListener('click',()=>add());$t('tcNameManageBtn')?.addEventListener('click',()=>{renderTCNameManager();tcResetNameEditor();$t('tcNameDlg')?.showModal()});$t('tcNameOptionSaveBtn')?.addEventListener('click',tcSaveNameOption);$t('tcNameOptionCancelBtn')?.addEventListener('click',tcResetNameEditor);$t('tcNameDlgCloseBtn')?.addEventListener('click',()=>{$t('tcNameDlg')?.close()});$t('tcNameOptionInput')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcSaveNameOption()}});$t('tcDetailSaveBtn')?.addEventListener('click',()=>tcDetailSave(true));$t('tcExcelBtn')?.addEventListener('click',download);$t('tcClearBtn')?.addEventListener('click',clear);if(!$t('tcItemsBody')?.children.length)clear();
  const sync=()=>{if(document.body.classList.contains('admin-account'))tab?.classList.remove('hidden');else tab?.classList.add('hidden')};sync();new MutationObserver(sync).observe(document.body,{attributes:true,attributeFilter:['class']});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();
