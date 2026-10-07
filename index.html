@@ -1287,23 +1287,28 @@ async function excelQuote(x){
       const v=doc.createElementNS(NS,"v");v.textContent=String(Number(val)||0);c.appendChild(v);
     }
     function setCustomerExcel(addr,val){
-      // C4 原範本為「微軟正黑體」18pt；只有前置編號使用同字型 14pt。
-      // Rich text 的每一段都明確設定字型，避免 Excel 回退成其他預設字型。
-      const c=getCell(addr),style=c.getAttribute("s");clearKids(c);c.setAttribute("t","inlineStr");if(style!==null)c.setAttribute("s",style);
-      const is=doc.createElementNS(NS,"is"),v=String(val||"").trim(),mm=v.match(/^([A-Za-z][A-Za-z0-9_-]*)(\s*)(.*)$/);
-      function run(txt,size){
-        const r=doc.createElementNS(NS,"r"),rp=doc.createElementNS(NS,"rPr");
-        const font=doc.createElementNS(NS,"rFont");font.setAttribute("val","微軟正黑體");rp.appendChild(font);
-        const sz=doc.createElementNS(NS,"sz");sz.setAttribute("val",String(size));rp.appendChild(sz);
-        const family=doc.createElementNS(NS,"family");family.setAttribute("val","2");rp.appendChild(family);
-        const charset=doc.createElementNS(NS,"charset");charset.setAttribute("val","136");rp.appendChild(charset);
-        const color=doc.createElementNS(NS,"color");color.setAttribute("indexed","8");rp.appendChild(color);
-        const t=doc.createElementNS(NS,"t");t.setAttribute("xml:space","preserve");t.textContent=txt;
-        r.appendChild(rp);r.appendChild(t);is.appendChild(r);
+      // 保留原範本 C4 的字型、字級與儲存格樣式；只調整客戶編號為 14pt。
+      const c=getCell(addr),style=c.getAttribute("s");
+      clearKids(c);c.setAttribute("t","inlineStr");
+      if(style!==null)c.setAttribute("s",style);
+      const is=doc.createElementNS(NS,"is"),v=String(val||"").trim();
+      const mm=v.match(/^([A-Za-z][A-Za-z0-9_-]*)(\\s*)(.*)$/);
+      if(mm&&mm[3]){
+        const first=doc.createElementNS(NS,"r"),rp=doc.createElementNS(NS,"rPr");
+        const sz=doc.createElementNS(NS,"sz");sz.setAttribute("val","14");rp.appendChild(sz);
+        const t1=doc.createElementNS(NS,"t");t1.textContent=mm[1];
+        first.appendChild(rp);first.appendChild(t1);is.appendChild(first);
+        const rest=doc.createElementNS(NS,"r"),t2=doc.createElementNS(NS,"t");
+        t2.setAttribute("xml:space","preserve");t2.textContent=(mm[2]||" ")+mm[3];
+        rest.appendChild(t2);is.appendChild(rest);
+      }else{
+        const t=doc.createElementNS(NS,"t");t.setAttribute("xml:space","preserve");t.textContent=v;is.appendChild(t);
       }
-      if(mm){run(mm[1],14);if(mm[2]||mm[3])run((mm[2]||" ")+mm[3],18)}
-      else run(v,18);
       c.appendChild(is);
+    }
+    function clearBlankExcelCell(addr){
+      // 真正移除公式/快取值/inlineStr；避免 Excel 將空白列重新顯示為 0。
+      const c=getCell(addr);clearKids(c);c.removeAttribute("t");
     }
     const money=n=>Number(String(n??0).replace(/,/g,""))||0;
     // 原始範本真正的填值位置（只改內容，不動版型）
@@ -1371,7 +1376,7 @@ async function excelQuote(x){
     setText("L8",`背牆  ${m.back_wall||""}  cm`);
     for(let r=10;r<=17;r++){
       setText("A"+r,"");setText("B"+r,"");setText("F"+r,"");setText("I"+r,"");setText("J"+r,"");setText("K"+r,"");
-      setText("L"+r,"");
+      clearBlankExcelCell("L"+r);
     }
     for(let i=0;i<Math.min(8,items.length);i++){
       const r=10+i,it=items[i]||{},qtyRaw=(it.total_cm??it.qty),priceRaw=it.price;
@@ -1379,7 +1384,7 @@ async function excelQuote(x){
       setNum("A"+r,i+1);setText("B"+r,fmtQName(it.name||it.description||""));setText("F"+r,it.process_size||"");
       if(qtyRaw===""||qtyRaw==null)setText("I"+r,"");else setNum("I"+r,qty);
       setText("J"+r,it.unit||"");if(priceRaw===""||priceRaw==null)setText("K"+r,"");else setNum("K"+r,price);
-      if(qtyRaw===""||qtyRaw==null||priceRaw===""||priceRaw==null)setText("L"+r,"");else setNum("L"+r,qty*price,`IF(OR(I${r}=\"\",K${r}=\"\"),\"\",I${r}*K${r})`);
+      if(qtyRaw===""||qtyRaw==null||priceRaw===""||priceRaw==null)clearBlankExcelCell("L"+r);else setNum("L"+r,qty*price,`IF(OR(I${r}=\"\",K${r}=\"\"),\"\",I${r}*K${r})`);
     }
     setNum("L18",money(x.subtotal),"SUM(L10:L17)");setNum("L19",money(x.tax_amount),"ROUND(L18*0.05,0)");setNum("L20",money(x.total_amount),"SUM(L18:L19)");
 
