@@ -606,12 +606,16 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
       <button type="button" id="poClearBtn">清空 PDF 明細</button>
       <button type="button" id="poSaveAllBtn" class="primary">儲存全部配對／明細</button>
       <button type="button" id="poExcelBtn">套用模板下載 Excel</button><button type="button" id="poCostBtn" class="primary">產出成本</button>
+      <label style="display:inline-flex;align-items:center;gap:6px;margin-left:8px">請款區間
+        <input id="poPdfPeriod" list="poPdfPeriods" placeholder="260826-260925" style="width:165px">
+      </label><datalist id="poPdfPeriods"></datalist>
+      <select id="poPeriodSelect" style="min-width:175px"><option value="">選擇已儲存區間</option></select>
     </div>
     <div id="poStatus" class="purchaseStatus">可以先建立「單號／案名」。收到浤富 PDF 後再匯入，系統會依銷貨單號分組。</div>
     <div id="poGroups"></div>
     <div class="purchaseCard" style="margin-top:16px"><h3>已記憶的浤富 PDF（依請款區間）</h3>
-    <label>請款區間 <input id="poPdfPeriod" list="poPdfPeriods" placeholder="260826-260925" style="max-width:250px"></label><datalist id="poPdfPeriods"></datalist>
-    <div class="hint">請先輸入請款區間再匯入 PDF；每份 PDF 的最後一頁「本期合計」即浤富成本。原檔保存在目前瀏覽器，按檔名可重新開啟。</div>
+
+    <div class="hint">請款區間可在上方「產出成本」旁切換；下方只顯示該區間已保存的 PDF 原檔。</div>
     <div id="poPdfHistory"></div></div>
   </div>
 </section>
@@ -821,7 +825,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
     <div id="tcSavedDetailEmpty" class="quoteEmpty">目前沒有已儲存的台中採購單明細</div>
   </div>
 </section>
-<section id="costReportView" class="hidden" style="max-width:1250px;margin:22px auto;padding:0 15px;font-family:system-ui,'Noto Sans TC',sans-serif;color:#172b45"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px"><div><h2 style="font-size:25px;margin:0">成本・銷售・件數分析</h2><p style="color:#718096">正式統計｜讀取本瀏覽器已儲存的採購單及台中採購單資料</p></div><select id="crMonth" style="padding:10px;border-radius:8px;border:1px solid #cbd5e1"><option value="all">全部月份</option></select> <select id="crPeriod" style="padding:10px;border-radius:8px;border:1px solid #cbd5e1"><option value="all">全部請款區間</option></select></div><div id="crCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:14px;margin:16px 0"></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px"><div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:20px"><h3>月份銷售與成本比較</h3><div id="crBars"></div></div><div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:20px"><h3>月份案件件數</h3><div id="crCounts"></div></div></div><div style="display:none;background:white;border:1px solid #e2e8f0;border-radius:14px;padding:18px;margin-top:16px;overflow:auto"><h3>案件成本與銷售明細</h3><table style="width:100%;min-width:780px;border-collapse:collapse"><thead><tr style="background:#eef3f8"><th>月份</th><th>單號</th><th>案名</th><th>銷售</th><th>成本</th></tr></thead><tbody id="crRows"></tbody></table></div></section></main></section>
+<section id="costReportView" class="hidden" style="max-width:1250px;margin:22px auto;padding:0 15px;font-family:system-ui,'Noto Sans TC',sans-serif;color:#172b45"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px"><div><h2 style="font-size:25px;margin:0">成本・銷售・件數分析</h2><p style="color:#718096">正式統計｜讀取本瀏覽器已儲存的採購單及台中採購單資料</p></div><select id="crMonth" style="padding:10px;border-radius:8px;border:1px solid #cbd5e1"><option value="all">全部月份</option></select> <select id="crPeriod" style="padding:10px;border-radius:8px;border:1px solid #cbd5e1"><option value="all">全部請款區間</option></select></div><div id="crCards" style="margin:16px 0"></div><div id="crSummary" style="background:#fff;border:1px solid #dce5ee;border-radius:14px;padding:20px;overflow-x:auto"></div><div style="display:none;background:white;border:1px solid #e2e8f0;border-radius:14px;padding:18px;margin-top:16px;overflow:auto"><h3>案件成本與銷售明細</h3><table style="width:100%;min-width:780px;border-collapse:collapse"><thead><tr style="background:#eef3f8"><th>月份</th><th>單號</th><th>案名</th><th>銷售</th><th>成本</th></tr></thead><tbody id="crRows"></tbody></table></div></section></main></section>
 <dialog id="viewDlg">
   <div class="form">
     <h2>查看行程</h2>
@@ -2283,7 +2287,16 @@ let poProjectEditKey=null;
 const PO_WORK_KEY="sbd_purchase_pdf_work_v1";
 function poSaveAllWork(showMsg=true){
   try{
-    localStorage.setItem(PO_WORK_KEY,JSON.stringify({groups:poGroups,pdfPageCount:poPdfPageCount,pdfMonth:poPdfMonth,savedAt:new Date().toISOString()}));
+    const period=($("poPdfPeriod")?.value||"").trim();
+    const snapshot={groups:poGroups,pdfPageCount:poPdfPageCount,pdfMonth:poPdfMonth,savedAt:new Date().toISOString()};
+    localStorage.setItem(PO_WORK_KEY,JSON.stringify(snapshot));
+    if(/^\d{6}-\d{6}$/.test(period)){
+      const archive=JSON.parse(localStorage.getItem("sbd_hongfu_period_work_v1")||"{}");
+      archive[period]=snapshot;
+      localStorage.setItem("sbd_hongfu_period_work_v1",JSON.stringify(archive));
+      localStorage.setItem("sbd_hongfu_last_period",period);
+      window.poRefreshPeriodOptions?.();
+    }
     if(showMsg){const n=poGroups.length;const rows=poGroups.reduce((a,g)=>a+(g.rows?.length||0),0);$("poStatus").textContent=`已完整儲存：${n} 個銷貨單分組、${rows} 筆貨品與所有單號／案名配對。下次開啟會自動帶回。`;}
     return true;
   }catch(e){console.error(e);if(showMsg)alert("儲存失敗："+(e?.message||e));return false;}
@@ -3158,11 +3171,30 @@ document.querySelectorAll('.featureTabs button').forEach(b=>{if(b.id!=='taichung
 const fmt=n=>Math.round(n).toLocaleString('zh-TW'),esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function read(k,f){try{return JSON.parse(localStorage.getItem(k)||f)}catch(e){return JSON.parse(f)}}
 const amount=v=>Number(String(v??0).replace(/,/g,''))||0;
-function source(){const purchase=read('sbd_purchase_projects','[]'),tc=read('sbd_taichung_purchase_projects_v1','[]'),details=read('sbd_taichung_purchase_details_v1','{}');const map=new Map();
-for(const p of purchase){const no=String(p.no||p.number||'').trim();if(!no)continue;map.set(no,{no,name:p.caseName||p.case||'',sale:amount(p.caseAmount??p.amount),cost:0,period:'',hasCost:false})}
-for(const p of tc){const no=String(p.no||'').trim();if(!no)continue;const r=map.get(no)||{no,name:'',sale:0,cost:0,period:'',hasCost:false};r.name=p.caseName||r.name;r.sale=amount(p.caseAmount)||r.sale;const d=details[p.key];if(d){r.cost=(d.items||[]).reduce((n,it)=>n+amount(it.qty)*amount(it.price),0);r.hasCost=true;r.period=d.claimPeriod||''}map.set(no,r)}
-return [...map.values()].map(r=>{const m=r.no.match(/^(?:G5DD|G5DE)(\d{2})(\d{2})/i);return {...r,month:m?`20${m[1]}-${m[2]}`:'未分類'}}).sort((a,b)=>a.no.localeCompare(b.no))}
-function render(){const all=source(),sel=document.getElementById('crMonth'),period=document.getElementById('crPeriod'),old=sel.value,op=period.value;const months=[...new Set(all.map(r=>r.month))].sort();sel.innerHTML='<option value="all">全部月份</option>'+months.map(m=>`<option value="${esc(m)}">${esc(m)} 月</option>`).join('');sel.value=months.includes(old)?old:'all';const saved=read('sbd_taichung_claim_periods_v1','[]');const periods=[...new Set([...all.map(r=>r.period).filter(Boolean),...(Array.isArray(saved)?saved:[])])].sort();period.innerHTML='<option value="all">全部請款區間</option>'+periods.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');period.value=periods.includes(op)?op:'all';const rows=all.filter(r=>(sel.value==='all'||r.month===sel.value)&&(period.value==='all'||r.period===period.value));const sale=rows.reduce((n,r)=>n+r.sale,0),cost=rows.reduce((n,r)=>n+r.cost,0);const cards=[['銷售總額',fmt(sale),'#183a62'],['成本總額',fmt(cost),'#b76e38'],['案件件數',rows.length+' 件','#26496b']];document.getElementById('crCards').innerHTML=cards.map(c=>`<div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:19px;border-top:4px solid ${c[2]}"><div style="color:#718096;font-size:13px">${c[0]}</div><div style="font-size:27px;font-weight:800;color:${c[2]};margin-top:8px">${c[1]}</div></div>`).join('');const shown=sel.value==='all'?months:[sel.value],max=Math.max(1,...shown.map(m=>rows.filter(r=>r.month===m).reduce((n,r)=>n+r.sale,0)));document.getElementById('crBars').innerHTML=shown.map(m=>{const rr=rows.filter(r=>r.month===m),sv=rr.reduce((n,r)=>n+r.sale,0),co=rr.reduce((n,r)=>n+r.cost,0);return `<div style="margin:15px 0"><b>${esc(m)}</b><div style="height:12px;background:#edf2f7;border-radius:9px;overflow:hidden;margin:7px 0"><div style="width:${sv/max*100}%;background:#234c77;height:100%"></div></div><div style="height:9px;background:#edf2f7;border-radius:9px;overflow:hidden"><div style="width:${co/max*100}%;background:#d89a57;height:100%"></div></div><small>銷售 ${fmt(sv)}　成本 ${fmt(co)}</small></div>`}).join('');const peak=Math.max(1,...shown.map(m=>rows.filter(r=>r.month===m).length));document.getElementById('crCounts').innerHTML=shown.map(m=>{const n=rows.filter(r=>r.month===m).length;return `<div style="display:flex;align-items:center;gap:14px;margin:20px 0"><b>${esc(m)}</b><div style="flex:1;background:#eef2f6;border-radius:9px;height:20px;overflow:hidden"><div style="width:${n/peak*100}%;height:100%;background:#3c8a8a"></div></div><b>${n} 件</b></div>`}).join('');document.getElementById('crRows').innerHTML=rows.map(r=>`<tr style="border-bottom:1px solid #e2e8f0;text-align:center"><td style="padding:12px">${esc(r.month)}</td><td>${esc(r.no)}</td><td>${esc(r.name)}</td><td>${fmt(r.sale)}</td><td>${r.hasCost?fmt(r.cost):'—'}</td></tr>`).join('')||'<tr><td colspan="5" style="padding:24px;text-align:center">目前沒有符合條件的案件資料</td></tr>'}
+function source(){
+ const purchase=read('sbd_purchase_projects','[]'),tc=read('sbd_taichung_purchase_projects_v1','[]'),details=read('sbd_taichung_purchase_details_v1','{}');
+ const result=[];
+ for(const p of purchase){const no=String(p.no||p.number||'').trim();if(!no)continue;result.push({group:'浤富',no,name:p.caseName||p.case||'',sale:amount(p.caseAmount??p.amount),cost:null,period:''})}
+ for(const p of tc){const no=String(p.no||'').trim();if(!no)continue;const d=details[p.key];result.push({group:'草屯',no,name:p.caseName||'',sale:amount(p.caseAmount),cost:d?(d.items||[]).reduce((n,it)=>n+amount(it.qty)*amount(it.price),0):null,period:d?.claimPeriod||''})}
+ return result.map(r=>{const m=r.no.match(/^(?:G5DD|G5DE)(\d{2})(\d{2})/i);return {...r,month:m?`20${m[1]}-${m[2]}`:'未分類'}})
+}
+function render(){
+ const all=source(),sel=document.getElementById('crMonth'),period=document.getElementById('crPeriod'),old=sel.value,op=period.value;
+ const months=[...new Set(all.map(r=>r.month))].sort();
+ sel.innerHTML='<option value="all">全部月份</option>'+months.map(m=>`<option value="${esc(m)}">${esc(m)} 月</option>`).join('');
+ sel.value=months.includes(old)?old:'all';
+ const saved=read('sbd_taichung_claim_periods_v1','[]');
+ const periods=[...new Set([...all.map(r=>r.period).filter(Boolean),...(Array.isArray(saved)?saved:[])])].sort();
+ period.innerHTML='<option value="all">全部請款區間</option>'+periods.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');
+ period.value=periods.includes(op)?op:'all';
+ const rows=all.filter(r=>(sel.value==='all'||r.month===sel.value)&&(period.value==='all'||r.period===period.value));
+ const groups=['浤富','草屯'].map(name=>{const rr=rows.filter(r=>r.group===name);return {name,sale:rr.reduce((n,r)=>n+r.sale,0),cost:rr.reduce((n,r)=>n+(r.cost||0),0),known:rr.every(r=>r.cost!==null),count:rr.length}});
+ const total={name:'總計',sale:groups.reduce((n,g)=>n+g.sale,0),cost:groups.reduce((n,g)=>n+g.cost,0),known:groups.every(g=>g.known),count:groups.reduce((n,g)=>n+g.count,0)};
+ document.getElementById('crCards').innerHTML='';
+ const cell=(value,muted=false)=>`<td style="padding:17px 20px;text-align:right;font-size:19px;font-weight:700;color:${muted?'#718096':'#183a62'};white-space:nowrap">${value}</td>`;
+ document.getElementById('crSummary').innerHTML=`<h3 style="margin:0 0 16px;color:#173653">銷售／成本／件數統計</h3><table style="width:100%;border-collapse:collapse;min-width:540px"><thead><tr style="background:#eef3f8;color:#173653"><th style="padding:13px;text-align:left">來源</th><th style="text-align:right;padding:13px">銷售總額</th><th style="text-align:right;padding:13px">成本總額</th><th style="text-align:right;padding:13px">案件件數</th></tr></thead><tbody>${[...groups,total].map((g,i)=>`<tr style="border-bottom:1px solid #e0e7ef;${i===2?'background:#f0f5fa;':''}"><th style="padding:17px 13px;text-align:left;color:#173653;font-size:18px">${g.name}</th>${cell(fmt(g.sale))}${cell(g.known?fmt(g.cost):(g.cost?fmt(g.cost)+'（部分）':'尚無成本資料'),!g.known)}${cell(g.count+' 件')}</tr>`).join('')}</tbody></table><p style="color:#718096;font-size:12px;margin:12px 0 0">成本未儲存的案件不會當作 0；浤富 PDF 本期合計需另行核對成本來源。</p>`;
+ document.getElementById('crRows').innerHTML='';
+}
 function bind(){const b=document.getElementById('costReportTabBtn');if(!b)return;b.classList.toggle('hidden',typeof isAdminAccount==='function'&&!isAdminAccount());b.onclick=()=>{if(typeof isAdminAccount==='function'&&!isAdminAccount())return;document.querySelectorAll('#appPage main > section,#calendarView').forEach(el=>el.classList.add('hidden'));document.getElementById('costReportView').classList.remove('hidden');document.getElementById('calendarControls')?.classList.add('hidden');document.querySelectorAll('.featureTabs button').forEach(x=>x.classList.remove('active'));b.classList.add('active');render()};document.getElementById('crMonth').onchange=render;document.getElementById('crPeriod').onchange=render;document.querySelectorAll('.featureTabs button').forEach(x=>{if(x!==b)x.addEventListener('click',()=>document.getElementById('costReportView')?.classList.add('hidden'))})}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();})();</script><script id="source-cost-export-v47">
 (function(){
 const $=id=>document.getElementById(id);
@@ -3228,18 +3260,40 @@ async function renderArchive(){
  const el=$('poPdfHistory');if(!el)return;
  const database=await db(),files=await store(database,'readonly',os=>os.getAll());database.close();
  files.sort((a,b)=>b.savedAt.localeCompare(a.savedAt));
- const periods=[...new Set(files.map(x=>x.period))],list=$('poPdfPeriods');
+ const active=($('poPdfPeriod')?.value||'').trim();
+ const archive=read('sbd_hongfu_period_work_v1',{});
+ const periods=[...new Set([...files.map(x=>x.period),...Object.keys(archive)])].sort();
+ const list=$('poPdfPeriods');
  if(list)list.innerHTML=periods.map(x=>`<option value="${x}"></option>`).join('');
+ const picker=$('poPeriodSelect');
+ if(picker){const previous=picker.value;picker.innerHTML='<option value="">選擇已儲存區間</option>'+periods.map(x=>`<option value="${x}">${x}</option>`).join('');picker.value=periods.includes(active)?active:(periods.includes(previous)?previous:'');}
  el.replaceChildren();
  if(!files.length){el.textContent='目前尚無已保存的 PDF 原檔';return}
- for(const f of files){
+ for(const f of files.filter(f=>!active||f.period===active)){
   const row=document.createElement('div');row.style='display:flex;gap:12px;align-items:center;border-bottom:1px solid #dbe3ea;padding:9px';
   const a=document.createElement('a');a.href='#';a.textContent=`${f.period}｜${f.name}｜本期合計（浤富成本）：${Number(f.cost||0).toLocaleString("zh-TW")}`;a.onclick=e=>{e.preventDefault();const u=URL.createObjectURL(f.blob);window.open(u,'_blank');setTimeout(()=>URL.revokeObjectURL(u),60000)};
   const del=document.createElement('button');del.textContent='刪除原檔';del.onclick=async()=>{if(!confirm('只刪除這份 PDF 原檔？不影響採購明細。'))return;const d=await db();await store(d,'readwrite',os=>os.delete(f.id));d.close();renderArchive()};
   row.append(a,del);el.append(row);
  }
 }
+window.poRefreshPeriodOptions=()=>renderArchive().catch(console.error);
+function switchPeriod(period){
+ if(!periodValid(period))return;
+ const current=($('poPdfPeriod')?.value||'').trim();
+ if(current&&current!==period&&typeof poSaveAllWork==='function')poSaveAllWork(false);
+ $('poPdfPeriod').value=period;
+ localStorage.setItem('sbd_hongfu_last_period',period);
+ const archive=read('sbd_hongfu_period_work_v1',{});
+ if(archive[period]&&Array.isArray(archive[period].groups)){
+   poGroups=archive[period].groups;poPdfPageCount=archive[period].pdfPageCount||0;poPdfMonth=archive[period].pdfMonth||'';
+   poRenderGroups();
+   $('poStatus').textContent=`已切換至 ${period}：${poGroups.length} 個銷貨單分組、${poGroups.reduce((n,g)=>n+(g.rows||[]).length,0)} 筆明細`;
+ }else{$('poStatus').textContent=`請款區間 ${period}：尚未保存明細，匯入 PDF 後可保存。`;poGroups=[];poRenderGroups();}
+ renderArchive().catch(console.error);
+}
 function init(){
+ $('poPeriodSelect')?.addEventListener('change',e=>{if(e.target.value)switchPeriod(e.target.value)});
+ $('poPdfPeriod')?.addEventListener('change',e=>{const p=e.target.value.trim();if(periodValid(p))switchPeriod(p)});
  $('poCostBtn')?.addEventListener('click',()=>exportCost('po'));
  $('tcCostBtn')?.addEventListener('click',()=>exportCost('tc'));
  $('poPdfPeriod')?.addEventListener('change',()=>{const v=$('poPdfPeriod').value.trim();if(periodValid(v))localStorage.setItem('sbd_hongfu_last_period',v)});
