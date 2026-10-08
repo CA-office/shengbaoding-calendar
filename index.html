@@ -2968,36 +2968,48 @@ async function download(){
    let pi=0;
    wb.worksheets.forEach((ws,si)=>{
      const groups=groupsBySheet[si]||[];
-     for(const [rs,re] of groups){
-       if(pi>=projects.length)break;
-       const p=projects[pi], detail=ds[p.key]||{}, its=(detail.items||[]);
-       const capacity=re-rs+1;
-       // 序號、總計、報價單合計都是整個指定單號共用一次。
-       ws.getCell('A'+rs).value=pi+1;
+     const used=groups.slice(0,Math.max(0,Math.min(groups.length,projects.length-pi)));
+     // 從下往上擴充區塊，避免插入列影響其他區塊的原始位置。
+     const expansions=used.map(([rs,re],i)=>Math.max(0,(ds[projects[pi+i].key]?.items||[]).length-(re-rs+1)));
+     for(let gi=used.length-1;gi>=0;gi--){
+       const [rs,re]=used[gi],extra=expansions[gi];
+       if(!extra)continue;
+       // 先解除該區塊跨列合併，再插入足夠的明細列。
+       for(const col of ['A','H','I']){
+         try{ws.unMergeCells(`${col}${rs}:${col}${re}`)}catch(e){}
+       }
+       const blanks=Array.from({length:extra},()=>[]);
+       ws.spliceRows(re+1,0,...blanks);
+       for(let r=re+1;r<=re+extra;r++){
+         ws.getRow(r).height=ws.getRow(re).height;
+         for(let c=1;c<=9;c++)copyStyle(ws.getRow(re).getCell(c),ws.getRow(r).getCell(c));
+       }
+     }
+     let offset=0;
+     used.forEach(([origStart,origEnd],gi)=>{
+       const rs=origStart+offset,re=origEnd+offset+expansions[gi];
+       offset+=expansions[gi];
+       const p=projects[pi++],its=ds[p.key]?.items||[];
+       // 重新合併跨列的序號、總計與報價欄，整組只顯示一次。
+       for(const col of ['A','H','I']){
+         try{ws.unMergeCells(`${col}${rs}:${col}${re}`)}catch(e){}
+         if(re>rs)ws.mergeCells(`${col}${rs}:${col}${re}`);
+       }
+       ws.getCell('A'+rs).value=pi;
        const total=Math.round(its.reduce((sum,it)=>sum+Number(it.qty||0)*Number(it.price||0),0)*100)/100;
-       ws.getCell('H'+rs).value=total; ws.getCell('H'+rs).numFmt='#,##0';
+       ws.getCell('H'+rs).value=total;ws.getCell('H'+rs).numFmt='#,##0';
        ws.getCell('I'+rs).value=fullQuote(p);
-       // 同一指定單號的每一個明細，依序放進同一序號的列內。
-       its.slice(0,capacity).forEach((it,k)=>{
+       its.forEach((it,k)=>{
          const r=rs+k;
          ws.getCell('B'+r).value=it.name||'';
-         ws.getCell('D'+r).value=it.size||'';
-         ws.getCell('E'+r).value=it.qty||0;
-         ws.getCell('F'+r).value=it.unit||'';
-         ws.getCell('G'+r).value=Number(it.price||0); ws.getCell('G'+r).numFmt='#,##0';
-         // 新版範本欄位：G=單價、H? 依範本實際欄位位置修正如下 B名稱 D總公分 E單位 F單價 G合計 H總計 I報價
-         ws.getCell('D'+r).value=it.qty||0;
+         ws.getCell('D'+r).value=Number(it.qty||0);
          ws.getCell('E'+r).value=it.unit||'';
-         ws.getCell('F'+r).value=Number(it.price||0); ws.getCell('F'+r).numFmt='#,##0';
-         ws.getCell('G'+r).value=Math.round(Number(it.qty||0)*Number(it.price||0)*100)/100; ws.getCell('G'+r).numFmt='#,##0';
+         ws.getCell('F'+r).value=Number(it.price||0);
+         ws.getCell('F'+r).numFmt='#,##0';
+         ws.getCell('G'+r).value=Math.round(Number(it.qty||0)*Number(it.price||0)*100)/100;
+         ws.getCell('G'+r).numFmt='#,##0';
        });
-       if(its.length>capacity){
-         // 不靜默遺失：把超出的明細串接到本區最後一列名稱欄，提醒仍可看見內容。
-         const extra=its.slice(capacity).map(it=>`${it.name||''}｜${it.qty||0}${it.unit||''}｜單價${fmtMoney(it.price||0)}｜合計${fmtMoney(Number(it.qty||0)*Number(it.price||0))}`).join('\n');
-         const c=ws.getCell('B'+re);c.value=(c.value?String(c.value)+'\n':'')+extra;c.alignment={...(c.alignment||{}),wrapText:true};
-       }
-       pi++;
-     }
+     });
    });
    const buf=await wb.xlsx.writeBuffer(),blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),u=URL.createObjectURL(blob),a=document.createElement('a');
    a.href=u;a.download=`台中採購單_${(assigned.no||assigned.caseName||'未命名').replace(/[\\/:*?"<>|]/g,'_')}.xlsx`;a.click();setTimeout(()=>URL.revokeObjectURL(u),1200);
