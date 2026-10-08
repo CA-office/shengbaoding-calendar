@@ -2950,12 +2950,25 @@ function tcDetailData(){
 function tcDetailSave(showMsg=true){const p=tcCurrentProject();if(!p)return alert('請先在「指定單號／案名」選擇要配對的資料');const all=tcDetails();all[p.key]=tcDetailData();tcSaveDetails(all);tcRenderSavedDetails();if(showMsg)alert('台中採購單已儲存並指定到：'+(p.no||'')+'｜'+(p.caseName||''))}
 function tcDetailLoad(key){const d=tcDetails()[key];if(!d)return false;if(d.claimPeriod&&$t('tcExportPeriod')){$t('tcExportPeriod').value=d.claimPeriod;tcPeriodRender(d.claimPeriod)}$t('tcItemsBody').innerHTML='';(d.items||[]).forEach(add);if(!(d.items||[]).length)add();calc();return true}
 function tcEsc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function tcResolvedClaimPeriod(d,p){
+ if(d.claimPeriod)return d.claimPeriod;
+ const m=String(p.no||'').match(/^(?:G5DD|G5DE)(\\d{6})/i);
+ if(!m)return '';
+ const candidates=tcPeriodList().filter(v=>{const r=v.match(/^(\\d{6})-(\\d{6})$/);return r&&r[1]<=m[1]&&m[1]<=r[2]});
+ return candidates.length===1?candidates[0]:'';
+}
 function tcRenderSavedDetails(){
  const body=$t('tcSavedDetailRows'),empty=$t('tcSavedDetailEmpty');if(!body)return;
  const ds=tcDetails(),ps=tcProjects(),rows=[];
+ let migrated=false;
+ Object.keys(ds).forEach(key=>{
+   const d=ds[key],p=ps.find(x=>x.key===key);
+   if(d&&!d.claimPeriod&&p){const inferred=tcResolvedClaimPeriod(d,p);if(inferred){d.claimPeriod=inferred;migrated=true}}
+ });
+ if(migrated)tcSaveDetails(ds);
  Object.keys(ds).forEach(key=>{const d=ds[key]||{},p=ps.find(x=>x.key===key)||{};const its=Array.isArray(d.items)?d.items:[];const total=its.reduce((n,x)=>n+Number(x.qty||0)*Number(x.price||0),0);const detail=its.length?its.map((x,i)=>`${i+1}. ${x.name||''}${x.size?'｜尺寸 '+x.size:''}${x.qty!==''&&x.qty!=null?'｜'+x.qty+' '+(x.unit||''):''}${x.price!==''&&x.price!=null?'｜單價 '+money(x.price):''}${x.qty!==''&&x.qty!=null&&x.price!==''&&x.price!=null?'｜合計 '+money(Number(x.qty||0)*Number(x.price||0)):''}`).join('<br>'):'—';rows.push({key,d,p,total,detail})});
  rows.sort((a,b)=>String(b.d.updatedAt||'').localeCompare(String(a.d.updatedAt||'')));
- body.innerHTML=rows.map(r=>`<tr><td style="white-space:nowrap">${tcEsc(r.d.claimPeriod||"—")}</td><td style="white-space:nowrap"><button type="button" data-tc-act="edit" data-k="${tcEsc(r.key)}">修改</button> <button type="button" data-tc-act="del" data-k="${tcEsc(r.key)}" style="background:#d62d2d;color:#fff;border-color:#d62d2d">刪除</button></td><td>${tcEsc(r.p.no||'')}</td><td>${tcEsc(r.p.caseName||'')}</td><td style="text-align:left;white-space:normal;min-width:420px;line-height:1.65">${r.detail}</td><td>${money(r.total)}</td></tr>`).join('');
+ body.innerHTML=rows.map(r=>`<tr><td style="white-space:nowrap">${tcEsc(tcResolvedClaimPeriod(r.d,r.p)||"—")}</td><td style="white-space:nowrap"><button type="button" data-tc-act="edit" data-k="${tcEsc(r.key)}">修改</button> <button type="button" data-tc-act="del" data-k="${tcEsc(r.key)}" style="background:#d62d2d;color:#fff;border-color:#d62d2d">刪除</button></td><td>${tcEsc(r.p.no||'')}</td><td>${tcEsc(r.p.caseName||'')}</td><td style="text-align:left;white-space:normal;min-width:420px;line-height:1.65">${r.detail}</td><td>${money(r.total)}</td></tr>`).join('');
  if(empty)empty.classList.toggle('hidden',rows.length>0);
  body.querySelectorAll('button[data-tc-act]').forEach(btn=>btn.onclick=()=>{const key=btn.dataset.k;if(btn.dataset.tcAct==='edit'){if($t('tcAssignmentSelect'))$t('tcAssignmentSelect').value=key;tcDetailLoad(key);$t('taichungPurchaseView')?.scrollIntoView({behavior:'smooth',block:'start'});}else{const p=ps.find(x=>x.key===key)||{};if(!confirm(`確定刪除 ${p.no||''} ${p.caseName||''} 的台中採購單明細？`))return;const all=tcDetails();delete all[key];tcSaveDetails(all);if($t('tcAssignmentSelect')?.value===key)clear();tcRenderSavedDetails();}});
 }
@@ -3025,45 +3038,58 @@ async function download(){
    let pi=0;
    wb.worksheets.forEach((ws,si)=>{
      const groups=groupsBySheet[si]||[];
-     const used=groups.slice(0,Math.max(0,Math.min(groups.length,projects.length-pi)));
-     // 從下往上擴充區塊，避免插入列影響其他區塊的原始位置。
-     const expansions=used.map(([rs,re],i)=>Math.max(0,(ds[projects[pi+i].key]?.items||[]).length-(re-rs+1)));
-     for(let gi=used.length-1;gi>=0;gi--){
-       const [rs,re]=used[gi],extra=expansions[gi];
-       if(!extra)continue;
-       // 先解除該區塊跨列合併，再插入足夠的明細列。
-       for(const col of ['A','H','I']){
-         try{ws.unMergeCells(`${col}${rs}:${col}${re}`)}catch(e){}
-       }
-       const blanks=Array.from({length:extra},()=>[]);
-       ws.spliceRows(re+1,0,...blanks);
+     const count=Math.min(groups.length,Math.max(0,projects.length-pi));
+     const expansions=groups.map(([rs,re],i)=>i<count?Math.max(0,(ds[projects[pi+i].key]?.items||[]).length-(re-rs+1)):0);
+     // ExcelJS 插入列不會正確移動合併儲存格：先解除全部合併，完成插列後重新定位。
+     const originalMerges=Object.keys(ws._merges||{}).map(k=>{
+       const x=ws._merges[k].model;
+       return {top:x.top,bottom:x.bottom,left:x.left,right:x.right};
+     });
+     originalMerges.forEach(m=>{try{ws.unMergeCells(m.top,m.left,m.bottom,m.right)}catch(e){}});
+     for(let gi=groups.length-1;gi>=0;gi--){
+       const [rs,re]=groups[gi],extra=expansions[gi];if(!extra)continue;
+       ws.spliceRows(re+1,0,...Array.from({length:extra},()=>[]));
        for(let r=re+1;r<=re+extra;r++){
          ws.getRow(r).height=ws.getRow(re).height;
          for(let c=1;c<=9;c++)copyStyle(ws.getRow(re).getCell(c),ws.getRow(r).getCell(c));
        }
      }
-     let offset=0;
-     used.forEach(([origStart,origEnd],gi)=>{
-       const rs=origStart+offset,re=origEnd+offset+expansions[gi];
-       offset+=expansions[gi];
-       const p=projects[pi++],its=ds[p.key]?.items||[];
-       // 重新合併跨列的序號、總計與報價欄，整組只顯示一次。
-       for(const col of ['A','H','I']){
-         try{ws.unMergeCells(`${col}${rs}:${col}${re}`)}catch(e){}
-         if(re>rs)ws.mergeCells(`${col}${rs}:${col}${re}`);
+     const shift=row=>row+groups.reduce((n,g,i)=>n+(g[1]<row?expansions[i]:0),0);
+     const blockMerge=m=>groups.findIndex(g=>g[0]===m.top&&g[1]===m.bottom&&[1,8,9].includes(m.left)&&m.left===m.right);
+     originalMerges.forEach(m=>{
+       const gi=blockMerge(m);
+       const top=shift(m.top),bottom=shift(m.bottom)+(gi>=0?expansions[gi]:0);
+       try{ws.mergeCells(top,m.left,bottom,m.right)}catch(e){console.warn('merge',m,e)}
+     });
+     groups.forEach(([origStart,origEnd],gi)=>{
+       const rs=shift(origStart),re=shift(origEnd)+expansions[gi];
+       if(gi>=count){
+         // 模板未使用的序號區塊不應出現重複序號、預設文字或 0。
+         for(let r=rs;r<=re;r++)for(let c=1;c<=9;c++){
+           const cell=ws.getRow(r).getCell(c);
+           if(!cell.isMerged||cell.address===cell.master.address)cell.value=null;
+         }
+         return;
        }
+       const p=projects[pi++],its=ds[p.key]?.items||[];
        ws.getCell('A'+rs).value=pi;
        const total=Math.round(its.reduce((sum,it)=>sum+Number(it.qty||0)*Number(it.price||0),0)*100)/100;
        ws.getCell('H'+rs).value=total;ws.getCell('H'+rs).numFmt='#,##0';
        ws.getCell('I'+rs).value=fullQuote(p);
+       for(let r=rs;r<=re;r++){
+         for(const c of ['B','D','E','F','G']){
+           const cell=ws.getCell(c+r);
+           if(!cell.isMerged||cell.address===cell.master.address)cell.value=null;
+         }
+       }
        its.forEach((it,k)=>{
          const r=rs+k;
          ws.getCell('B'+r).value=it.name||'';
-         ws.getCell('D'+r).value=Number(it.qty||0);
+         ws.getCell('D'+r).value=Number(it.qty||0)||null;
          ws.getCell('E'+r).value=it.unit||'';
-         ws.getCell('F'+r).value=Number(it.price||0);
+         ws.getCell('F'+r).value=Number(it.price||0)||null;
          ws.getCell('F'+r).numFmt='#,##0';
-         ws.getCell('G'+r).value=Math.round(Number(it.qty||0)*Number(it.price||0)*100)/100;
+         ws.getCell('G'+r).value=(Number(it.qty||0)*Number(it.price||0))||null;
          ws.getCell('G'+r).numFmt='#,##0';
        });
      });
