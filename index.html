@@ -833,7 +833,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
     <div><b>案名</b><div id="vtitle"></div></div>
     <div><b>師傅</b><div id="vmaster"></div></div>
     <div><b>內容</b><div id="vdetail" style="white-space:pre-wrap"></div></div>
-    <div class="formActions"><button type="button" id="closeViewBtn">關閉</button></div>
+    <div class="formActions"><button type="button" id="closeViewBtn" onclick="document.getElementById('viewDlg').close()">關閉</button></div>
   </div>
 </dialog>
 <dialog id="eventDlg"><form class="form" method="dialog"><h2 id="eventDlgTitle">新增行程</h2><div class="eventGrid"><label>日期<input id="fdate" type="text" inputmode="numeric" placeholder="例如：20260901 或 2026/09/01"></label><label>時間<input id="ftime" type="text" inputmode="numeric" placeholder="例如：0830 或 08:30"></label><label>案名<input id="ftitle" placeholder="例如：工地會勘"></label><label>顏色<select id="fcolor"><option value="blue">藍色－人造石</option><option value="green">綠色－石英石</option><option value="red">紅色</option><option value="orange">橘色－草屯接單</option><option value="purple">紫色－浤富代裝石英</option><option value="yellow">黃色－自安送料</option><option value="black">咖啡－我司單草屯代裝</option></select></label><label id="installField">安裝<select id="finstall"><option value="勝寶鼎">勝寶鼎</option><option value="外包">外包</option></select><div style="margin-top:5px;color:var(--muted);font-size:12px">勝寶鼎、外包</div></label><label>師傅<select id="fmaster"><option value="">請選擇師傅</option><option value="__ADD__">＋ 新增師傅</option></select></label><label class="full">詳細內容<textarea id="fdetail" placeholder="地點、人員、工作內容、備註……"></textarea></label></div><div class="formActions"><button id="deleteEventBtn" type="button" class="danger hidden">刪除</button><button value="cancel">取消</button><button id="saveEventBtn" type="button" class="primary">儲存</button></div></form></dialog>
@@ -1290,6 +1290,18 @@ table{width:100%;border-collapse:collapse;border:1.4px solid #111;table-layout:f
 
 
 
+<script id="calendar-view-close-mobile-fix">
+(function(){
+ function bind(){
+  const dlg=document.getElementById('viewDlg');
+  const btn=document.getElementById('closeViewBtn');
+  if(!dlg||!btn)return;
+  btn.addEventListener('click',function(e){e.preventDefault();dlg.close();});
+  dlg.addEventListener('click',function(e){if(e.target===dlg)dlg.close();});
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();
+})();
+</script>
 </body></html>`
 }
 function printQuote(x){const w=window.open("","_blank");if(!w){alert("瀏覽器阻擋新視窗，請允許彈出視窗");return}w.document.write(quotePrintHtml(x));w.document.close();w.onload=()=>setTimeout(()=>w.print(),300)}
@@ -2305,7 +2317,7 @@ function poLoadAllWork(){
   try{
     const raw=localStorage.getItem(PO_WORK_KEY);if(!raw)return false;
     const d=JSON.parse(raw);if(!d||!Array.isArray(d.groups))return false;
-    poGroups=d.groups;poGroups.forEach(g=>{if(String(g.salesNo)==='1154977')g.pdfTotal=15834;});poPdfPageCount=Number(d.pdfPageCount||0);poPdfMonth=String(d.pdfMonth||"");
+    window.poLastPdfCost=null;poGroups=d.groups;poGroups.forEach(g=>{if(String(g.salesNo)==='1154977')g.pdfTotal=15834;});poPdfPageCount=Number(d.pdfPageCount||0);poPdfMonth=String(d.pdfMonth||"");
     poRenderGroups();
     const rows=poGroups.reduce((a,g)=>a+(g.rows?.length||0),0);
     $("poStatus").textContent=`已載入上次完整存檔：${poGroups.length} 個銷貨單分組、${rows} 筆貨品；單號／案名配對已自動帶回。`;
@@ -2366,16 +2378,10 @@ function poRenderGroups(){
     const rows=g.rows.map((r,ri)=>`<tr><td>${ri+1}</td><td><input class="poName" value="${poEsc(r.name)}"></td><td><input class="poQty" inputmode="decimal" value="${r.qty}"></td><td><input class="poUnit" value="${poEsc(r.unit)}"></td><td><input class="poPrice" inputmode="decimal" value="${r.price}"></td><td class="poSum">${poFmt((+r.qty||0)*(+r.price||0))}</td><td><button type="button" class="poDel">刪</button></td></tr>`).join("");
     return `<div class="poGroup" data-gi="${gi}"><div class="poGroupHead"><div><div style="font-size:12px">浤富銷貨單號</div><strong>${poEsc(g.salesNo||("第 "+(gi+1)+" 組"))}</strong></div><div><div style="font-size:12px">總計</div><div class="poGroupTotal">${poFmt(total)}</div></div><label>單號／案名<select class="poProjectSel">${options}</select></label></div><div class="purchaseTableWrap"><table class="purchaseTable"><thead><tr><th>序號</th><th>型號品名</th><th>訂購量</th><th>單位</th><th>單價</th><th>合計</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
   }).join("");
-  const corrected={'1154977':15834,'1155175':9550,'1155265':5776};
-  const total=poGroups.reduce((sum,g)=>{
-    const disc=(g.rows||[]).find(r=>/現金扣/.test(String(r.name||''))&&Number(r.qty)>0&&Number(r.price)<0&&Number(r.price)>-1);
-    const calc=disc?Math.round(Number(disc.qty)*(1+Number(disc.price))):(g.rows||[]).reduce((n,r)=>n+(Number(r.qty)||0)*(Number(r.price)||0),0);
-    const val=Object.prototype.hasOwnProperty.call(corrected,String(g.salesNo))?corrected[String(g.salesNo)]:(g.pdfTotal!=null&&Number.isFinite(Number(g.pdfTotal))?Number(g.pdfTotal):calc);
-    return sum+val;
-  },0);
+  const total=Number.isFinite(Number(window.poLastPdfCost))&&window.poLastPdfCost!==null&&window.poLastPdfCost!==undefined?Number(window.poLastPdfCost):null;
   const grand=$("poGrandTotal");
-  if(grand)grand.textContent=`浤富總金額：${poFmt(total)}（${poGroups.length} 張銷貨單）`;
-  try{localStorage.setItem('sbd_hongfu_visible_total_v1',JSON.stringify({period:($("poPdfPeriod")?.value||'').trim(),total,count:poGroups.length}))}catch(e){}
+  if(grand)grand.textContent=total===null?"浤富成本：請匯入 PDF，讀取最後一頁本期合計":`浤富成本（PDF 本期合計）：${poFmt(total)}`;
+
   host.querySelectorAll(".poGroup").forEach(box=>{
     const gi=+box.dataset.gi;
     box.querySelector(".poProjectSel").onchange=e=>{poGroups[gi].projectKey=e.target.value;poSaveAllWork(false)};
@@ -2443,7 +2449,7 @@ async function poReadPdf(file){
       const sorted=r.items.sort((a,b)=>a.x-b.x),joined=sorted.map(x=>x.t).join(" ");
       const after=joined.split(/本期\s*合計/).slice(1).join(" ");
       const nums=[...after.matchAll(/-?\d[\d,]*(?:\.\d+)?/g)].map(x=>Number(x[0].replace(/,/g,"")));
-      if(nums.length)pdfFinalCost=nums[nums.length-1];
+      if(nums.length)pdfFinalCost=nums[0];
     }
     if(pdfFinalCost===null)throw new Error("最後一頁找不到「本期合計」金額，請確認 PDF 格式；不會以明細金額冒充成本");
     window.poLastPdfCost=pdfFinalCost;
@@ -3236,11 +3242,6 @@ async function render(){
  }catch(e){console.warn('浤富成本讀取失敗',e)}
  const groups=['浤富','草屯'].map(name=>{const rr=rows.filter(r=>r.group===name);return {name,sale:rr.reduce((n,r)=>n+r.sale,0),cost:rr.reduce((n,r)=>n+(r.cost||0),0),known:rr.every(r=>r.cost!==null),count:rr.length}});
  if(hongfuCost!==null){groups[0].cost=hongfuCost;groups[0].known=true}
- const visible=read('sbd_hongfu_visible_total_v1',null);
- if(visible&&Number.isFinite(Number(visible.total))&&visible.count>0&&(period.value==='all'||period.value===visible.period)){
-   const h=groups.find(g=>g.name==='浤富');
-   if(h){h.cost=Number(visible.total);h.known=true;}
- }
  const total={name:'總計',sale:groups.reduce((n,g)=>n+g.sale,0),cost:groups.reduce((n,g)=>n+g.cost,0),known:groups.every(g=>g.known),count:groups.reduce((n,g)=>n+g.count,0)};
  document.getElementById('crCards').innerHTML='';
  const cell=(value,muted=false)=>`<td style="padding:17px 20px;text-align:right;font-size:19px;font-weight:700;color:${muted?'#718096':'#183a62'};white-space:nowrap">${value}</td>`;
