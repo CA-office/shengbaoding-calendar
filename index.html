@@ -64,7 +64,7 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
 
 /* 採購單號清單：欄寬 4cm */
 #purchaseView .purchaseRecords th, #purchaseView .purchaseRecords td{width:4cm;max-width:4cm;}
-#purchaseView .purchaseRecords{table-layout:fixed;width:auto;min-width:16cm;}
+#purchaseView .purchaseRecords{table-layout:fixed;width:20cm;min-width:20cm;} #purchaseView .purchaseRecords th:nth-child(3),#purchaseView .purchaseRecords td:nth-child(3){width:8cm;max-width:8cm;}
 #purchaseView .purchaseRecords th:nth-child(3),#purchaseView .purchaseRecords td:nth-child(3){overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 </style>
 
@@ -591,6 +591,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
     <table class="purchaseRecords">
       <thead><tr><th>操作</th><th>單號</th><th>案名</th><th>案件金額</th></tr></thead>
       <tbody id="poProjectRecords"></tbody>
+      <tfoot><tr style="font-weight:800;background:#f1f5f9"><td style="padding:12px">總計</td><td></td><td id="poProjectCount" style="text-align:center;padding:12px">0</td><td id="poProjectGrandTotal" style="text-align:right;padding:12px">0</td></tr></tfoot>
     </table>
   </div>
 
@@ -2307,6 +2308,10 @@ function poRenderProjects(){
   const filter=$("poProjectFilter")?.value??"";
   const numPart=v=>{const m=String(v||"").match(/^(?:G5DD|G5DE)(\d+)/);return m?BigInt(m[1]):0n};
   const a=poProjects().filter(r=>!filter || String(r.no||"").startsWith(filter)).sort((x,y)=>{const a=numPart(x.no),b=numPart(y.no);return a<b?-1:a>b?1:String(x.no||"").localeCompare(String(y.no||""));});
+  const total=a.reduce((sum,r)=>sum+(Number(String(r.caseAmount??0).replace(/,/g,""))||0),0);
+  const totalEl=$("poProjectGrandTotal");
+  if(totalEl)totalEl.textContent=poFmt(total);
+  const countEl=$("poProjectCount");if(countEl)countEl.textContent=String(a.length);
   b.innerHTML=a.map(r=>`<tr><td><button data-a="edit" data-k="${r.key}">修改</button><button data-a="del" data-k="${r.key}">刪除</button></td><td>${poEsc(r.no)}</td><td>${poEsc(r.caseName)}</td><td>${poFmt(r.caseAmount)}</td></tr>`).join("");
   b.querySelectorAll("button").forEach(btn=>btn.onclick=()=>{
     const a=poProjects(),r=a.find(x=>x.key===btn.dataset.k);
