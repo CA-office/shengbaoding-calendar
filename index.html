@@ -809,7 +809,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
     <h2 class="purchaseTitle">台中採購單明細表</h2>
     <div class="purchaseTableWrap" style="max-height:none">
       <table class="purchaseTable" style="min-width:1250px">
-        <thead><tr><th>操作</th><th>指定單號</th><th>指定案名</th><th>明細內容</th><th>合計</th></tr></thead>
+        <thead><tr><th style="min-width:150px">請款日</th><th>操作</th><th>指定單號</th><th>指定案名</th><th>明細內容</th><th>合計</th></tr></thead>
         <tbody id="tcSavedDetailRows"></tbody>
       </table>
     </div>
@@ -2941,16 +2941,21 @@ function tcCurrentProject(){const key=$t('tcAssignmentSelect')?.value||'';return
 const TC_DETAIL_KEY='sbd_taichung_purchase_details_v1';
 function tcDetails(){try{return JSON.parse(localStorage.getItem(TC_DETAIL_KEY)||'{}')}catch(e){return {}}}
 function tcSaveDetails(o){localStorage.setItem(TC_DETAIL_KEY,JSON.stringify(o))}
-function tcDetailData(){return {items:items(),updatedAt:new Date().toISOString()}}
+function tcDetailData(){
+ const entered=String($t('tcExportPeriod')?.value||'').trim();
+ const selected=String($t('tcPeriodHistory')?.value||'').trim();
+ const period=/^\d{6}-\d{6}$/.test(entered)?entered:(/^\d{6}-\d{6}$/.test(selected)?selected:'');
+ return {items:items(),claimPeriod:period,updatedAt:new Date().toISOString()};
+}
 function tcDetailSave(showMsg=true){const p=tcCurrentProject();if(!p)return alert('請先在「指定單號／案名」選擇要配對的資料');const all=tcDetails();all[p.key]=tcDetailData();tcSaveDetails(all);tcRenderSavedDetails();if(showMsg)alert('台中採購單已儲存並指定到：'+(p.no||'')+'｜'+(p.caseName||''))}
-function tcDetailLoad(key){const d=tcDetails()[key];if(!d)return false;$t('tcItemsBody').innerHTML='';(d.items||[]).forEach(add);if(!(d.items||[]).length)add();calc();return true}
+function tcDetailLoad(key){const d=tcDetails()[key];if(!d)return false;if(d.claimPeriod&&$t('tcExportPeriod')){$t('tcExportPeriod').value=d.claimPeriod;tcPeriodRender(d.claimPeriod)}$t('tcItemsBody').innerHTML='';(d.items||[]).forEach(add);if(!(d.items||[]).length)add();calc();return true}
 function tcEsc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function tcRenderSavedDetails(){
  const body=$t('tcSavedDetailRows'),empty=$t('tcSavedDetailEmpty');if(!body)return;
  const ds=tcDetails(),ps=tcProjects(),rows=[];
  Object.keys(ds).forEach(key=>{const d=ds[key]||{},p=ps.find(x=>x.key===key)||{};const its=Array.isArray(d.items)?d.items:[];const total=its.reduce((n,x)=>n+Number(x.qty||0)*Number(x.price||0),0);const detail=its.length?its.map((x,i)=>`${i+1}. ${x.name||''}${x.size?'｜尺寸 '+x.size:''}${x.qty!==''&&x.qty!=null?'｜'+x.qty+' '+(x.unit||''):''}${x.price!==''&&x.price!=null?'｜單價 '+money(x.price):''}${x.qty!==''&&x.qty!=null&&x.price!==''&&x.price!=null?'｜合計 '+money(Number(x.qty||0)*Number(x.price||0)):''}`).join('<br>'):'—';rows.push({key,d,p,total,detail})});
  rows.sort((a,b)=>String(b.d.updatedAt||'').localeCompare(String(a.d.updatedAt||'')));
- body.innerHTML=rows.map(r=>`<tr><td style="white-space:nowrap"><button type="button" data-tc-act="edit" data-k="${tcEsc(r.key)}">修改</button> <button type="button" data-tc-act="del" data-k="${tcEsc(r.key)}" style="background:#d62d2d;color:#fff;border-color:#d62d2d">刪除</button></td><td>${tcEsc(r.p.no||'')}</td><td>${tcEsc(r.p.caseName||'')}</td><td style="text-align:left;white-space:normal;min-width:420px;line-height:1.65">${r.detail}</td><td>${money(r.total)}</td></tr>`).join('');
+ body.innerHTML=rows.map(r=>`<tr><td style="white-space:nowrap">${tcEsc(r.d.claimPeriod||"—")}</td><td style="white-space:nowrap"><button type="button" data-tc-act="edit" data-k="${tcEsc(r.key)}">修改</button> <button type="button" data-tc-act="del" data-k="${tcEsc(r.key)}" style="background:#d62d2d;color:#fff;border-color:#d62d2d">刪除</button></td><td>${tcEsc(r.p.no||'')}</td><td>${tcEsc(r.p.caseName||'')}</td><td style="text-align:left;white-space:normal;min-width:420px;line-height:1.65">${r.detail}</td><td>${money(r.total)}</td></tr>`).join('');
  if(empty)empty.classList.toggle('hidden',rows.length>0);
  body.querySelectorAll('button[data-tc-act]').forEach(btn=>btn.onclick=()=>{const key=btn.dataset.k;if(btn.dataset.tcAct==='edit'){if($t('tcAssignmentSelect'))$t('tcAssignmentSelect').value=key;tcDetailLoad(key);$t('taichungPurchaseView')?.scrollIntoView({behavior:'smooth',block:'start'});}else{const p=ps.find(x=>x.key===key)||{};if(!confirm(`確定刪除 ${p.no||''} ${p.caseName||''} 的台中採購單明細？`))return;const all=tcDetails();delete all[key];tcSaveDetails(all);if($t('tcAssignmentSelect')?.value===key)clear();tcRenderSavedDetails();}});
 }
