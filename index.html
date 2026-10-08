@@ -495,7 +495,10 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
 /* 台中採購單：尺寸目前先隱藏，資料欄位仍保留供既有資料/Excel相容 */
 #taichungPurchaseView .tcItemsTable .tcSizeCol{display:none!important}
 </style>
-</head>
+<style id="tc-project-column-widths">
+.tcProjectRecordsTable{table-layout:fixed!important;width:17cm!important;min-width:17cm!important}
+.tcProjectRecordsTable th:nth-child(3),.tcProjectRecordsTable td:nth-child(3){width:5cm!important;max-width:5cm!important}
+</style></head>
 <body>
 <div id="pullRefreshIndicator" aria-hidden="true"><div class="pull-spinner"></div></div>
 <section id="loginPage" class="loginWrap"><div class="loginCard"><h1>勝寶鼎/新弘股公司</h1><label class="field">Email<input id="loginEmail" type="email" autocomplete="username"></label><label class="field">密碼<input id="loginPassword" type="password" autocomplete="current-password"></label><button id="loginBtn" class="loginBtn">登入</button><button id="passkeyBtn" class="loginBtn" type="button" style="margin-top:10px;background:#fff;border:1px solid #81D8D0">使用 Face ID／裝置解鎖登入</button><div id="loginErr" class="err"></div></div></section>
@@ -783,7 +786,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
       <label>案名<input id="tcProjectCase" placeholder="例如 遵櫃-三峽"></label>
       <label>案件金額<input id="tcProjectAmount" inputmode="decimal" placeholder="例如 68088"></label>
     </div>
-    <table class="purchaseRecords">
+    <table class="purchaseRecords tcProjectRecordsTable">
       <thead><tr><th>操作</th><th>單號</th><th>案名</th><th>案件金額</th></tr></thead>
       <tbody id="tcProjectRecords"></tbody>
     </table>
