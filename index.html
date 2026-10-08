@@ -2357,7 +2357,10 @@ function poRenderGroups(){
   });
   host.innerHTML=poGroups.map((g,gi)=>{
     const options='<option value="">尚未指定</option>'+projects.map(p=>`<option value="${p.key}" ${g.projectKey===p.key?"selected":""}>${poEsc([p.no,p.caseName,(p.caseAmount!==undefined && p.caseAmount!==null && p.caseAmount!=="" ? poFmt(Number(p.caseAmount)||0) : "")].filter(Boolean).join("｜"))}</option>`).join("");
-    const total=g.rows.reduce((n,r)=>n+(+r.qty||0)*(+r.price||0),0);
+    // 浤富現金扣列的「訂購量」是折扣前淨額，非一般商品數量。
+    // 例：銷貨1155265：6,080 × (1 - 0.05) = 5,776，不能算成 6,880 - 304 = 6,576。
+    const discountRow=g.rows.find(r=>/現金扣/.test(String(r.name||""))&&Number(r.qty)>0&&Number(r.price)<0&&Number(r.price)>-1);
+    const total=discountRow?Math.round(Number(discountRow.qty)*(1+Number(discountRow.price))):g.rows.reduce((n,r)=>n+(+r.qty||0)*(+r.price||0),0);
     const rows=g.rows.map((r,ri)=>`<tr><td>${ri+1}</td><td><input class="poName" value="${poEsc(r.name)}"></td><td><input class="poQty" inputmode="decimal" value="${r.qty}"></td><td><input class="poUnit" value="${poEsc(r.unit)}"></td><td><input class="poPrice" inputmode="decimal" value="${r.price}"></td><td class="poSum">${poFmt((+r.qty||0)*(+r.price||0))}</td><td><button type="button" class="poDel">刪</button></td></tr>`).join("");
     return `<div class="poGroup" data-gi="${gi}"><div class="poGroupHead"><div><div style="font-size:12px">浤富銷貨單號</div><strong>${poEsc(g.salesNo||("第 "+(gi+1)+" 組"))}</strong></div><div><div style="font-size:12px">總計</div><div class="poGroupTotal">${poFmt(total)}</div></div><label>單號／案名<select class="poProjectSel">${options}</select></label></div><div class="purchaseTableWrap"><table class="purchaseTable"><thead><tr><th>序號</th><th>型號品名</th><th>訂購量</th><th>單位</th><th>單價</th><th>合計</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
   }).join("");
@@ -3021,6 +3024,19 @@ function tcRenderSavedDetails(){
  if(label)label.textContent=selected||'尚未選擇';
  if(count)count.textContent=String(relevant.length);
  if(sum)sum.textContent=money(relevant.reduce((n,r)=>n+r.total,0));
+ // 顯示未納入請款區間的案件，避免把漏算案件藏起來。
+ let diagnostic=$t('tcPeriodDiagnostic');
+ if(!diagnostic){diagnostic=document.createElement('div');diagnostic.id='tcPeriodDiagnostic';diagnostic.style='padding:12px 16px;background:#fff8e9;border-top:1px solid #ead6ac;color:#6e4b13;font-size:14px;line-height:1.7';const anchor=$t('tcDetailPeriodTotal');const table=body.closest('table');if(table)table.insertAdjacentElement('afterend',diagnostic);else body.parentElement.appendChild(diagnostic)}
+ const missing=selected?rows.filter(r=>!relevant.includes(r)):[];
+ const candidates=missing.filter(r=>{const m=String(r.p.no||'').match(/^(?:G5DD|G5DE)(\d{6})/i);return m&&periodParts&&m[1]>=periodParts[1]&&m[1]<=periodParts[2]});
+ const unmatched=ps.filter(p=>!ds[p.key]&&(()=>{const m=String(p.no||'').match(/^(?:G5DD|G5DE)(\d{6})/i);return m&&periodParts&&m[1]>=periodParts[1]&&m[1]<=periodParts[2]})());
+ if(selected&&(candidates.length||unmatched.length)){
+  diagnostic.style.display='block';
+  diagnostic.innerHTML='<b>請款區間核對：</b>目前納入 '+relevant.length+' 件。另有 '+(candidates.length+unmatched.length)+' 筆單號日期在此區間內、但未納入統計（請先確認是否屬於此請款區間）：'+
+  candidates.map(r=>'<div>• '+tcEsc(r.p.no)+'｜'+tcEsc(r.p.caseName)+'｜目前請款日：'+tcEsc(r.d.claimPeriod||'未指定')+'｜明細 '+money(r.total)+'</div>').join('')+
+  unmatched.map(p=>'<div>• '+tcEsc(p.no)+'｜'+tcEsc(p.caseName)+'｜尚無儲存明細</div>').join('')+
+  '<small>若請款區間錯誤，按該筆「修改」設定請款日後儲存，統計會更新；不會自動更改既有紀錄。</small>';
+ }else{diagnostic.style.display='none';diagnostic.textContent=''}
  if(empty)empty.classList.toggle('hidden',rows.length>0);
  body.querySelectorAll('button[data-tc-act]').forEach(btn=>btn.onclick=()=>{const key=btn.dataset.k;if(btn.dataset.tcAct==='edit'){if($t('tcAssignmentSelect'))$t('tcAssignmentSelect').value=key;tcDetailLoad(key);$t('taichungPurchaseView')?.scrollIntoView({behavior:'smooth',block:'start'});}else{const p=ps.find(x=>x.key===key)||{};if(!confirm(`確定刪除 ${p.no||''} ${p.caseName||''} 的台中採購單明細？`))return;const all=tcDetails();delete all[key];tcSaveDetails(all);if($t('tcAssignmentSelect')?.value===key)clear();tcRenderSavedDetails();}});
 }
