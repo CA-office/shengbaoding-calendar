@@ -597,8 +597,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
       <tfoot><tr style="font-weight:800;background:#f1f5f9"><td style="padding:12px">總計</td><td></td><td id="poProjectCount" style="text-align:center;padding:12px">0</td><td id="poProjectGrandTotal" style="text-align:right;padding:12px">0</td></tr></tfoot>
     </table>
   </div>
-
-  <div class="purchaseCard">
+<div class="purchaseCard">
     <h2 class="purchaseTitle">浤富 PDF／銷貨單分組</h2>
     <div class="purchaseActions">
       <button type="button" id="poPdfBtn" class="primary">匯入浤富 PDF</button>
@@ -795,14 +794,14 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
       <label>案件金額<input id="tcProjectAmount" inputmode="decimal" placeholder="例如 68088"></label>
     </div>
     <table class="purchaseRecords tcProjectRecordsTable">
-      <thead><tr><th>操作</th><th>單號</th><th>案名</th><th>案件金額</th></tr></thead>
+      <thead><tr><th>操作</th><th>單號</th><th>案名</th><th>案件金額</th><th>分類</th></tr></thead>
       <tbody id="tcProjectRecords"></tbody>
       <tfoot><tr style="font-weight:800;background:#eef2f6">
         <td style="padding:12px">總計</td><td></td>
         <td id="tcProjectCount" style="text-align:center;padding:12px">0</td>
         <td id="tcProjectGrandTotal" style="text-align:right;padding:12px">0</td>
       </tr></tfoot>
-    </table>
+    </table><div style="margin-top:18px"><h3>代安裝明細</h3><table class="purchaseRecords"><thead><tr><th>單號</th><th>案名</th><th>案件金額</th></tr></thead><tbody id="tcAgencyRows"></tbody><tfoot><tr><th>總計</th><th id="tcAgencyCount">0 件</th><th id="tcAgencyTotal">0</th></tr></tfoot></table></div>
   </div>
   <div class="quoteCard">
     <h2 class="quoteTitle">台中採購單</h2>
@@ -2336,7 +2335,7 @@ function poProjectSave(){
   const no=noSuffix ? (($("poNoPrefix")?.value||"")+noSuffix) : "", caseName=$("poCase").value.trim(), caseAmount=Number(String($("poCaseAmount").value).replace(/,/g,"")||0);
   if(!no&&!caseName)return alert("請輸入單號或案名");
   const a=poProjects(), key=poProjectEditKey||Date.now().toString();
-  const rec={key,no,caseName,caseAmount,updatedAt:new Date().toISOString()};
+  const previous=a.find(x=>x.key===key);const rec={...previous,key,no,caseName,caseAmount,updatedAt:new Date().toISOString()};
   const i=a.findIndex(x=>x.key===key); if(i>=0)a[i]=rec; else a.unshift(rec);
   poSaveProjects(a);poProjectEditKey=null;poRenderProjects();poRenderGroups();
   // 儲存後直接進入下一筆新增狀態：保留目前前綴，其餘欄位清空，游標回到單號數字欄
@@ -2992,16 +2991,17 @@ function tcProjects(){try{return JSON.parse(localStorage.getItem(TC_PROJECT_KEY)
 function tcSaveProjects(a){localStorage.setItem(TC_PROJECT_KEY,JSON.stringify(a))}
 function tcProjectClear(){tcProjectEditKey=null;$t('tcNoPrefix').value='G5DE';$t('tcProjectNo').value='';$t('tcProjectCase').value='';$t('tcProjectAmount').value='';}
 function tcFullNo(){const x=$t('tcProjectNo')?.value.trim()||'';return x?(($t('tcNoPrefix')?.value||'')+x):''}
-function tcProjectSave(){const no=tcFullNo(),caseName=$t('tcProjectCase').value.trim(),caseAmount=$t('tcProjectAmount').value.trim();if(!no&&!caseName)return alert('請輸入單號或案名');const a=tcProjects(),key=tcProjectEditKey||Date.now().toString(),rec={key,no,caseName,caseAmount,updatedAt:new Date().toISOString()};const i=a.findIndex(x=>x.key===key);if(i>=0)a[i]=rec;else a.unshift(rec);tcSaveProjects(a);tcProjectEditKey=null;tcRenderProjects();tcProjectClear();}
+function tcProjectSave(){const no=tcFullNo(),caseName=$t('tcProjectCase').value.trim(),caseAmount=$t('tcProjectAmount').value.trim();if(!no&&!caseName)return alert('請輸入單號或案名');const a=tcProjects(),key=tcProjectEditKey||Date.now().toString(),rec={key,no,caseName,caseAmount,updatedAt:new Date().toISOString()};const i=a.findIndex(x=>x.key===key);if(i>=0){rec.category=a[i].category||"";a[i]=rec;}else a.unshift(rec);tcSaveProjects(a);tcProjectEditKey=null;tcRenderProjects();tcProjectClear();}
 function tcRenderAssignmentOptions(){
  const sel=$t('tcAssignmentSelect');if(!sel)return;const keep=sel.value;
  const a=tcProjects();sel.innerHTML='<option value="">請選擇要指定的單號／案名</option>'+a.map(r=>`<option value="${r.key}">${String(r.no||'')}｜${String(r.caseName||'')}｜${String(r.caseAmount||'')}</option>`).join('');
  if(a.some(r=>r.key===keep))sel.value=keep;
 }
+window.tcRenderAgency=function(){const a=tcProjects().filter(r=>r.category==='代安裝'),b=document.getElementById('tcAgencyRows');if(!b)return;b.innerHTML=a.map(r=>`<tr><td>${String(r.no||'')}</td><td>${String(r.caseName||'')}</td><td>${Number(String(r.caseAmount||0).replace(/,/g,'')).toLocaleString('en-US')}</td></tr>`).join('');document.getElementById('tcAgencyCount').textContent=a.length+' 件';document.getElementById('tcAgencyTotal').textContent=a.reduce((n,r)=>n+(Number(String(r.caseAmount||0).replace(/,/g,''))||0),0).toLocaleString('en-US')};
 function tcRenderProjects(){const b=$t('tcProjectRecords');if(!b)return;const filter=$t('tcProjectFilter')?.value||'';const np=v=>{const m=String(v||'').match(/^(?:G5DD|G5DE)(\d+)/);return m?BigInt(m[1]):0n};const a=tcProjects().filter(r=>!filter||String(r.no||'').startsWith(filter)).sort((x,y)=>{const a=np(x.no),b=np(y.no);return a<b?-1:a>b?1:0});  const total=a.reduce((sum,r)=>sum+(Number(String(r.caseAmount??0).replace(/,/g,""))||0),0);
 const countEl=$t('tcProjectCount');if(countEl)countEl.textContent=String(a.length);
 const totalEl=$t('tcProjectGrandTotal');if(totalEl)totalEl.textContent=total.toLocaleString('en-US',{maximumFractionDigits:2});
-b.innerHTML=a.map(r=>`<tr><td><button data-a="edit" data-k="${r.key}">修改</button><button data-a="del" data-k="${r.key}">刪除</button></td><td>${String(r.no||'')}</td><td>${String(r.caseName||'')}</td><td>${String(r.caseAmount||'')}</td></tr>`).join('');b.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{const all=tcProjects(),r=all.find(x=>x.key===btn.dataset.k);if(!r)return;if(btn.dataset.a==='edit'){tcProjectEditKey=r.key;const m=String(r.no||'').match(/^(G5DD|G5DE)(.*)$/);$t('tcNoPrefix').value=m?m[1]:'G5DE';$t('tcProjectNo').value=m?m[2]:r.no||'';$t('tcProjectCase').value=r.caseName||'';$t('tcProjectAmount').value=r.caseAmount||''}if(btn.dataset.a==='del'){if(!confirm('確定刪除這筆？'))return;tcSaveProjects(all.filter(x=>x.key!==r.key));const ds=tcDetails();delete ds[r.key];tcSaveDetails(ds);tcRenderProjects();tcRenderSavedDetails()}});tcRenderAssignmentOptions();tcRenderSavedDetails()}
+b.innerHTML=a.map(r=>`<tr><td><button data-a="edit" data-k="${r.key}">修改</button><button data-a="del" data-k="${r.key}">刪除</button></td><td>${String(r.no||'')}</td><td>${String(r.caseName||'')}</td><td>${String(r.caseAmount||'')}</td><td><select class="tcAgencyCategory" data-k="${r.key}"><option value="">一般案件</option><option value="代安裝" ${r.category==="代安裝"?"selected":""}>代安裝</option></select></td></tr>`).join('');b.querySelectorAll('.tcAgencyCategory').forEach(el=>el.onchange=()=>{const a=tcProjects(),r=a.find(x=>String(x.key)===el.dataset.k);if(r){r.category=el.value;tcSaveProjects(a);tcRenderProjects();}});b.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{const all=tcProjects(),r=all.find(x=>x.key===btn.dataset.k);if(!r)return;if(btn.dataset.a==='edit'){tcProjectEditKey=r.key;const m=String(r.no||'').match(/^(G5DD|G5DE)(.*)$/);$t('tcNoPrefix').value=m?m[1]:'G5DE';$t('tcProjectNo').value=m?m[2]:r.no||'';$t('tcProjectCase').value=r.caseName||'';$t('tcProjectAmount').value=r.caseAmount||''}if(btn.dataset.a==='del'){if(!confirm('確定刪除這筆？'))return;tcSaveProjects(all.filter(x=>x.key!==r.key));const ds=tcDetails();delete ds[r.key];tcSaveDetails(ds);tcRenderProjects();tcRenderSavedDetails()}});tcRenderAssignmentOptions();tcRenderSavedDetails();window.tcRenderAgency?.()}
 function tcCurrentProject(){const key=$t('tcAssignmentSelect')?.value||'';return tcProjects().find(x=>x.key===key)||null}
 const TC_DETAIL_KEY='sbd_taichung_purchase_details_v1';
 function tcDetails(){try{return JSON.parse(localStorage.getItem(TC_DETAIL_KEY)||'{}')}catch(e){return {}}}
@@ -3215,7 +3215,7 @@ function source(){
  const purchase=read('sbd_purchase_projects','[]'),tc=read('sbd_taichung_purchase_projects_v1','[]'),details=read('sbd_taichung_purchase_details_v1','{}');
  const result=[];
  for(const p of purchase){const no=String(p.no||p.number||'').trim();if(!no)continue;result.push({group:'浤富',no,name:p.caseName||p.case||'',sale:amount(p.caseAmount??p.amount),cost:null,period:''})}
- for(const p of tc){const no=String(p.no||'').trim();if(!no)continue;const d=details[p.key];result.push({group:'草屯',no,name:p.caseName||'',sale:amount(p.caseAmount),cost:d?(d.items||[]).reduce((n,it)=>n+amount(it.qty)*amount(it.price),0):null,period:d?.claimPeriod||''})}
+ for(const p of tc){const no=String(p.no||'').trim();if(!no)continue;const d=details[p.key];result.push({group:p.category==='代安裝'?'代安裝':'草屯',no,name:p.caseName||'',sale:amount(p.caseAmount),cost:d?(d.items||[]).reduce((n,it)=>n+amount(it.qty)*amount(it.price),0):null,period:d?.claimPeriod||''})}
  return result.map(r=>{const m=r.no.match(/^(?:G5DD|G5DE)(\d{2})(\d{2})/i);return {...r,month:m?`20${m[1]}-${m[2]}`:'未分類'}})
 }
 async function render(){
@@ -3240,12 +3240,12 @@ async function render(){
    if(chosen.length)hongfuCost=chosen.reduce((n,f)=>n+Number(f.cost),0);
   }
  }catch(e){console.warn('浤富成本讀取失敗',e)}
- const groups=['浤富','草屯'].map(name=>{const rr=rows.filter(r=>r.group===name);return {name,sale:rr.reduce((n,r)=>n+r.sale,0),cost:rr.reduce((n,r)=>n+(r.cost||0),0),known:rr.every(r=>r.cost!==null),count:rr.length}});
+ const groups=['浤富','草屯','代安裝'].map(name=>{const rr=rows.filter(r=>r.group===name);return {name,sale:rr.reduce((n,r)=>n+r.sale,0),cost:rr.reduce((n,r)=>n+(r.cost||0),0),known:rr.every(r=>r.cost!==null),count:rr.length}});
  if(hongfuCost!==null){groups[0].cost=hongfuCost;groups[0].known=true}
  const total={name:'總計',sale:groups.reduce((n,g)=>n+g.sale,0),cost:groups.reduce((n,g)=>n+g.cost,0),known:groups.every(g=>g.known),count:groups.reduce((n,g)=>n+g.count,0)};
  document.getElementById('crCards').innerHTML='';
  const cell=(value,muted=false)=>`<td style="padding:17px 20px;text-align:right;font-size:19px;font-weight:700;color:${muted?'#718096':'#183a62'};white-space:nowrap">${value}</td>`;
- document.getElementById('crSummary').innerHTML=`<h3 style="margin:0 0 16px;color:#173653">銷售／成本／件數統計</h3><table style="width:12cm;min-width:12cm;table-layout:fixed;border-collapse:collapse"><colgroup><col style="width:2cm"><col style="width:4cm"><col style="width:4cm"><col style="width:2cm"></colgroup><thead><tr style="background:#eef3f8;color:#173653"><th style="padding:13px;text-align:left">來源</th><th style="text-align:right;padding:13px">銷售總額</th><th style="text-align:right;padding:13px">成本總額</th><th style="text-align:right;padding:13px">案件件數</th></tr></thead><tbody>${[...groups,total].map((g,i)=>`<tr style="border-bottom:1px solid #e0e7ef;${i===2?'background:#f0f5fa;':''}"><th style="padding:17px 13px;text-align:left;color:#173653;font-size:18px">${g.name}</th>${cell(fmt(g.sale))}${cell(g.known?fmt(g.cost):(g.cost?fmt(g.cost)+'（部分）':'尚無成本資料'),!g.known)}${cell(g.count+' 件')}</tr>`).join('')}</tbody></table><p style="color:#718096;font-size:12px;margin:12px 0 0">成本未儲存的案件不會當作 0；浤富成本取已保存 PDF 最後一頁的「本期合計」，相同請款區間不重複加總；尚未保存 PDF 時顯示尚無成本資料。</p>`;
+ document.getElementById('crSummary').innerHTML=`<h3 style="margin:0 0 16px;color:#173653">銷售／成本／件數統計</h3><table style="width:12cm;min-width:12cm;table-layout:fixed;border-collapse:collapse"><colgroup><col style="width:2cm"><col style="width:4cm"><col style="width:4cm"><col style="width:2cm"></colgroup><thead><tr style="background:#eef3f8;color:#173653"><th style="padding:13px;text-align:left">來源</th><th style="text-align:right;padding:13px">銷售總額</th><th style="text-align:right;padding:13px">成本總額</th><th style="text-align:right;padding:13px">案件件數</th></tr></thead><tbody>${[...groups,total].map((g,i)=>`<tr style="border-bottom:1px solid #e0e7ef;${i===groups.length?'background:#f0f5fa;':''}"><th style="padding:17px 13px;text-align:left;color:#173653;font-size:18px">${g.name}</th>${cell(fmt(g.sale))}${cell(g.known?fmt(g.cost):(g.cost?fmt(g.cost)+'（部分）':'尚無成本資料'),!g.known)}${cell(g.count+' 件')}</tr>`).join('')}</tbody></table><p style="color:#718096;font-size:12px;margin:12px 0 0">成本未儲存的案件不會當作 0；浤富成本取已保存 PDF 最後一頁的「本期合計」，相同請款區間不重複加總；尚未保存 PDF 時顯示尚無成本資料。</p>`;
  document.getElementById('crRows').innerHTML='';
 }
 function bind(){const b=document.getElementById('costReportTabBtn');if(!b)return;b.classList.toggle('hidden',typeof isAdminAccount==='function'&&!isAdminAccount());b.onclick=()=>{if(typeof isAdminAccount==='function'&&!isAdminAccount())return;document.querySelectorAll('#appPage main > section,#calendarView').forEach(el=>el.classList.add('hidden'));document.getElementById('costReportView').classList.remove('hidden');document.getElementById('calendarControls')?.classList.add('hidden');document.querySelectorAll('.featureTabs button').forEach(x=>x.classList.remove('active'));b.classList.add('active');render()};document.getElementById('crMonth').onchange=render;document.getElementById('crPeriod').onchange=render;document.querySelectorAll('.featureTabs button').forEach(x=>{if(x!==b)x.addEventListener('click',()=>document.getElementById('costReportView')?.classList.add('hidden'))})}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();})();</script><script id="source-cost-export-v47">
