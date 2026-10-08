@@ -2961,6 +2961,19 @@ function tcPeriodSave(start,end){
  localStorage.setItem(TC_PERIOD_KEY,JSON.stringify(all));
  tcPeriodRender(value);
 }
+function tcRememberEnteredPeriod(showError=false){
+ const el=$t("tcExportPeriod"),raw=String(el?.value||"").trim();
+ if(!raw)return false;
+ const m=raw.match(/^(\\d{6})\\s*[-～~]\\s*(\\d{6})$/);
+ if(!m||m[1]>m[2]){
+   if(showError)alert("請款區間格式請輸入 260825-260926");
+   return false;
+ }
+ const valid=x=>{const y=2000+Number(x.slice(0,2)),mo=Number(x.slice(2,4)),d=Number(x.slice(4,6)),dt=new Date(y,mo-1,d);return dt.getFullYear()===y&&dt.getMonth()===mo-1&&dt.getDate()===d};
+ if(!valid(m[1])||!valid(m[2])){if(showError)alert("請輸入有效日期");return false}
+ tcPeriodSave(m[1],m[2]);
+ return true;
+}
 function tcPeriodSelect(){
  const v=$t("tcPeriodHistory")?.value||"";
  if(!v)return;
@@ -3038,7 +3051,11 @@ async function download(){
    a.href=u;a.download=`台中採購單_${(assigned.no||assigned.caseName||'未命名').replace(/[\\/:*?"<>|]/g,'_')}.xlsx`;a.click();setTimeout(()=>URL.revokeObjectURL(u),1200);
  }catch(e){console.error(e);alert('台中採購單 Excel 產生失敗：'+e.message)}
 }
-function bind(){const tab=$t('taichungPurchaseTabBtn');if(tab)tab.onclick=e=>{e.preventDefault();open()};tcRenderProjects();$t('tcProjectNewBtn')?.addEventListener('click',tcProjectClear);$t('tcProjectSaveBtn')?.addEventListener('click',tcProjectSave);$t('tcProjectFilter')?.addEventListener('change',tcRenderProjects);$t('tcAssignmentSelect')?.addEventListener('change',()=>{});['tcNoPrefix','tcProjectNo','tcProjectCase','tcProjectAmount'].forEach(id=>$t(id)?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcProjectSave()}}));$t('tcAddItemBtn')?.addEventListener('click',()=>add());$t('tcNameManageBtn')?.addEventListener('click',()=>{renderTCNameManager();tcResetNameEditor();$t('tcNameDlg')?.showModal()});$t('tcNameOptionSaveBtn')?.addEventListener('click',tcSaveNameOption);$t('tcNameOptionCancelBtn')?.addEventListener('click',tcResetNameEditor);$t('tcNameDlgCloseBtn')?.addEventListener('click',()=>{$t('tcNameDlg')?.close()});$t('tcNameOptionInput')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcSaveNameOption()}});$t('tcDetailSaveBtn')?.addEventListener('click',()=>tcDetailSave(true));$t('tcExcelBtn')?.addEventListener('click',download);$t('tcPeriodHistory')?.addEventListener('change',tcPeriodSelect);tcPeriodRender();if(!$t('tcItemsBody')?.children.length)clear();
+function bind(){const tab=$t('taichungPurchaseTabBtn');if(tab)tab.onclick=e=>{e.preventDefault();open()};tcRenderProjects();$t('tcProjectNewBtn')?.addEventListener('click',tcProjectClear);$t('tcProjectSaveBtn')?.addEventListener('click',tcProjectSave);$t('tcProjectFilter')?.addEventListener('change',tcRenderProjects);$t('tcAssignmentSelect')?.addEventListener('change',()=>{});['tcNoPrefix','tcProjectNo','tcProjectCase','tcProjectAmount'].forEach(id=>$t(id)?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcProjectSave()}}));$t('tcAddItemBtn')?.addEventListener('click',()=>add());$t('tcNameManageBtn')?.addEventListener('click',()=>{renderTCNameManager();tcResetNameEditor();$t('tcNameDlg')?.showModal()});$t('tcNameOptionSaveBtn')?.addEventListener('click',tcSaveNameOption);$t('tcNameOptionCancelBtn')?.addEventListener('click',tcResetNameEditor);$t('tcNameDlgCloseBtn')?.addEventListener('click',()=>{$t('tcNameDlg')?.close()});$t('tcNameOptionInput')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcSaveNameOption()}});$t('tcDetailSaveBtn')?.addEventListener('click',()=>tcDetailSave(true));$t('tcExcelBtn')?.addEventListener('click',download);$t('tcPeriodHistory')?.addEventListener('change',tcPeriodSelect);
+$t('tcExportPeriod')?.addEventListener('change',()=>tcRememberEnteredPeriod(false));
+$t('tcExportPeriod')?.addEventListener('blur',()=>tcRememberEnteredPeriod(false));
+$t('tcExportPeriod')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcRememberEnteredPeriod(true)}});
+tcPeriodRender();if(tcPeriodList().length&&!$t('tcExportPeriod')?.value){$t('tcExportPeriod').value=tcPeriodList()[0]}if(!$t('tcItemsBody')?.children.length)clear();
  const sync=()=>{if(document.body.classList.contains('admin-account'))tab?.classList.remove('hidden');else tab?.classList.add('hidden')};sync();new MutationObserver(sync).observe(document.body,{attributes:true,attributeFilter:['class']});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();
