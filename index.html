@@ -490,6 +490,11 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
 #overtimeView .ot-table th:nth-child(5),#overtimeView .ot-table td:nth-child(5){width:4cm!important;min-width:4cm!important;max-width:4cm!important}
 #otDlg select{width:100%;padding:10px;border:1px solid #bdc8d2;border-radius:8px;background:#fff}
 </style>
+
+<style id="tc-hide-size-column">
+/* 台中採購單：尺寸目前先隱藏，資料欄位仍保留供既有資料/Excel相容 */
+#taichungPurchaseView .tcItemsTable .tcSizeCol{display:none!important}
+</style>
 </head>
 <body>
 <div id="pullRefreshIndicator" aria-hidden="true"><div class="pull-spinner"></div></div>
@@ -785,7 +790,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
   <div class="quoteCard">
     <h2 class="quoteTitle">台中採購單</h2>
     <div style="margin:0 0 12px"><label style="font-size:13px;font-weight:800">指定單號／案名<select id="tcAssignmentSelect" style="width:100%;padding:10px;border:1px solid #bdc8d2;border-radius:8px;margin-top:4px;background:#fff"><option value="">請選擇要指定的單號／案名</option></select></label><div style="font-size:12px;color:var(--muted);margin-top:4px">只做配對，不會把單號／案名帶入下方欄位。</div></div>
-    <div class="quoteItemsWrap"><table class="quoteItems"><thead><tr><th>項數</th><th>名稱</th><th>尺寸</th><th>總公分數</th><th>單位</th><th>單價</th><th>合計</th><th></th></tr></thead><tbody id="tcItemsBody"></tbody></table></div>
+    <div class="quoteItemsWrap"><table class="quoteItems tcItemsTable"><thead><tr><th>項數</th><th>名稱</th><th class="tcSizeCol">尺寸</th><th>總公分數</th><th>單位</th><th>單價</th><th>合計</th><th></th></tr></thead><tbody id="tcItemsBody"></tbody></table></div>
     <div class="quoteManageTools"><button type="button" id="tcAddItemBtn">＋ 新增項目</button><button type="button" id="tcNameManageBtn">名稱選項管理</button><span class="hint">直接輸入資料，不需要 PDF 匯入</span></div>
     <div class="quoteSummary"><span>合計</span><span id="tcSubtotal">0</span></div>
     <div class="quoteActions"><button type="button" id="tcDetailSaveBtn" class="primary">儲存台中採購單</button><button type="button" id="tcExcelBtn" class="primary">套用台中採購單範本下載 Excel</button><button type="button" id="tcClearBtn">清空</button></div>
@@ -1118,10 +1123,31 @@ function openQuoteQuickNoteFromHeader(){
 async function copyQuoteQuickNote(){
   refreshQuoteQuickNote();
   const text=$("qQuickNoteText")?.value||buildQuoteQuickNote();
-  try{await navigator.clipboard.writeText(text)}catch(e){
-    const ta=$("qQuickNoteText");if(ta){ta.focus();ta.select();document.execCommand("copy");ta.setSelectionRange(0,0)}
+  let copied=false;
+  // iPhone / Safari：先在點擊事件內同步選取及複製，避免失去使用者操作授權。
+  const helper=document.createElement("textarea");
+  helper.value=text;
+  helper.setAttribute("readonly","");
+  helper.style.cssText="position:fixed;top:0;left:0;width:1px;height:1px;opacity:.01;z-index:-1";
+  document.body.appendChild(helper);
+  try{
+    helper.focus();
+    helper.select();
+    helper.setSelectionRange(0,helper.value.length);
+    copied=document.execCommand("copy")===true;
+  }catch(e){}
+  helper.remove();
+  if(!copied && navigator.clipboard?.writeText){
+    try{await navigator.clipboard.writeText(text);copied=true}catch(e){}
   }
-  const b=$("qQuickNoteCopyBtn");if(b){const old=b.textContent;b.textContent="已複製";setTimeout(()=>b.textContent=old,1200)}
+  const b=$("qQuickNoteCopyBtn");
+  if(copied){
+    if(b){b.textContent="已複製";setTimeout(()=>b.textContent="複製內容",1500)}
+  }else{
+    const ta=$("qQuickNoteText");
+    if(ta){ta.removeAttribute("readonly");ta.focus();ta.select();ta.setSelectionRange(0,ta.value.length)}
+    alert("手機未允許自動複製，已選取記事本內容，請長按選擇「複製」。");
+  }
 }
 function calcQuote(){let sub=0;[...$("qItemsBody").children].forEach(tr=>{const a=Number(tr.querySelector(".qcm").value||0)*Number(tr.querySelector(".qprice").value||0);tr.querySelector(".qamount").textContent=qMoney(a);sub+=a});const rate=5,tax=Math.round(sub*rate/100),total=sub+tax;$("qSubtotal").textContent=qMoney(sub);$("qTax").textContent=qMoney(tax);$("qTotal").textContent=qMoney(total);const result={sub,tax,total,rate};renderQuotePreview(result);refreshQuoteQuickNote();return result}
 function currentQuoteDraft(calcResult=null){const c=calcResult||calcQuote();const meta=qMeta();return {quote_no:$("qNo").value.trim(),quote_date:qDateStorage($("qDate").value),customer_name:$("qCustomer").value.trim(),contact_name:meta.case_name||null,phone:meta.contact_phone||null,address:$("qAddress").value.trim(),items:getQuoteItems(),subtotal:c.sub,tax_rate:5,tax_amount:c.tax,total_amount:c.total,note:JSON.stringify(meta)}}
@@ -2913,7 +2939,7 @@ function tcRenderSavedDetails(){
 }
 function add(item={}){
  const tr=document.createElement('tr');
- tr.innerHTML=`<td class="tcidx"></td><td><input class="tcname" list="tcNameOptionsList" placeholder="選擇或直接輸入" value="${String(item.name||'').replace(/"/g,'&quot;')}"></td><td><input class="tcsize" value="${String(item.size||'').replace(/"/g,'&quot;')}"></td><td><input class="tcqty" type="number" min="0" step="0.01" value="${item.qty??0}"></td><td><select class="tcunit"><option value=""></option><option value="cm">cm</option><option value="式">式</option><option value="片">片</option><option value="支">支</option><option value="個">個</option></select></td><td><input class="tcprice" type="number" min="0" step="0.01" value="${item.price??0}"></td><td class="tcamt">0</td><td><button type="button" class="tcdel">刪</button></td>`;
+ tr.innerHTML=`<td class="tcidx"></td><td><input class="tcname" list="tcNameOptionsList" placeholder="選擇或直接輸入" value="${String(item.name||'').replace(/"/g,'&quot;')}"></td><td class="tcSizeCol"><input class="tcsize" value="${String(item.size||'').replace(/"/g,'&quot;')}"></td><td><input class="tcqty" type="number" min="0" step="0.01" value="${item.qty??0}"></td><td><select class="tcunit"><option value=""></option><option value="cm">cm</option><option value="式">式</option><option value="片">片</option><option value="支">支</option><option value="個">個</option></select></td><td><input class="tcprice" type="number" min="0" step="0.01" value="${item.price??0}"></td><td class="tcamt">0</td><td><button type="button" class="tcdel">刪</button></td>`;
  $t('tcItemsBody').appendChild(tr); if(item.unit)tr.querySelector('.tcunit').value=item.unit;
  tr.querySelectorAll('input,select').forEach(e=>e.addEventListener('input',calc));tr.querySelector('.tcdel').onclick=()=>{tr.remove();renum();calc()};renum();calc();
 }
