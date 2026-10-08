@@ -1289,6 +1289,8 @@ table{width:100%;border-collapse:collapse;border:1.4px solid #111;table-layout:f
 
 
 
+
+
 </body></html>`
 }
 function printQuote(x){const w=window.open("","_blank");if(!w){alert("瀏覽器阻擋新視窗，請允許彈出視窗");return}w.document.write(quotePrintHtml(x));w.document.close();w.onload=()=>setTimeout(()=>w.print(),300)}
@@ -3354,6 +3356,61 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   dlg.addEventListener('click',function(e){if(e.target===dlg)dlg.close();});
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();
+})();
+</script>
+<script id="sbd-safe-sync-v67">
+(function(){
+'use strict';
+const keys=['sbd_purchase_projects','sbd_taichung_purchase_projects_v1','sbd_taichung_purchase_details_v1','sbd_taichung_purchase_period_v1','sbd_taichung_purchase_names_v1','sbd_purchase_pdf_work_v1','sbd_hongfu_period_work_v1','sbd_hongfu_last_period'];
+const panel=document.createElement('div');
+panel.style='position:fixed;bottom:12px;right:12px;z-index:9000;background:#fff;border:2px solid #285276;border-radius:12px;padding:10px;box-shadow:0 2px 10px #0003;max-width:290px;font:13px system-ui;color:#17334d';
+panel.innerHTML='<b>浤富／草屯 雲端資料同步</b><div style="font-size:11px;margin:5px 0">先在公司電腦備份並上傳，再到家裡下載；不會自動覆蓋。</div><div style="display:flex;gap:5px;flex-wrap:wrap"><button type="button" data-act="backup">備份本機</button><button type="button" data-act="upload">上傳本機</button><button type="button" data-act="download">下載雲端</button></div><div data-status style="font-size:12px;margin-top:5px">尚未同步</div>';
+const status=panel.querySelector('[data-status]');
+const msg=t=>status.textContent=t;
+const nonempty=v=>v!==null&&v!==''&&v!=='[]'&&v!=='{}';
+async function uid(){const {data,error}=await sb.auth.getUser();if(error||!data?.user)throw Error('請先登入管理員帳號');return data.user.id}
+function snapshot(){return Object.fromEntries(keys.filter(k=>nonempty(localStorage.getItem(k))).map(k=>[k,localStorage.getItem(k)]))}
+function backup(){
+ const blob=new Blob([JSON.stringify({createdAt:new Date().toISOString(),origin:location.origin,records:snapshot()},null,2)],{type:'application/json'});
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='勝寶鼎_採購本機備份_'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+ msg('已下載本機備份');
+}
+async function upload(){
+ const user_id=await uid(),records=snapshot(),entries=Object.entries(records);
+ if(!entries.length){msg('本機沒有採購資料，禁止上傳空白');return}
+ if(!confirm('確認已備份本機資料？此操作只會上傳本機非空白項目。若雲端已有資料，將停止以避免覆蓋。'))return;
+ const {data,error}=await sb.from('sbd_app_data').select('data_key').eq('user_id',user_id);
+ if(error)throw error;
+ const existing=new Set((data||[]).map(r=>r.data_key));
+ const conflicts=entries.filter(([k])=>existing.has(k));
+ if(conflicts.length){msg('雲端已有 '+conflicts.length+' 項資料，已停止上傳，避免覆蓋');return}
+ for(const [data_key,value] of entries){
+   const {error:e}=await sb.from('sbd_app_data').insert({user_id,data_key,payload:{value},updated_at:new Date().toISOString()});
+   if(e)throw e;
+ }
+ msg('成功上傳 '+entries.length+' 項資料；請到另一台電腦下載');
+}
+async function download(){
+ const user_id=await uid();
+ const {data,error}=await sb.from('sbd_app_data').select('data_key,payload').eq('user_id',user_id);
+ if(error)throw error;
+ const records=(data||[]).filter(r=>keys.includes(r.data_key)&&nonempty(r.payload?.value));
+ if(!records.length){msg('雲端目前沒有採購資料，請先在公司電腦上傳');return}
+ const conflicts=records.filter(r=>nonempty(localStorage.getItem(r.data_key)));
+ if(conflicts.length){msg('本機已有 '+conflicts.length+' 項資料，為避免覆蓋已停止下載');return}
+ if(!confirm('即將下載 '+records.length+' 項雲端資料到本機，確定嗎？'))return;
+ backup();
+ for(const r of records)localStorage.setItem(r.data_key,r.payload.value);
+ msg('已下載 '+records.length+' 項，請重新整理頁面');
+}
+panel.addEventListener('click',async e=>{
+ const act=e.target?.dataset?.act;if(!act)return;
+ const b=e.target;b.disabled=true;
+ try{if(act==='backup')backup();else if(act==='upload')await upload();else await download()}
+ catch(err){msg('操作未完成：'+(err.message||err))}
+ finally{b.disabled=false}
+});
+document.addEventListener('DOMContentLoaded',()=>document.body.append(panel));
 })();
 </script>
 </body>
