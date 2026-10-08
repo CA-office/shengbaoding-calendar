@@ -502,7 +502,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
 <body>
 <div id="pullRefreshIndicator" aria-hidden="true"><div class="pull-spinner"></div></div>
 <section id="loginPage" class="loginWrap"><div class="loginCard"><h1>勝寶鼎/新弘股公司</h1><label class="field">Email<input id="loginEmail" type="email" autocomplete="username"></label><label class="field">密碼<input id="loginPassword" type="password" autocomplete="current-password"></label><button id="loginBtn" class="loginBtn">登入</button><button id="passkeyBtn" class="loginBtn" type="button" style="margin-top:10px;background:#fff;border:1px solid #81D8D0">使用 Face ID／裝置解鎖登入</button><div id="loginErr" class="err"></div></div></section>
-<section id="appPage" class="hidden"><header><div class="toprow"><div class="brand">勝寶鼎/新弘股公司｜行事曆</div><button id="logoutBtn" class="userBtn">登出</button></div><div id="roleLine" class="roleLine"></div><div class="featureTabs"><button id="calendarTabBtn" class="active">行事曆</button><button id="quoteTabBtn" class="hidden">報價單</button><button id="quoteQuickNoteHeaderBtn" class="hidden">記事本／複製</button><button id="installStatsTabBtn" class="hidden">安裝統計表</button><button id="purchaseTabBtn" class="hidden">採購單</button><button id="taichungPurchaseTabBtn" class="hidden">台中採購單</button><button id="costReportTabBtn" class="hidden">成本銷售報表</button><button id="invoiceCustomerTabBtn" class="hidden">客戶發票</button><button id="overtimeTabBtn" class="hidden">超時打卡紀錄</button></div><div class="controls" id="calendarControls"><button id="prevBtn">‹</button><div id="monthTitle" class="month"></div><button id="nextBtn">›</button><button id="todayBtn">本月</button><button id="noteBtn" class="hidden">備註</button></div><div class="legend"><span class="lg"><i class="dot" style="background:#20aa5a"></i>綠－石英石</span><span class="lg"><i class="dot" style="background:#2196f3"></i>藍－人造石</span><span class="lg"><i class="dot" style="background:#e52424"></i>紅－維修</span><span class="lg"><i class="dot" style="background:#ff851b"></i>橘－草屯接單</span><span class="lg"><i class="dot" style="background:#8c35d5"></i>紫－浤富代裝石英</span><span class="lg"><i class="dot" style="background:#e5b800"></i>黃－自安送料</span><span class="lg"><i class="dot" style="background:#8b5a2b"></i>咖啡－我司單草屯代裝</span><span class="lg symbolLegend">☑</span><span class="lg symbolLegend">☒</span><span class="lg symbolLegend">➜</span><span class="lg symbolLegend">●</span><span class="lg symbolLegend">▲</span><span class="lg symbolLegend">✔</span><span class="lg symbolLegend">✘</span></div></header><main>
+<section id="appPage" class="hidden"><header><div class="toprow"><div class="brand">勝寶鼎/新弘股公司｜行事曆</div><button id="logoutBtn" class="userBtn">登出</button></div><div id="roleLine" class="roleLine"></div><div class="featureTabs"><button id="calendarTabBtn" class="active">行事曆</button><button id="quoteTabBtn" class="hidden">報價單</button><button id="quoteQuickNoteHeaderBtn" class="hidden">記事本／複製</button><button id="installStatsTabBtn" class="hidden">安裝統計表</button><button id="purchaseTabBtn" class="hidden">浤富</button><button id="taichungPurchaseTabBtn" class="hidden">草屯</button><button id="costReportTabBtn" class="hidden">成本銷售報表</button><button id="invoiceCustomerTabBtn" class="hidden">客戶發票</button><button id="overtimeTabBtn" class="hidden">超時打卡紀錄</button></div><div class="controls" id="calendarControls"><button id="prevBtn">‹</button><div id="monthTitle" class="month"></div><button id="nextBtn">›</button><button id="todayBtn">本月</button><button id="noteBtn" class="hidden">備註</button></div><div class="legend"><span class="lg"><i class="dot" style="background:#20aa5a"></i>綠－石英石</span><span class="lg"><i class="dot" style="background:#2196f3"></i>藍－人造石</span><span class="lg"><i class="dot" style="background:#e52424"></i>紅－維修</span><span class="lg"><i class="dot" style="background:#ff851b"></i>橘－草屯接單</span><span class="lg"><i class="dot" style="background:#8c35d5"></i>紫－浤富代裝石英</span><span class="lg"><i class="dot" style="background:#e5b800"></i>黃－自安送料</span><span class="lg"><i class="dot" style="background:#8b5a2b"></i>咖啡－我司單草屯代裝</span><span class="lg symbolLegend">☑</span><span class="lg symbolLegend">☒</span><span class="lg symbolLegend">➜</span><span class="lg symbolLegend">●</span><span class="lg symbolLegend">▲</span><span class="lg symbolLegend">✔</span><span class="lg symbolLegend">✘</span></div></header><main>
 <div id="calendarView"><section class="calendar"><div class="weekhead"><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div class="weekend">六</div><div class="weekend">日</div></div><div id="weeks"></div></section><section class="outing-card" id="outingRecords" style="display:none!important">
 <h3>外出紀錄</h3>
 <table class="outing-table"><colgroup><col><col><col><col><col></colgroup><thead><tr>
@@ -611,7 +611,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
     <div id="poGroups"></div>
     <div class="purchaseCard" style="margin-top:16px"><h3>已記憶的浤富 PDF（依請款區間）</h3>
     <label>請款區間 <input id="poPdfPeriod" list="poPdfPeriods" placeholder="260826-260925" style="max-width:250px"></label><datalist id="poPdfPeriods"></datalist>
-    <div class="hint">匯入 PDF 前先輸入請款區間；PDF 原檔保存在目前瀏覽器，按檔名可重新開啟。</div>
+    <div class="hint">請先輸入請款區間再匯入 PDF；每份 PDF 的最後一頁「本期合計」即浤富成本。原檔保存在目前瀏覽器，按檔名可重新開啟。</div>
     <div id="poPdfHistory"></div></div>
   </div>
 </section>
@@ -821,7 +821,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
     <div id="tcSavedDetailEmpty" class="quoteEmpty">目前沒有已儲存的台中採購單明細</div>
   </div>
 </section>
-<section id="costReportView" class="hidden" style="max-width:1250px;margin:22px auto;padding:0 15px;font-family:system-ui,'Noto Sans TC',sans-serif;color:#172b45"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px"><div><h2 style="font-size:25px;margin:0">成本・銷售・件數分析</h2><p style="color:#718096">正式統計｜讀取本瀏覽器已儲存的採購單及台中採購單資料</p></div><select id="crMonth" style="padding:10px;border-radius:8px;border:1px solid #cbd5e1"><option value="all">全部月份</option></select> <select id="crPeriod" style="padding:10px;border-radius:8px;border:1px solid #cbd5e1"><option value="all">全部請款區間</option></select></div><div id="crCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:14px;margin:16px 0"></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px"><div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:20px"><h3>月份銷售與成本比較</h3><div id="crBars"></div></div><div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:20px"><h3>月份案件件數</h3><div id="crCounts"></div></div></div><div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:18px;margin-top:16px;overflow:auto"><h3>案件成本與銷售明細</h3><table style="width:100%;min-width:780px;border-collapse:collapse"><thead><tr style="background:#eef3f8"><th>月份</th><th>單號</th><th>案名</th><th>銷售</th><th>成本</th></tr></thead><tbody id="crRows"></tbody></table></div></section></main></section>
+<section id="costReportView" class="hidden" style="max-width:1250px;margin:22px auto;padding:0 15px;font-family:system-ui,'Noto Sans TC',sans-serif;color:#172b45"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px"><div><h2 style="font-size:25px;margin:0">成本・銷售・件數分析</h2><p style="color:#718096">正式統計｜讀取本瀏覽器已儲存的採購單及台中採購單資料</p></div><select id="crMonth" style="padding:10px;border-radius:8px;border:1px solid #cbd5e1"><option value="all">全部月份</option></select> <select id="crPeriod" style="padding:10px;border-radius:8px;border:1px solid #cbd5e1"><option value="all">全部請款區間</option></select></div><div id="crCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:14px;margin:16px 0"></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px"><div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:20px"><h3>月份銷售與成本比較</h3><div id="crBars"></div></div><div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:20px"><h3>月份案件件數</h3><div id="crCounts"></div></div></div><div style="display:none;background:white;border:1px solid #e2e8f0;border-radius:14px;padding:18px;margin-top:16px;overflow:auto"><h3>案件成本與銷售明細</h3><table style="width:100%;min-width:780px;border-collapse:collapse"><thead><tr style="background:#eef3f8"><th>月份</th><th>單號</th><th>案名</th><th>銷售</th><th>成本</th></tr></thead><tbody id="crRows"></tbody></table></div></section></main></section>
 <dialog id="viewDlg">
   <div class="form">
     <h2>查看行程</h2>
@@ -2397,12 +2397,28 @@ async function poReadPdf(file){
         current.rows.push({name,qty,unit,price});
       }
     }
+    // 最後一頁「本期合計」是整份浤富 PDF 的成本，不使用逐項合計取代。
+    const lastPage=await pdf.getPage(pdf.numPages);
+    const lastContent=await lastPage.getTextContent();
+    const lastItems=lastContent.items.map(x=>({t:String(x.str||"").trim(),y:x.transform[5],x:x.transform[4]})).filter(x=>x.t);
+    const lastRows=[];
+    lastItems.forEach(it=>{let row=lastRows.find(r=>Math.abs(r.y-it.y)<3);if(!row)lastRows.push(row={y:it.y,items:[]});row.items.push(it)});
+    const totalRows=lastRows.filter(r=>r.items.some(x=>/本期\s*合計/.test(x.t)||/本期合計/.test(r.items.map(y=>y.t).join(""))));
+    let pdfFinalCost=null;
+    for(const r of totalRows){
+      const sorted=r.items.sort((a,b)=>a.x-b.x),joined=sorted.map(x=>x.t).join(" ");
+      const after=joined.split(/本期\s*合計/).slice(1).join(" ");
+      const nums=[...after.matchAll(/-?\d[\d,]*(?:\.\d+)?/g)].map(x=>Number(x[0].replace(/,/g,"")));
+      if(nums.length)pdfFinalCost=nums[nums.length-1];
+    }
+    if(pdfFinalCost===null)throw new Error("最後一頁找不到「本期合計」金額，請確認 PDF 格式；不會以明細金額冒充成本");
+    window.poLastPdfCost=pdfFinalCost;
     poGroups=groups.filter(g=>g.rows.length);
     if(!poGroups.length)throw new Error("沒有辨識到採購明細");
     poRenderGroups();
     $("poStatus").textContent=`PDF 匯入完成：${poGroups.length} 個銷貨單分組、${poGroups.reduce((n,g)=>n+g.rows.length,0)} 筆貨品。請為每組選擇已建立的「單號／案名」。`;
     poSaveAllWork(false);
-    poArchivePdf(file).catch(err=>{console.warn(err);$("poStatus").textContent+="（PDF 原檔儲存失敗："+err.message+"）"});
+    poArchivePdf(file,window.poLastPdfCost).catch(err=>{console.warn(err);$("poStatus").textContent+="（PDF 原檔儲存失敗："+err.message+"）"});
   }catch(e){console.error(e);$("poStatus").textContent="PDF 讀取失敗："+e.message}
 }
 function poIsDiscountRow(r){
@@ -2981,9 +2997,12 @@ function tcRenderSavedDetails(){
  const chosen=String($t('tcExportPeriod')?.value||$t('tcPeriodHistory')?.value||'').trim();
  const selected=/^\d{6}-\d{6}$/.test(chosen)?chosen:'';
  const periodParts=selected.match(/^(\d{6})-(\d{6})$/);
- const relevant=periodParts?rows.filter(r=>{
-   const m=String(r.p.no||'').match(/^(?:G5DD|G5DE)(\d{6})/i);
-   return m&&m[1]>=periodParts[1]&&m[1]<=periodParts[2];
+ const relevant=selected?rows.filter(r=>{
+   // 以每筆已儲存的「請款日」為準，不能用單號日期取代人工指定區間。
+   const saved=String(r.d.claimPeriod||'').trim();
+   if(saved)return saved===selected;
+   // 舊紀錄未保存請款日時，僅在可唯一推定時使用既有區間。
+   return tcResolvedClaimPeriod(r.d,r.p)===selected;
  }):[];
  const label=$t('tcDetailPeriodLabel'),count=$t('tcDetailPeriodCount'),sum=$t('tcDetailPeriodTotal');
  if(label)label.textContent=selected||'尚未選擇';
@@ -3177,27 +3196,32 @@ async function exportCost(source){
  if(typeof ExcelJS==='undefined')return alert('Excel 元件尚未載入');
  const period=source==='tc'?tcPeriod():($('poPdfPeriod')?.value||'').trim();
  if(period&&!periodValid(period))return alert('請款區間格式為 260826-260925');
- const rows=costData(source,period);
- if(!rows.length)return alert('此區間沒有已儲存的成本明細。浤富請先匯入 PDF 並完成單號配對及儲存。');
+ let rows=costData(source,period);
+ if(source==='po'){
+   const database=await db(),files=await store(database,'readonly',os=>os.getAll());database.close();
+   rows=files.filter(f=>!period||f.period===period).map(f=>({no:f.name,name:f.period,cost:Number(f.cost),items:1}));
+   if(rows.some(r=>!Number.isFinite(r.cost)))return alert('有 PDF 未辨識到最後一頁「本期合計」，請重新匯入');
+ }
+ if(!rows.length)return alert('此區間沒有已保存的成本資料。浤富請先匯入 PDF 並確認最後一頁本期合計。');
  const wb=new ExcelJS.Workbook(),ws=wb.addWorksheet(source==='tc'?'草屯成本':'浤富成本');
  ws.addRow([source==='tc'?'草屯｜成本報表':'浤富｜成本報表']);
  ws.addRow(['請款區間',period||'全部']);
- ws.addRow(['單號','案名','成本金額','明細項數']);
+ ws.addRow(source==='po'?['PDF 檔名','請款區間','本期合計（成本）','PDF 份數']:['單號','案名','成本金額','明細項數']);
  rows.forEach(r=>ws.addRow([r.no,r.name,r.cost,r.items]));
  ws.addRow(['總計',rows.length,rows.reduce((n,r)=>n+r.cost,0),rows.reduce((n,r)=>n+r.items,0)]);
  ws.columns=[{width:23},{width:42},{width:20},{width:16}];
  [1,3].forEach(i=>{ws.getRow(i).font={bold:true,color:{argb:'FFFFFFFF'}};ws.getRow(i).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF173653'}}});
  ws.getColumn(3).numFmt='#,##0';
  const blob=new Blob([await wb.xlsx.writeBuffer()],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
- const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`${source==='tc'?'草屯':'浤富'}成本_${period||'全部'}.xlsx`;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);
+ const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=(source==='tc'?'草屯':'浤富')+'成本_'+(period||'全部')+'.xlsx';a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
 function db(){return new Promise((resolve,reject)=>{const req=indexedDB.open('sbd_hongfu_pdf_archive_v1',1);req.onupgradeneeded=()=>req.result.createObjectStore('files',{keyPath:'id'});req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
 function store(db,mode,fn){return new Promise((resolve,reject)=>{const tx=db.transaction('files',mode),req=fn(tx.objectStore('files'));req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
-window.poArchivePdf=async function(file){
+window.poArchivePdf=async function(file,cost){
  const period=($('poPdfPeriod')?.value||'').trim();
  if(!periodValid(period)){$('poStatus').textContent+='（請填請款區間，才能將 PDF 歸檔）';return}
  const database=await db();
- await store(database,'readwrite',os=>os.put({id:period+'|'+file.name,name:file.name,period,blob:file,savedAt:new Date().toISOString()}));
+ await store(database,'readwrite',os=>os.put({id:period+'|'+file.name,name:file.name,period,blob:file,cost,savedAt:new Date().toISOString()}));
  database.close();await renderArchive();
 };
 async function renderArchive(){
@@ -3210,7 +3234,7 @@ async function renderArchive(){
  if(!files.length){el.textContent='目前尚無已保存的 PDF 原檔';return}
  for(const f of files){
   const row=document.createElement('div');row.style='display:flex;gap:12px;align-items:center;border-bottom:1px solid #dbe3ea;padding:9px';
-  const a=document.createElement('a');a.href='#';a.textContent=`${f.period}｜${f.name}`;a.onclick=e=>{e.preventDefault();const u=URL.createObjectURL(f.blob);window.open(u,'_blank');setTimeout(()=>URL.revokeObjectURL(u),60000)};
+  const a=document.createElement('a');a.href='#';a.textContent=`${f.period}｜${f.name}｜本期合計（浤富成本）：${Number(f.cost||0).toLocaleString("zh-TW")}`;a.onclick=e=>{e.preventDefault();const u=URL.createObjectURL(f.blob);window.open(u,'_blank');setTimeout(()=>URL.revokeObjectURL(u),60000)};
   const del=document.createElement('button');del.textContent='刪除原檔';del.onclick=async()=>{if(!confirm('只刪除這份 PDF 原檔？不影響採購明細。'))return;const d=await db();await store(d,'readwrite',os=>os.delete(f.id));d.close();renderArchive()};
   row.append(a,del);el.append(row);
  }
