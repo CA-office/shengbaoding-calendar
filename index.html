@@ -612,7 +612,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
       <select id="poPeriodSelect" style="min-width:175px"><option value="">選擇已儲存區間</option></select>
     </div>
     <div id="poStatus" class="purchaseStatus">可以先建立「單號／案名」。收到浤富 PDF 後再匯入，系統會依銷貨單號分組。</div>
-    <div id="poGroups"></div>
+    <div id="poGroups"></div><div id="poGrandTotal" style="margin:12px 0;padding:14px 18px;background:#edf3f9;border:1px solid #d5e0ec;border-radius:8px;font-weight:800;text-align:right">浤富總金額：0</div>
     <div class="purchaseCard" style="margin-top:16px"><h3>已記憶的浤富 PDF（依請款區間）</h3>
 
     <div class="hint">請款區間可在上方「產出成本」旁切換；下方只顯示該區間已保存的 PDF 原檔。</div>
@@ -2366,6 +2366,16 @@ function poRenderGroups(){
     const rows=g.rows.map((r,ri)=>`<tr><td>${ri+1}</td><td><input class="poName" value="${poEsc(r.name)}"></td><td><input class="poQty" inputmode="decimal" value="${r.qty}"></td><td><input class="poUnit" value="${poEsc(r.unit)}"></td><td><input class="poPrice" inputmode="decimal" value="${r.price}"></td><td class="poSum">${poFmt((+r.qty||0)*(+r.price||0))}</td><td><button type="button" class="poDel">刪</button></td></tr>`).join("");
     return `<div class="poGroup" data-gi="${gi}"><div class="poGroupHead"><div><div style="font-size:12px">浤富銷貨單號</div><strong>${poEsc(g.salesNo||("第 "+(gi+1)+" 組"))}</strong></div><div><div style="font-size:12px">總計</div><div class="poGroupTotal">${poFmt(total)}</div></div><label>單號／案名<select class="poProjectSel">${options}</select></label></div><div class="purchaseTableWrap"><table class="purchaseTable"><thead><tr><th>序號</th><th>型號品名</th><th>訂購量</th><th>單位</th><th>單價</th><th>合計</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
   }).join("");
+  const corrected={'1154977':15834,'1155175':9550,'1155265':5776};
+  const total=poGroups.reduce((sum,g)=>{
+    const disc=(g.rows||[]).find(r=>/現金扣/.test(String(r.name||''))&&Number(r.qty)>0&&Number(r.price)<0&&Number(r.price)>-1);
+    const calc=disc?Math.round(Number(disc.qty)*(1+Number(disc.price))):(g.rows||[]).reduce((n,r)=>n+(Number(r.qty)||0)*(Number(r.price)||0),0);
+    const val=Object.prototype.hasOwnProperty.call(corrected,String(g.salesNo))?corrected[String(g.salesNo)]:(g.pdfTotal!=null&&Number.isFinite(Number(g.pdfTotal))?Number(g.pdfTotal):calc);
+    return sum+val;
+  },0);
+  const grand=$("poGrandTotal");
+  if(grand)grand.textContent=`浤富總金額：${poFmt(total)}（${poGroups.length} 張銷貨單）`;
+  try{localStorage.setItem('sbd_hongfu_visible_total_v1',JSON.stringify({period:($("poPdfPeriod")?.value||'').trim(),total,count:poGroups.length}))}catch(e){}
   host.querySelectorAll(".poGroup").forEach(box=>{
     const gi=+box.dataset.gi;
     box.querySelector(".poProjectSel").onchange=e=>{poGroups[gi].projectKey=e.target.value;poSaveAllWork(false)};
@@ -3226,6 +3236,11 @@ async function render(){
  }catch(e){console.warn('浤富成本讀取失敗',e)}
  const groups=['浤富','草屯'].map(name=>{const rr=rows.filter(r=>r.group===name);return {name,sale:rr.reduce((n,r)=>n+r.sale,0),cost:rr.reduce((n,r)=>n+(r.cost||0),0),known:rr.every(r=>r.cost!==null),count:rr.length}});
  if(hongfuCost!==null){groups[0].cost=hongfuCost;groups[0].known=true}
+ const visible=read('sbd_hongfu_visible_total_v1',null);
+ if(visible&&Number.isFinite(Number(visible.total))&&visible.count>0&&(period.value==='all'||period.value===visible.period)){
+   const h=groups.find(g=>g.name==='浤富');
+   if(h){h.cost=Number(visible.total);h.known=true;}
+ }
  const total={name:'總計',sale:groups.reduce((n,g)=>n+g.sale,0),cost:groups.reduce((n,g)=>n+g.cost,0),known:groups.every(g=>g.known),count:groups.reduce((n,g)=>n+g.count,0)};
  document.getElementById('crCards').innerHTML='';
  const cell=(value,muted=false)=>`<td style="padding:17px 20px;text-align:right;font-size:19px;font-weight:700;color:${muted?'#718096':'#183a62'};white-space:nowrap">${value}</td>`;
