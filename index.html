@@ -811,6 +811,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
       <table class="purchaseTable" style="min-width:1250px">
         <thead><tr><th style="min-width:150px">請款日</th><th>操作</th><th>指定單號</th><th>指定案名</th><th>明細內容</th><th>合計</th></tr></thead>
         <tbody id="tcSavedDetailRows"></tbody>
+        <tfoot><tr style="background:#eef2f6;font-weight:800"><td colspan="5" style="text-align:right;padding:12px">請款區間總計（<span id="tcDetailPeriodLabel">尚未選擇</span>）｜<span id="tcDetailPeriodCount">0</span> 件</td><td id="tcDetailPeriodTotal" style="text-align:right;padding:12px">0</td></tr></tfoot>
       </table>
     </div>
     <div id="tcSavedDetailEmpty" class="quoteEmpty">目前沒有已儲存的台中採購單明細</div>
@@ -2952,9 +2953,9 @@ function tcDetailLoad(key){const d=tcDetails()[key];if(!d)return false;if(d.clai
 function tcEsc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function tcResolvedClaimPeriod(d,p){
  if(d.claimPeriod)return d.claimPeriod;
- const m=String(p.no||'').match(/^(?:G5DD|G5DE)(\\d{6})/i);
+ const m=String(p.no||'').match(/^(?:G5DD|G5DE)(\d{6})/i);
  if(!m)return '';
- const candidates=tcPeriodList().filter(v=>{const r=v.match(/^(\\d{6})-(\\d{6})$/);return r&&r[1]<=m[1]&&m[1]<=r[2]});
+ const candidates=tcPeriodList().filter(v=>{const r=v.match(/^(\d{6})-(\d{6})$/);return r&&r[1]<=m[1]&&m[1]<=r[2]});
  return candidates.length===1?candidates[0]:'';
 }
 function tcRenderSavedDetails(){
@@ -2969,6 +2970,13 @@ function tcRenderSavedDetails(){
  Object.keys(ds).forEach(key=>{const d=ds[key]||{},p=ps.find(x=>x.key===key)||{};const its=Array.isArray(d.items)?d.items:[];const total=its.reduce((n,x)=>n+Number(x.qty||0)*Number(x.price||0),0);const detail=its.length?its.map((x,i)=>`${i+1}. ${x.name||''}${x.size?'｜尺寸 '+x.size:''}${x.qty!==''&&x.qty!=null?'｜'+x.qty+' '+(x.unit||''):''}${x.price!==''&&x.price!=null?'｜單價 '+money(x.price):''}${x.qty!==''&&x.qty!=null&&x.price!==''&&x.price!=null?'｜合計 '+money(Number(x.qty||0)*Number(x.price||0)):''}`).join('<br>'):'—';rows.push({key,d,p,total,detail})});
  rows.sort((a,b)=>String(b.d.updatedAt||'').localeCompare(String(a.d.updatedAt||'')));
  body.innerHTML=rows.map(r=>`<tr><td style="white-space:nowrap">${tcEsc(tcResolvedClaimPeriod(r.d,r.p)||"—")}</td><td style="white-space:nowrap"><button type="button" data-tc-act="edit" data-k="${tcEsc(r.key)}">修改</button> <button type="button" data-tc-act="del" data-k="${tcEsc(r.key)}" style="background:#d62d2d;color:#fff;border-color:#d62d2d">刪除</button></td><td>${tcEsc(r.p.no||'')}</td><td>${tcEsc(r.p.caseName||'')}</td><td style="text-align:left;white-space:normal;min-width:420px;line-height:1.65">${r.detail}</td><td>${money(r.total)}</td></tr>`).join('');
+ const chosen=String($t('tcExportPeriod')?.value||$t('tcPeriodHistory')?.value||'').trim();
+ const selected=/^\d{6}-\d{6}$/.test(chosen)?chosen:'';
+ const relevant=selected?rows.filter(r=>tcResolvedClaimPeriod(r.d,r.p)===selected):[];
+ const label=$t('tcDetailPeriodLabel'),count=$t('tcDetailPeriodCount'),sum=$t('tcDetailPeriodTotal');
+ if(label)label.textContent=selected||'尚未選擇';
+ if(count)count.textContent=String(relevant.length);
+ if(sum)sum.textContent=money(relevant.reduce((n,r)=>n+r.total,0));
  if(empty)empty.classList.toggle('hidden',rows.length>0);
  body.querySelectorAll('button[data-tc-act]').forEach(btn=>btn.onclick=()=>{const key=btn.dataset.k;if(btn.dataset.tcAct==='edit'){if($t('tcAssignmentSelect'))$t('tcAssignmentSelect').value=key;tcDetailLoad(key);$t('taichungPurchaseView')?.scrollIntoView({behavior:'smooth',block:'start'});}else{const p=ps.find(x=>x.key===key)||{};if(!confirm(`確定刪除 ${p.no||''} ${p.caseName||''} 的台中採購單明細？`))return;const all=tcDetails();delete all[key];tcSaveDetails(all);if($t('tcAssignmentSelect')?.value===key)clear();tcRenderSavedDetails();}});
 }
@@ -3006,6 +3014,7 @@ function tcRememberEnteredPeriod(showError=false){
  const valid=x=>{const y=2000+Number(x.slice(0,2)),mo=Number(x.slice(2,4)),d=Number(x.slice(4,6)),dt=new Date(y,mo-1,d);return dt.getFullYear()===y&&dt.getMonth()===mo-1&&dt.getDate()===d};
  if(!valid(m[1])||!valid(m[2])){if(showError)alert("請輸入有效日期");return false}
  tcPeriodSave(m[1],m[2]);
+ tcRenderSavedDetails();
  return true;
 }
 function tcPeriodSelect(){
@@ -3013,6 +3022,7 @@ function tcPeriodSelect(){
  if(!v)return;
  const m=v.match(/^(\d{6})-(\d{6})$/);if(!m)return;
  $t("tcExportPeriod").value=v;
+ tcRenderSavedDetails();
 }
 function clear(){$t('tcItemsBody').innerHTML='';add()}
 function open(){if(typeof isAdminAccount==='function'&&!isAdminAccount())return;if(typeof renderQNameDatalist==='function')renderQNameDatalist();['calendarView','quoteView','purchaseView','installStatsView','overtimeView','invoiceCustomerView'].forEach(id=>$t(id)?.classList.add('hidden'));$t('taichungPurchaseView').classList.remove('hidden');$t('calendarControls')?.classList.add('hidden');document.querySelectorAll('.featureTabs button').forEach(b=>b.classList.remove('active'));$t('taichungPurchaseTabBtn').classList.add('active');tcRenderSavedDetails()}
@@ -3039,58 +3049,59 @@ async function download(){
    wb.worksheets.forEach((ws,si)=>{
      const groups=groupsBySheet[si]||[];
      const count=Math.min(groups.length,Math.max(0,projects.length-pi));
-     const expansions=groups.map(([rs,re],i)=>i<count?Math.max(0,(ds[projects[pi+i].key]?.items||[]).length-(re-rs+1)):0);
-     // ExcelJS 插入列不會正確移動合併儲存格：先解除全部合併，完成插列後重新定位。
+     const sizes=groups.map((g,i)=>i<count?Math.max(1,(ds[projects[pi+i].key]?.items||[]).length):0);
+     const deltas=groups.map((g,i)=>sizes[i]-(g[1]-g[0]+1));
      const originalMerges=Object.keys(ws._merges||{}).map(k=>{
-       const x=ws._merges[k].model;
-       return {top:x.top,bottom:x.bottom,left:x.left,right:x.right};
+       const x=ws._merges[k].model;return {top:x.top,bottom:x.bottom,left:x.left,right:x.right};
      });
      originalMerges.forEach(m=>{try{ws.unMergeCells(m.top,m.left,m.bottom,m.right)}catch(e){}});
+     // Resize each original item block. Unused rows are deleted, not left as empty bordered cells.
      for(let gi=groups.length-1;gi>=0;gi--){
-       const [rs,re]=groups[gi],extra=expansions[gi];if(!extra)continue;
-       ws.spliceRows(re+1,0,...Array.from({length:extra},()=>[]));
-       for(let r=re+1;r<=re+extra;r++){
-         ws.getRow(r).height=ws.getRow(re).height;
-         for(let c=1;c<=9;c++)copyStyle(ws.getRow(re).getCell(c),ws.getRow(r).getCell(c));
+       const [rs,re]=groups[gi],delta=deltas[gi];
+       if(delta<0)ws.spliceRows(re+delta+1,-delta);
+       else if(delta>0){
+         ws.spliceRows(re+1,0,...Array.from({length:delta},()=>[]));
+         for(let r=re+1;r<=re+delta;r++){
+           ws.getRow(r).height=ws.getRow(re).height;
+           for(let c=1;c<=9;c++)copyStyle(ws.getRow(re).getCell(c),ws.getRow(r).getCell(c));
+         }
        }
      }
-     const shift=row=>row+groups.reduce((n,g,i)=>n+(g[1]<row?expansions[i]:0),0);
-     const blockMerge=m=>groups.findIndex(g=>g[0]===m.top&&g[1]===m.bottom&&[1,8,9].includes(m.left)&&m.left===m.right);
+     const shift=row=>row+groups.reduce((n,g,i)=>n+(g[1]<row?deltas[i]:0),0);
+     // Restore only merges that do not cross resized item blocks; rebuilt item merges below.
      originalMerges.forEach(m=>{
-       const gi=blockMerge(m);
-       const top=shift(m.top),bottom=shift(m.bottom)+(gi>=0?expansions[gi]:0);
-       try{ws.mergeCells(top,m.left,bottom,m.right)}catch(e){console.warn('merge',m,e)}
+       const overlapping=groups.some(([rs,re])=>m.top<=re&&m.bottom>=rs);
+       if(overlapping)return;
+       try{ws.mergeCells(shift(m.top),m.left,shift(m.bottom),m.right)}catch(e){console.warn('template merge',e)}
      });
      groups.forEach(([origStart,origEnd],gi)=>{
-       const rs=shift(origStart),re=shift(origEnd)+expansions[gi];
-       if(gi>=count){
-         // 模板未使用的序號區塊不應出現重複序號、預設文字或 0。
-         for(let r=rs;r<=re;r++)for(let c=1;c<=9;c++){
-           const cell=ws.getRow(r).getCell(c);
-           if(!cell.isMerged||cell.address===cell.master.address)cell.value=null;
-         }
-         return;
-       }
-       const p=projects[pi++],its=ds[p.key]?.items||[];
-       ws.getCell('A'+rs).value=pi;
-       const total=Math.round(its.reduce((sum,it)=>sum+Number(it.qty||0)*Number(it.price||0),0)*100)/100;
-       ws.getCell('H'+rs).value=total;ws.getCell('H'+rs).numFmt='#,##0';
-       ws.getCell('I'+rs).value=fullQuote(p);
+       if(gi>=count)return;
+       const rs=shift(origStart),its=ds[projects[pi].key]?.items||[],re=rs+sizes[gi]-1;
+       const p=projects[pi++];
        for(let r=rs;r<=re;r++){
-         for(const c of ['B','D','E','F','G']){
-           const cell=ws.getCell(c+r);
-           if(!cell.isMerged||cell.address===cell.master.address)cell.value=null;
+         for(let c=1;c<=9;c++){const cell=ws.getRow(r).getCell(c);cell.value=null}
+         // Names occupy B:C; make each item one centered row, without cross-row overlap.
+         try{ws.mergeCells(r,2,r,3)}catch(e){}
+         for(let c=1;c<=9;c++){
+           const cell=ws.getRow(r).getCell(c);
+           if(c===2||c===3||c===4||c===5||c===6||c===7)
+             cell.alignment={...(cell.alignment||{}),vertical:'middle',horizontal:'center',wrapText:true};
          }
        }
+       for(const col of [1,8,9])if(re>rs){try{ws.mergeCells(rs,col,re,col)}catch(e){}}
+       for(const col of [1,8,9])ws.getCell(rs,col).alignment={...(ws.getCell(rs,col).alignment||{}),vertical:'middle',horizontal:'center',wrapText:true};
+       ws.getCell(rs,1).value=pi;
+       const total=its.reduce((n,it)=>n+Number(it.qty||0)*Number(it.price||0),0);
+       ws.getCell(rs,8).value=total;ws.getCell(rs,8).numFmt='#,##0';
+       ws.getCell(rs,9).value=fullQuote(p);
        its.forEach((it,k)=>{
          const r=rs+k;
-         ws.getCell('B'+r).value=it.name||'';
-         ws.getCell('D'+r).value=Number(it.qty||0)||null;
-         ws.getCell('E'+r).value=it.unit||'';
-         ws.getCell('F'+r).value=Number(it.price||0)||null;
-         ws.getCell('F'+r).numFmt='#,##0';
-         ws.getCell('G'+r).value=(Number(it.qty||0)*Number(it.price||0))||null;
-         ws.getCell('G'+r).numFmt='#,##0';
+         ws.getCell(r,2).value=it.name||'';
+         ws.getCell(r,4).value=Number(it.qty||0)||null;
+         ws.getCell(r,5).value=it.unit||'';
+         ws.getCell(r,6).value=Number(it.price||0)||null;
+         ws.getCell(r,7).value=Number(it.qty||0)*Number(it.price||0)||null;
+         ws.getCell(r,6).numFmt='#,##0';ws.getCell(r,7).numFmt='#,##0';
        });
      });
    });
