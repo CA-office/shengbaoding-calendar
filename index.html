@@ -3202,7 +3202,7 @@ function source(){
  for(const p of tc){const no=String(p.no||'').trim();if(!no)continue;const d=details[p.key];result.push({group:'草屯',no,name:p.caseName||'',sale:amount(p.caseAmount),cost:d?(d.items||[]).reduce((n,it)=>n+amount(it.qty)*amount(it.price),0):null,period:d?.claimPeriod||''})}
  return result.map(r=>{const m=r.no.match(/^(?:G5DD|G5DE)(\d{2})(\d{2})/i);return {...r,month:m?`20${m[1]}-${m[2]}`:'未分類'}})
 }
-function render(){
+async function render(){
  const all=source(),sel=document.getElementById('crMonth'),period=document.getElementById('crPeriod'),old=sel.value,op=period.value;
  const months=[...new Set(all.map(r=>r.month))].sort();
  sel.innerHTML='<option value="all">全部月份</option>'+months.map(m=>`<option value="${esc(m)}">${esc(m)} 月</option>`).join('');
@@ -3212,11 +3212,24 @@ function render(){
  period.innerHTML='<option value="all">全部請款區間</option>'+periods.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');
  period.value=periods.includes(op)?op:'all';
  const rows=all.filter(r=>(sel.value==='all'||r.month===sel.value)&&(period.value==='all'||r.period===period.value));
+ let hongfuCost=null;
+ try {
+  const request=indexedDB.open('sbd_hongfu_pdf_archive_v1',1);
+  const archived=await new Promise((resolve,reject)=>{request.onerror=()=>reject(request.error);request.onupgradeneeded=()=>{if(!request.result.objectStoreNames.contains('files'))request.result.createObjectStore('files',{keyPath:'id'})};request.onsuccess=()=>{const db=request.result,tx=db.transaction('files','readonly'),req=tx.objectStore('files').getAll();req.onsuccess=()=>{db.close();resolve(req.result||[])};req.onerror=()=>{db.close();reject(req.error)}}});
+  const valid=archived.filter(f=>Number.isFinite(Number(f.cost))&&f.cost!==null&&f.cost!==undefined);
+  if(valid.length){
+   // Each archived PDF represents one statement period; never count duplicate files for the same period twice.
+   const byPeriod=new Map();for(const f of valid){const old=byPeriod.get(f.period);if(!old||String(f.savedAt||'')>String(old.savedAt||''))byPeriod.set(f.period,f)}
+   const chosen=[...byPeriod.values()].filter(f=>period.value==='all'||f.period===period.value);
+   if(chosen.length)hongfuCost=chosen.reduce((n,f)=>n+Number(f.cost),0);
+  }
+ }catch(e){console.warn('浤富成本讀取失敗',e)}
  const groups=['浤富','草屯'].map(name=>{const rr=rows.filter(r=>r.group===name);return {name,sale:rr.reduce((n,r)=>n+r.sale,0),cost:rr.reduce((n,r)=>n+(r.cost||0),0),known:rr.every(r=>r.cost!==null),count:rr.length}});
+ if(hongfuCost!==null){groups[0].cost=hongfuCost;groups[0].known=true}
  const total={name:'總計',sale:groups.reduce((n,g)=>n+g.sale,0),cost:groups.reduce((n,g)=>n+g.cost,0),known:groups.every(g=>g.known),count:groups.reduce((n,g)=>n+g.count,0)};
  document.getElementById('crCards').innerHTML='';
  const cell=(value,muted=false)=>`<td style="padding:17px 20px;text-align:right;font-size:19px;font-weight:700;color:${muted?'#718096':'#183a62'};white-space:nowrap">${value}</td>`;
- document.getElementById('crSummary').innerHTML=`<h3 style="margin:0 0 16px;color:#173653">銷售／成本／件數統計</h3><table style="width:100%;border-collapse:collapse;min-width:540px"><thead><tr style="background:#eef3f8;color:#173653"><th style="padding:13px;text-align:left">來源</th><th style="text-align:right;padding:13px">銷售總額</th><th style="text-align:right;padding:13px">成本總額</th><th style="text-align:right;padding:13px">案件件數</th></tr></thead><tbody>${[...groups,total].map((g,i)=>`<tr style="border-bottom:1px solid #e0e7ef;${i===2?'background:#f0f5fa;':''}"><th style="padding:17px 13px;text-align:left;color:#173653;font-size:18px">${g.name}</th>${cell(fmt(g.sale))}${cell(g.known?fmt(g.cost):(g.cost?fmt(g.cost)+'（部分）':'尚無成本資料'),!g.known)}${cell(g.count+' 件')}</tr>`).join('')}</tbody></table><p style="color:#718096;font-size:12px;margin:12px 0 0">成本未儲存的案件不會當作 0；浤富 PDF 本期合計需另行核對成本來源。</p>`;
+ document.getElementById('crSummary').innerHTML=`<h3 style="margin:0 0 16px;color:#173653">銷售／成本／件數統計</h3><table style="width:100%;border-collapse:collapse;min-width:540px"><thead><tr style="background:#eef3f8;color:#173653"><th style="padding:13px;text-align:left">來源</th><th style="text-align:right;padding:13px">銷售總額</th><th style="text-align:right;padding:13px">成本總額</th><th style="text-align:right;padding:13px">案件件數</th></tr></thead><tbody>${[...groups,total].map((g,i)=>`<tr style="border-bottom:1px solid #e0e7ef;${i===2?'background:#f0f5fa;':''}"><th style="padding:17px 13px;text-align:left;color:#173653;font-size:18px">${g.name}</th>${cell(fmt(g.sale))}${cell(g.known?fmt(g.cost):(g.cost?fmt(g.cost)+'（部分）':'尚無成本資料'),!g.known)}${cell(g.count+' 件')}</tr>`).join('')}</tbody></table><p style="color:#718096;font-size:12px;margin:12px 0 0">成本未儲存的案件不會當作 0；浤富成本取已保存 PDF 最後一頁的「本期合計」，相同請款區間不重複加總；尚未保存 PDF 時顯示尚無成本資料。</p>`;
  document.getElementById('crRows').innerHTML='';
 }
 function bind(){const b=document.getElementById('costReportTabBtn');if(!b)return;b.classList.toggle('hidden',typeof isAdminAccount==='function'&&!isAdminAccount());b.onclick=()=>{if(typeof isAdminAccount==='function'&&!isAdminAccount())return;document.querySelectorAll('#appPage main > section,#calendarView').forEach(el=>el.classList.add('hidden'));document.getElementById('costReportView').classList.remove('hidden');document.getElementById('calendarControls')?.classList.add('hidden');document.querySelectorAll('.featureTabs button').forEach(x=>x.classList.remove('active'));b.classList.add('active');render()};document.getElementById('crMonth').onchange=render;document.getElementById('crPeriod').onchange=render;document.querySelectorAll('.featureTabs button').forEach(x=>{if(x!==b)x.addEventListener('click',()=>document.getElementById('costReportView')?.classList.add('hidden'))})}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();})();</script><script id="source-cost-export-v47">
