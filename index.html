@@ -811,7 +811,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
       <table class="purchaseTable" style="min-width:1250px">
         <thead><tr><th style="min-width:150px">請款日</th><th>操作</th><th>指定單號</th><th>指定案名</th><th>明細內容</th><th>合計</th></tr></thead>
         <tbody id="tcSavedDetailRows"></tbody>
-        <tfoot><tr style="background:#eef2f6;font-weight:800"><td colspan="5" style="text-align:right;padding:12px">請款區間總計（<span id="tcDetailPeriodLabel">尚未選擇</span>）｜<span id="tcDetailPeriodCount">0</span> 件</td><td id="tcDetailPeriodTotal" style="text-align:right;padding:12px">0</td></tr></tfoot>
+        <tfoot><tr style="background:#eef2f6;font-weight:800"><td colspan="6" style="text-align:left;padding:12px 16px">請款區間總計（<span id="tcDetailPeriodLabel">尚未選擇</span>）｜<span id="tcDetailPeriodCount">0</span> 件｜總金額：<span id="tcDetailPeriodTotal">0</span></td></tr></tfoot>
       </table>
     </div>
     <div id="tcSavedDetailEmpty" class="quoteEmpty">目前沒有已儲存的台中採購單明細</div>
@@ -2972,7 +2972,11 @@ function tcRenderSavedDetails(){
  body.innerHTML=rows.map(r=>`<tr><td style="white-space:nowrap">${tcEsc(tcResolvedClaimPeriod(r.d,r.p)||"—")}</td><td style="white-space:nowrap"><button type="button" data-tc-act="edit" data-k="${tcEsc(r.key)}">修改</button> <button type="button" data-tc-act="del" data-k="${tcEsc(r.key)}" style="background:#d62d2d;color:#fff;border-color:#d62d2d">刪除</button></td><td>${tcEsc(r.p.no||'')}</td><td>${tcEsc(r.p.caseName||'')}</td><td style="text-align:left;white-space:normal;min-width:420px;line-height:1.65">${r.detail}</td><td>${money(r.total)}</td></tr>`).join('');
  const chosen=String($t('tcExportPeriod')?.value||$t('tcPeriodHistory')?.value||'').trim();
  const selected=/^\d{6}-\d{6}$/.test(chosen)?chosen:'';
- const relevant=selected?rows.filter(r=>tcResolvedClaimPeriod(r.d,r.p)===selected):[];
+ const periodParts=selected.match(/^(\d{6})-(\d{6})$/);
+ const relevant=periodParts?rows.filter(r=>{
+   const m=String(r.p.no||'').match(/^(?:G5DD|G5DE)(\d{6})/i);
+   return m&&m[1]>=periodParts[1]&&m[1]<=periodParts[2];
+ }):[];
  const label=$t('tcDetailPeriodLabel'),count=$t('tcDetailPeriodCount'),sum=$t('tcDetailPeriodTotal');
  if(label)label.textContent=selected||'尚未選擇';
  if(count)count.textContent=String(relevant.length);
