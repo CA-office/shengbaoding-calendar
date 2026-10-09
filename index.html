@@ -520,7 +520,16 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
 #otherExpensesView .oeTable td button{padding:6px 7px;font-size:12px;margin:2px}
 #otherExpensesView .oeTable td button[data-delete]{color:#c52626;border-color:#efbaba}
 @media(max-width:850px){#otherExpensesView .oeEntry{grid-template-columns:repeat(2,minmax(0,1fr))}#otherExpensesView .oeEntry button{min-width:0}}
-</style></head>
+</style>
+<style id="oe-centered-layout-v85">
+/* 其他支出：整個內容區置中，保留既有欄位、資料及功能 */
+#otherExpensesView{width:min(1100px,calc(100% - 24px))!important;max-width:1100px!important;margin:22px auto 32px!important;padding:16px 18px!important;box-sizing:border-box}
+#otherExpensesView .oeEntry{width:100%!important;max-width:100%!important;grid-template-columns:minmax(150px,1fr) minmax(160px,1.15fr) minmax(160px,1.15fr) minmax(120px,.8fr) auto auto!important;justify-content:center!important;align-items:end!important}
+#otherExpensesView .oeTable{margin:12px auto 0!important}
+@media(max-width:900px){#otherExpensesView .oeEntry{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:540px){#otherExpensesView{width:calc(100% - 12px)!important;padding:12px 8px!important}#otherExpensesView .oeEntry{grid-template-columns:1fr!important}#otherExpensesView .oeTable{margin-left:auto!important;margin-right:auto!important}}
+</style>
+</head>
 <body>
 <div id="pullRefreshIndicator" aria-hidden="true"><div class="pull-spinner"></div></div>
 <section id="loginPage" class="loginWrap"><div class="loginCard"><h1>勝寶鼎/新弘股公司</h1><label class="field">Email<input id="loginEmail" type="email" autocomplete="username"></label><label class="field">密碼<input id="loginPassword" type="password" autocomplete="current-password"></label><button id="loginBtn" class="loginBtn">登入</button><button id="passkeyBtn" class="loginBtn" type="button" style="margin-top:10px;background:#fff;border:1px solid #81D8D0">使用 Face ID／裝置解鎖登入</button><div id="loginErr" class="err"></div></div></section>
