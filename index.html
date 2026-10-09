@@ -3358,15 +3358,29 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();
 })();
 </script>
+<style id="sbd-sync-side-drawer-style">
+#sbdSyncDrawer{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:9000;display:flex;align-items:center;pointer-events:none;font-family:system-ui,"Microsoft JhengHei",sans-serif;color:#17334d}
+#sbdSyncDrawerToggle{pointer-events:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;width:54px;height:94px;border:0;border-radius:8px 0 0 8px;background:#13a9e4;color:white;box-shadow:0 3px 10px #0003;cursor:pointer;font-size:20px;flex-shrink:0;order:1}
+#sbdSyncDrawerToggle .sbdSyncIcon{font-size:27px;line-height:1.1}
+#sbdSyncDrawerToggle .sbdSyncArrow{font-size:18px;transition:transform .2s}
+#sbdSyncDrawer.open #sbdSyncDrawerToggle .sbdSyncArrow{transform:rotate(180deg)}
+#sbdSyncDrawerPanel{pointer-events:auto;order:0;width:min(310px,calc(100vw - 65px));background:#fff;border:2px solid #285276;border-radius:12px 0 0 12px;padding:12px;box-shadow:0 3px 14px #0003;display:none;font-size:13px}
+#sbdSyncDrawer.open #sbdSyncDrawerPanel{display:block}
+#sbdSyncDrawerPanel button{padding:5px 8px;border:1px solid #b7c5d1;border-radius:5px;background:#fff;color:#17334d;cursor:pointer}
+@media(max-width:600px){#sbdSyncDrawerToggle{width:43px;height:76px}#sbdSyncDrawerPanel{width:min(295px,calc(100vw - 49px))}}
+</style>
 <script id="sbd-safe-auto-sync-v70">
 (function(){
 'use strict';
 /* 保守型同步：絕不自動覆蓋非空白且不同的本機/雲端資料。 */
 const keys=['sbd_purchase_projects','sbd_taichung_purchase_projects_v1','sbd_taichung_purchase_details_v1','sbd_taichung_purchase_period_v1','sbd_taichung_purchase_names_v1','sbd_tc_invoice_periods_v1','sbd_tc_name_options_v1','sbd_purchase_pdf_work_v1','sbd_hongfu_period_work_v1','sbd_hongfu_last_period','sbd_hongfu_visible_total_v1','sbd_other_expenses_v1'];
 const isData=v=>v!=null&&String(v).trim()!==''&&!['[]','{}','null'].includes(String(v).trim());
-const panel=document.createElement('div');
-panel.style='position:fixed;bottom:12px;right:12px;z-index:9000;background:white;border:2px solid #285276;border-radius:12px;padding:10px;box-shadow:0 2px 10px #0003;max-width:310px;font:13px system-ui;color:#17334d';
-panel.innerHTML='<b>採購雲端安全同步</b><div data-status style="font-size:12px;margin:6px 0">等待登入後自動檢查</div><div style="display:flex;gap:5px;flex-wrap:wrap"><button data-act="backup">備份本機</button><button data-act="sync">立即檢查</button></div><div style="font-size:11px;margin-top:6px">不同內容不會自動覆蓋；請保留兩台電腦的備份。</div>';
+const drawer=document.createElement('div');
+drawer.id='sbdSyncDrawer';
+drawer.innerHTML='<button type="button" id="sbdSyncDrawerToggle" aria-expanded="false" aria-label="展開採購雲端同步"><span class="sbdSyncIcon">☁</span><span class="sbdSyncArrow">❮</span></button><div id="sbdSyncDrawerPanel"><b>採購雲端安全同步</b><div data-status style="font-size:12px;margin:6px 0">等待登入後自動檢查</div><div style="display:flex;gap:5px;flex-wrap:wrap"><button data-act="backup">備份本機</button><button data-act="sync">立即檢查</button></div><div style="font-size:11px;margin-top:6px">不同內容不會自動覆蓋；請保留兩台電腦的備份。</div></div>';
+const panel=drawer.querySelector('#sbdSyncDrawerPanel');
+const toggle=drawer.querySelector('#sbdSyncDrawerToggle');
+toggle.addEventListener('click',()=>{const open=drawer.classList.toggle('open');toggle.setAttribute('aria-expanded',String(open));toggle.setAttribute('aria-label',open?'收合採購雲端同步':'展開採購雲端同步')});
 const status=panel.querySelector('[data-status]');
 function msg(t){status.textContent=t}
 function snapshot(){return Object.fromEntries(keys.filter(k=>isData(localStorage.getItem(k))).map(k=>[k,localStorage.getItem(k)]))}
@@ -3404,7 +3418,7 @@ async function sync(){
  }catch(e){msg('同步未完成：'+(e.message||e))}finally{busy=false}
 }
 panel.addEventListener('click',e=>{const act=e.target?.dataset?.act;if(act==='backup')backup();else if(act==='sync')sync()});
-function start(){document.body.appendChild(panel);setTimeout(sync,1800);setInterval(sync,30000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync()})}
+function start(){document.body.appendChild(drawer);setTimeout(sync,1800);setInterval(sync,30000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync()})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
 </script>
