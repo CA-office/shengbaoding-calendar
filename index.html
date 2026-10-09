@@ -492,7 +492,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
 </style>
 
 <style id="tc-hide-size-column">
-/* 台中採購單：尺寸目前先隱藏，資料欄位仍保留供既有資料/Excel相容 */
+/* 草屯採購單：尺寸目前先隱藏，資料欄位仍保留供既有資料/Excel相容 */
 #taichungPurchaseView .tcItemsTable .tcSizeCol{display:none!important}
 </style>
 <style id="tc-project-column-widths">
@@ -826,16 +826,16 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
     </table><div style="margin-top:18px"><h3>代安裝明細</h3><table class="purchaseRecords"><thead><tr><th>單號</th><th>案名</th><th>案件金額</th></tr></thead><tbody id="tcAgencyRows"></tbody><tfoot><tr><th>總計</th><th id="tcAgencyCount">0 件</th><th id="tcAgencyTotal">0</th></tr></tfoot></table></div>
   </div>
   <div class="quoteCard">
-    <h2 class="quoteTitle">台中採購單</h2>
-    <div style="margin:0 0 12px"><label style="font-size:13px;font-weight:800">指定單號／案名<select id="tcAssignmentSelect" style="width:100%;padding:10px;border:1px solid #bdc8d2;border-radius:8px;margin-top:4px;background:#fff"><option value="">請選擇要指定的單號／案名</option></select></label><div style="font-size:12px;color:var(--muted);margin-top:4px">報價單會帶入客戶名稱與未稅合計；原有草屯資料不覆蓋，可在上方新增、修改。 <button type="button" id="tcRefreshProjectBtn" style="padding:4px 8px">重新讀取清單</button></div></div>
+    <h2 class="quoteTitle">草屯採購單</h2>
+    <div id="tcCloudProjectsStatus" style="font-size:12px;color:#52687c;margin-bottom:7px">正在準備讀取雲端草屯案件…</div><div style="margin:0 0 12px"><label style="font-size:13px;font-weight:800">指定單號／案名<select id="tcAssignmentSelect" style="width:100%;padding:10px;border:1px solid #bdc8d2;border-radius:8px;margin-top:4px;background:#fff"><option value="">請選擇要指定的單號／案名</option></select></label><div style="font-size:12px;color:var(--muted);margin-top:4px">報價單會帶入客戶名稱與未稅合計；原有草屯資料不覆蓋，可在上方新增、修改。 <button type="button" id="tcRefreshProjectBtn" style="padding:4px 8px">重新讀取清單</button></div></div>
     <div class="quoteItemsWrap"><table class="quoteItems tcItemsTable"><thead><tr><th>項數</th><th>名稱</th><th class="tcSizeCol">尺寸</th><th>總公分數</th><th>單位</th><th>單價</th><th>合計</th><th></th></tr></thead><tbody id="tcItemsBody"></tbody></table></div>
     <div class="quoteManageTools"><button type="button" id="tcAddItemBtn">＋ 新增項目</button><button type="button" id="tcNameManageBtn">名稱選項管理</button><span class="hint">直接輸入資料，不需要 PDF 匯入</span></div>
     <div class="quoteSummary"><span>合計</span><span id="tcSubtotal">0</span></div>
     <div class="quoteCard" style="margin:12px 0"><label style="font-weight:800" for="tcExportPeriod">請款區間</label><input id="tcExportPeriod" inputmode="numeric" placeholder="例如 260825-260926" style="width:100%;margin-top:6px;padding:10px;border:1px solid #bdc8d2;border-radius:8px"><div class="hint">輸入一次後會記住；下次也可從下方選單選擇。</div></div>
-    <div class="quoteActions"><button type="button" id="tcDetailSaveBtn" class="primary">儲存台中採購單</button><button type="button" id="tcExcelBtn" class="primary">套用台中採購單範本下載 Excel</button><button type="button" id="tcCostBtn" class="primary">產出成本</button><select id="tcPeriodHistory" aria-label="已儲存請款區間" style="min-width:180px;padding:9px;border:1px solid #bdc8d2;border-radius:8px"><option value="">選擇請款區間</option></select></div>
+    <div class="quoteActions"><button type="button" id="tcDetailSaveBtn" class="primary">儲存草屯採購單</button><button type="button" id="tcExcelBtn" class="primary">套用草屯採購單範本下載 Excel</button><button type="button" id="tcCostBtn" class="primary">產出成本</button><select id="tcPeriodHistory" aria-label="已儲存請款區間" style="min-width:180px;padding:9px;border:1px solid #bdc8d2;border-radius:8px"><option value="">選擇請款區間</option></select></div>
   </div>
   <div class="purchaseCard">
-    <h2 class="purchaseTitle">台中採購單明細表</h2>
+    <h2 class="purchaseTitle">草屯採購單明細表</h2>
     <div class="purchaseTableWrap" style="max-height:none">
       <table class="purchaseTable" style="min-width:1250px">
         <thead><tr><th style="min-width:150px">請款日</th><th>操作</th><th>指定單號</th><th>指定案名</th><th>明細內容</th><th>合計</th></tr></thead>
@@ -843,7 +843,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
         <tfoot><tr style="background:#eef2f6;font-weight:800"><td colspan="6" style="text-align:left;padding:12px 16px">請款區間總計（<span id="tcDetailPeriodLabel">尚未選擇</span>）｜<span id="tcDetailPeriodCount">0</span> 件｜總金額：<span id="tcDetailPeriodTotal">0</span></td></tr></tfoot>
       </table>
     </div>
-    <div id="tcSavedDetailEmpty" class="quoteEmpty">目前沒有已儲存的台中採購單明細</div>
+    <div id="tcSavedDetailEmpty" class="quoteEmpty">目前沒有已儲存的草屯採購單明細</div>
   </div>
 </section>
 <section id="costReportView" class="hidden" style="max-width:1250px;margin:22px auto;padding:0 15px;font-family:system-ui,'Noto Sans TC',sans-serif;color:#172b45"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px"><div><h2 style="font-size:25px;margin:0">成本・銷售・件數分析</h2><p style="color:#718096">統計資料來源：本機及雲端已保存的採購案件；不覆蓋任何原始資料</p></div><select id="crMonth" style="display:none;padding:10px;border-radius:8px;border:1px solid #cbd5e1"><option value="all">全部月份</option></select> <select id="crPeriod" style="padding:10px;border-radius:8px;border:1px solid #cbd5e1"><option value="all">全部請款區間</option></select></div><div id="crPdfCostControl" style="margin:16px 0;padding:12px 16px;border:1px solid #dce5ee;border-radius:10px;background:#fff">
@@ -873,7 +873,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
 </dialog>
 <dialog id="eventDlg"><form class="form" method="dialog"><h2 id="eventDlgTitle">新增行程</h2><div class="eventGrid"><label>日期<input id="fdate" type="text" inputmode="numeric" placeholder="例如：20260901 或 2026/09/01"></label><label>時間<input id="ftime" type="text" inputmode="numeric" placeholder="例如：0830 或 08:30"></label><label>案名<input id="ftitle" placeholder="例如：工地會勘"></label><label>顏色<select id="fcolor"><option value="blue">藍色－人造石</option><option value="green">綠色－石英石</option><option value="red">紅色</option><option value="orange">橘色－草屯接單</option><option value="purple">紫色－浤富代裝石英</option><option value="yellow">黃色－自安送料</option><option value="black">咖啡－我司單草屯代裝</option></select></label><label id="installField">安裝<select id="finstall"><option value="勝寶鼎">勝寶鼎</option><option value="外包">外包</option></select><div style="margin-top:5px;color:var(--muted);font-size:12px">勝寶鼎、外包</div></label><label>師傅<select id="fmaster"><option value="">請選擇師傅</option><option value="__ADD__">＋ 新增師傅</option></select></label><label class="full">詳細內容<textarea id="fdetail" placeholder="地點、人員、工作內容、備註……"></textarea></label></div><div class="formActions"><button id="deleteEventBtn" type="button" class="danger hidden">刪除</button><button value="cancel">取消</button><button id="saveEventBtn" type="button" class="primary">儲存</button></div></form></dialog>
 <dialog id="qNameDlg"><div class="form"><h2>名稱選項管理</h2><div class="manageEditor"><label>名稱選項<input id="qNameOptionInput" placeholder="例如：L型檯面: D"></label><button type="button" id="qNameOptionSaveBtn" class="primary">新增</button><button type="button" id="qNameOptionCancelBtn" class="hidden">取消修改</button></div><div style="font-size:12px;color:var(--muted)">固定名稱會出現在下拉選單；實際報價時仍可直接輸入尺寸，例如 L型檯面: D60。</div><div id="qNameOptionList" class="manageList"></div><div class="formActions"><button type="button" id="qNameDlgCloseBtn">關閉</button></div></div></dialog>
-<dialog id="tcNameDlg"><div class="form"><h2>台中採購單｜名稱選項管理</h2><div class="manageEditor"><label>名稱選項<input id="tcNameOptionInput" placeholder="輸入名稱選項"></label><button type="button" id="tcNameOptionSaveBtn" class="primary">新增</button><button type="button" id="tcNameOptionCancelBtn" class="hidden">取消修改</button></div><div style="font-size:12px;color:var(--muted)">此清單只套用台中採購單，不影響報價單。</div><div id="tcNameOptionList" class="manageList"></div><div class="formActions"><button type="button" id="tcNameDlgCloseBtn">關閉</button></div></div></dialog>
+<dialog id="tcNameDlg"><div class="form"><h2>草屯採購單｜名稱選項管理</h2><div class="manageEditor"><label>名稱選項<input id="tcNameOptionInput" placeholder="輸入名稱選項"></label><button type="button" id="tcNameOptionSaveBtn" class="primary">新增</button><button type="button" id="tcNameOptionCancelBtn" class="hidden">取消修改</button></div><div style="font-size:12px;color:var(--muted)">此清單只套用草屯採購單，不影響報價單。</div><div id="tcNameOptionList" class="manageList"></div><div class="formActions"><button type="button" id="tcNameDlgCloseBtn">關閉</button></div></div></dialog>
 <dialog id="qCustomerDlg"><div class="form"><h2>客戶選項管理</h2><div class="manageEditor"><label>客戶名稱<input id="qCustomerOptionInput" placeholder="輸入客戶名稱"></label><button type="button" id="qCustomerOptionSaveBtn" class="primary">新增</button><button type="button" id="qCustomerOptionCancelBtn" class="hidden">取消修改</button></div><div style="font-size:12px;color:var(--muted)">這份客戶名單會保留給之後的「客戶資料」功能共用。</div><div id="qCustomerOptionList" class="manageList"></div><div class="formActions"><button type="button" id="qCustomerDlgCloseBtn">關閉</button></div></div></dialog>
 <dialog id="noteDlg"><form class="form" method="dialog"><h2>備註</h2><label>內容<textarea id="fnote" placeholder="輸入這個月份的備註……"></textarea></label><div class="formActions"><button value="cancel">取消</button><button id="saveNoteBtn" type="button" class="primary">儲存</button></div></form></dialog>
 <script>
@@ -2999,7 +2999,7 @@ async function download(){
  }
  const buf=await wb.xlsx.writeBuffer(),blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),u=URL.createObjectURL(blob),link=document.createElement('a');link.href=u;link.download='客戶發票_列印.xlsx';link.click();setTimeout(()=>URL.revokeObjectURL(u),1000)
 }
-function open(){if(typeof isAdminAccount==='function'&&!isAdminAccount())return;['calendarView','quoteView','purchaseView','installStatsView','overtimeView'].forEach(id=>$i(id)?.classList.add('hidden'));$i('invoiceCustomerView')?.classList.remove('hidden');$i('calendarControls')?.classList.add('hidden');document.querySelectorAll('.featureTabs button').forEach(b=>b.classList.remove('active'));$i('invoiceCustomerTabBtn')?.classList.add('active');render()}
+function open(){tcLoadCloudForDropdown();if(typeof isAdminAccount==='function'&&!isAdminAccount())return;['calendarView','quoteView','purchaseView','installStatsView','overtimeView'].forEach(id=>$i(id)?.classList.add('hidden'));$i('invoiceCustomerView')?.classList.remove('hidden');$i('calendarControls')?.classList.add('hidden');document.querySelectorAll('.featureTabs button').forEach(b=>b.classList.remove('active'));$i('invoiceCustomerTabBtn')?.classList.add('active');render()}
 function bind(){const tab=$i('invoiceCustomerTabBtn');if(tab)tab.onclick=e=>{e.preventDefault();open()};$i('ciSaveBtn')?.addEventListener('click',doSave);$i('ciDownloadBtn')?.addEventListener('click',download);render()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();
 })();
@@ -3013,7 +3013,24 @@ function today(){const d=new Date();return `${d.getFullYear()}/${String(d.getMon
 function roc(v){const m=String(v||'').match(/(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);return m?`${Number(m[1])-1911}年${String(m[2]).padStart(2,'0')}月${String(m[3]).padStart(2,'0')}日`:String(v||'')}
 let tcProjectEditKey=null;
 const TC_PROJECT_KEY='sbd_taichung_purchase_projects_v1';
-function tcProjects(){try{return JSON.parse(localStorage.getItem(TC_PROJECT_KEY)||'[]')}catch(e){return []}}
+let tcCloudProjects=[],tcCloudDetails={},tcCloudLoaded=false;
+function tcLocalProjects(){try{const a=JSON.parse(localStorage.getItem(TC_PROJECT_KEY)||'[]');return Array.isArray(a)?a:[]}catch(e){return []}}
+function tcProjects(){const m=new Map();for(const r of tcCloudProjects)if(r&&r.key!=null)m.set(String(r.key),r);for(const r of tcLocalProjects())if(r&&r.key!=null)m.set(String(r.key),r);return [...m.values()]}
+async function tcLoadCloudForDropdown(){
+ const status=document.getElementById('tcCloudProjectsStatus');
+ try{
+  const auth=await sb.auth.getUser();if(auth.error||!auth.data?.user)throw Error('尚未登入雲端');
+  const {data,error}=await sb.from('sbd_app_data').select('data_key,payload').eq('user_id',auth.data.user.id).in('data_key',[TC_PROJECT_KEY,'sbd_taichung_purchase_details_v1']);
+  if(error)throw error;
+  const get=k=>{const row=(data||[]).find(r=>r.data_key===k);if(!row)return null;const v=row.payload?.value;return typeof v==='string'?JSON.parse(v):v};
+  const ps=get(TC_PROJECT_KEY),ds=get('sbd_taichung_purchase_details_v1');
+  if(ps!==null&&!Array.isArray(ps))throw Error('雲端案件資料格式不正確');
+  if(ds!==null&&(!ds||typeof ds!=='object'||Array.isArray(ds)))throw Error('雲端明細格式不正確');
+  tcCloudProjects=ps||[];tcCloudDetails=ds||{};tcCloudLoaded=true;
+  if(status)status.textContent='已讀取雲端 '+tcCloudProjects.length+' 筆、本機 '+tcLocalProjects().length+' 筆；合併顯示，不覆蓋原始資料';
+  tcRenderProjects();tcRenderAssignmentOptions();tcRenderSavedDetails();
+ }catch(e){if(status)status.textContent='雲端讀取失敗：'+(e.message||e)+'；目前仍保留本機資料';}
+}
 function tcSaveProjects(a){localStorage.setItem(TC_PROJECT_KEY,JSON.stringify(a))}
 function tcProjectClear(){tcProjectEditKey=null;$t('tcNoPrefix').value='G5DE';$t('tcProjectNo').value='';$t('tcProjectCase').value='';$t('tcProjectAmount').value='';}
 function tcFullNo(){const x=$t('tcProjectNo')?.value.trim()||'';return x?(($t('tcNoPrefix')?.value||'')+x):''}
@@ -3046,10 +3063,10 @@ window.tcRenderAgency=function(){const a=tcProjects().filter(r=>r.category==='�
 function tcRenderProjects(){const b=$t('tcProjectRecords');if(!b)return;const filter=$t('tcProjectFilter')?.value||'';const np=v=>{const m=String(v||'').match(/^(?:G5DD|G5DE)(\d+)/);return m?BigInt(m[1]):0n};const a=tcProjects().filter(r=>!filter||String(r.no||'').startsWith(filter)).sort((x,y)=>{const a=np(x.no),b=np(y.no);return a<b?-1:a>b?1:0});  const total=a.reduce((sum,r)=>sum+(Number(String(r.caseAmount??0).replace(/,/g,""))||0),0);
 const countEl=$t('tcProjectCount');if(countEl)countEl.textContent=String(a.length);
 const totalEl=$t('tcProjectGrandTotal');if(totalEl)totalEl.textContent=total.toLocaleString('en-US',{maximumFractionDigits:2});
-b.innerHTML=a.map(r=>`<tr><td><button data-a="edit" data-k="${r.key}">修改</button><button data-a="del" data-k="${r.key}">刪除</button></td><td>${String(r.no||'')}</td><td>${String(r.caseName||'')}</td><td>${String(r.caseAmount||'')}</td><td><select class="tcAgencyCategory" data-k="${r.key}"><option value="">一般案件</option><option value="代安裝" ${r.category==="代安裝"?"selected":""}>代安裝</option></select></td></tr>`).join('');b.querySelectorAll('.tcAgencyCategory').forEach(el=>el.onchange=()=>{const a=tcProjects(),r=a.find(x=>String(x.key)===el.dataset.k);if(r){r.category=el.value;tcSaveProjects(a);tcRenderProjects();}});b.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{const all=tcProjects(),r=all.find(x=>x.key===btn.dataset.k);if(!r)return;if(btn.dataset.a==='edit'){tcProjectEditKey=r.key;const m=String(r.no||'').match(/^(G5DD|G5DE)(.*)$/);$t('tcNoPrefix').value=m?m[1]:'G5DE';$t('tcProjectNo').value=m?m[2]:r.no||'';$t('tcProjectCase').value=r.caseName||'';$t('tcProjectAmount').value=r.caseAmount||''}if(btn.dataset.a==='del'){if(!confirm('確定刪除這筆？'))return;tcSaveProjects(all.filter(x=>x.key!==r.key));const ds=tcDetails();delete ds[r.key];tcSaveDetails(ds);tcRenderProjects();tcRenderSavedDetails()}});tcRenderAssignmentOptions();tcRenderSavedDetails();window.tcRenderAgency?.()}
+b.innerHTML=a.map(r=>`<tr><td><button data-a="edit" data-k="${r.key}">修改</button><button data-a="del" data-k="${r.key}">刪除</button></td><td>${String(r.no||'')}</td><td>${String(r.caseName||'')}</td><td>${String(r.caseAmount||'')}</td><td><select class="tcAgencyCategory" data-k="${r.key}"><option value="">一般案件</option><option value="代安裝" ${r.category==="代安裝"?"selected":""}>代安裝</option></select></td></tr>`).join('');b.querySelectorAll('.tcAgencyCategory').forEach(el=>el.onchange=()=>{const a=tcProjects(),r=a.find(x=>String(x.key)===el.dataset.k);if(r){r.category=el.value;tcSaveProjects(a);tcRenderProjects();}});b.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{const all=tcProjects(),r=all.find(x=>x.key===btn.dataset.k);if(!r)return;if(btn.dataset.a==='edit'){tcProjectEditKey=r.key;const m=String(r.no||'').match(/^(G5DD|G5DE)(.*)$/);$t('tcNoPrefix').value=m?m[1]:'G5DE';$t('tcProjectNo').value=m?m[2]:r.no||'';$t('tcProjectCase').value=r.caseName||'';$t('tcProjectAmount').value=r.caseAmount||''}if(btn.dataset.a==='del'){if(tcCloudProjects.some(z=>String(z.key)===String(r.key))){alert('此案件存在公司雲端備份，為保護原始資料，暫不允許在這裡刪除。');return;}if(!confirm('確定刪除這筆？'))return;tcSaveProjects(all.filter(x=>x.key!==r.key));const ds=tcDetails();delete ds[r.key];tcSaveDetails(ds);tcRenderProjects();tcRenderSavedDetails()}});tcRenderAssignmentOptions();tcRenderSavedDetails();window.tcRenderAgency?.()}
 function tcCurrentProject(){const key=$t('tcAssignmentSelect')?.value||'';return tcProjects().find(x=>x.key===key)||null}
 const TC_DETAIL_KEY='sbd_taichung_purchase_details_v1';
-function tcDetails(){try{return JSON.parse(localStorage.getItem(TC_DETAIL_KEY)||'{}')}catch(e){return {}}}
+function tcDetails(){let local={};try{local=JSON.parse(localStorage.getItem(TC_DETAIL_KEY)||'{}')||{}}catch(e){}return {...tcCloudDetails,...local}}
 function tcSaveDetails(o){localStorage.setItem(TC_DETAIL_KEY,JSON.stringify(o))}
 function tcDetailData(){
  const entered=String($t('tcExportPeriod')?.value||'').trim();
@@ -3057,7 +3074,7 @@ function tcDetailData(){
  const period=/^\d{6}-\d{6}$/.test(entered)?entered:(/^\d{6}-\d{6}$/.test(selected)?selected:'');
  return {items:items(),claimPeriod:period,updatedAt:new Date().toISOString()};
 }
-function tcDetailSave(showMsg=true){const p=tcCurrentProject();if(!p)return alert('請先在「指定單號／案名」選擇要配對的資料');const all=tcDetails();all[p.key]=tcDetailData();tcSaveDetails(all);tcRenderSavedDetails();if(showMsg)alert('台中採購單已儲存並指定到：'+(p.no||'')+'｜'+(p.caseName||''))}
+function tcDetailSave(showMsg=true){const p=tcCurrentProject();if(!p)return alert('請先在「指定單號／案名」選擇要配對的資料');const all=tcDetails();all[p.key]=tcDetailData();tcSaveDetails(all);tcRenderSavedDetails();if(showMsg)alert('草屯採購單已儲存並指定到：'+(p.no||'')+'｜'+(p.caseName||''))}
 function tcDetailLoad(key){const d=tcDetails()[key];if(!d)return false;if(d.claimPeriod&&$t('tcExportPeriod')){$t('tcExportPeriod').value=d.claimPeriod;tcPeriodRender(d.claimPeriod)}$t('tcItemsBody').innerHTML='';(d.items||[]).forEach(add);if(!(d.items||[]).length)add();calc();return true}
 function tcEsc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function tcResolvedClaimPeriod(d,p){
@@ -3107,7 +3124,7 @@ function tcRenderSavedDetails(){
   '<small>若請款區間錯誤，按該筆「修改」設定請款日後儲存，統計會更新；不會自動更改既有紀錄。</small>';
  }else{diagnostic.style.display='none';diagnostic.textContent=''}
  if(empty)empty.classList.toggle('hidden',rows.length>0);
- body.querySelectorAll('button[data-tc-act]').forEach(btn=>btn.onclick=()=>{const key=btn.dataset.k;if(btn.dataset.tcAct==='edit'){if($t('tcAssignmentSelect'))$t('tcAssignmentSelect').value=key;tcDetailLoad(key);$t('taichungPurchaseView')?.scrollIntoView({behavior:'smooth',block:'start'});}else{const p=ps.find(x=>x.key===key)||{};if(!confirm(`確定刪除 ${p.no||''} ${p.caseName||''} 的台中採購單明細？`))return;const all=tcDetails();delete all[key];tcSaveDetails(all);if($t('tcAssignmentSelect')?.value===key)clear();tcRenderSavedDetails();}});
+ body.querySelectorAll('button[data-tc-act]').forEach(btn=>btn.onclick=()=>{const key=btn.dataset.k;if(btn.dataset.tcAct==='edit'){if($t('tcAssignmentSelect'))$t('tcAssignmentSelect').value=key;tcDetailLoad(key);$t('taichungPurchaseView')?.scrollIntoView({behavior:'smooth',block:'start'});}else{const p=ps.find(x=>x.key===key)||{};if(!confirm(`確定刪除 ${p.no||''} ${p.caseName||''} 的草屯採購單明細？`))return;const all=tcDetails();delete all[key];tcSaveDetails(all);if($t('tcAssignmentSelect')?.value===key)clear();tcRenderSavedDetails();}});
 }
 function add(item={}){
  const tr=document.createElement('tr');
@@ -3170,7 +3187,7 @@ async function download(){
  const projectDate=p=>{const m=String(p.no||'').match(/(?:G5DD|G5DE)(\d{6})/i);return m?m[1]:''};
  const projects=tcProjects().filter(p=>ds[p.key]&&Array.isArray(ds[p.key].items)&&ds[p.key].items.length&&projectDate(p)>=start&&projectDate(p)<=end);
  projects.sort((a,b)=>String(a.no||'').localeCompare(String(b.no||''),undefined,{numeric:true}));
- if(!projects.length)return alert('這個請款區間內沒有已儲存的台中採購單明細');
+ if(!projects.length)return alert('這個請款區間內沒有已儲存的草屯採購單明細');
  tcPeriodSave(start,end);
  if(typeof ExcelJS==='undefined')return alert('Excel 元件尚未載入');
  const fmtMoney=v=>{const n=Number(String(v??'').replace(/,/g,''));return Number.isFinite(n)?n.toLocaleString('en-US',{maximumFractionDigits:2}):String(v??'')};
@@ -3241,10 +3258,10 @@ async function download(){
      });
    });
    const buf=await wb.xlsx.writeBuffer(),blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),u=URL.createObjectURL(blob),a=document.createElement('a');
-   a.href=u;a.download=`台中採購單_${start}-${end}.xlsx`;a.click();setTimeout(()=>URL.revokeObjectURL(u),1200);
- }catch(e){console.error(e);alert('台中採購單 Excel 產生失敗：'+e.message)}
+   a.href=u;a.download=`草屯採購單_${start}-${end}.xlsx`;a.click();setTimeout(()=>URL.revokeObjectURL(u),1200);
+ }catch(e){console.error(e);alert('草屯採購單 Excel 產生失敗：'+e.message)}
 }
-function bind(){const tab=$t('taichungPurchaseTabBtn');if(tab)tab.onclick=e=>{e.preventDefault();open()};tcRenderProjects();$t('tcProjectNewBtn')?.addEventListener('click',tcProjectClear);$t('tcProjectSaveBtn')?.addEventListener('click',tcProjectSave);$t('tcProjectFilter')?.addEventListener('change',tcRenderProjects);$t('tcAssignmentSelect')?.addEventListener('change',()=>{});$t('tcRefreshProjectBtn')?.addEventListener('click',()=>{tcSyncQuotes();tcRenderProjects();tcRenderAssignmentOptions();});['tcNoPrefix','tcProjectNo','tcProjectCase','tcProjectAmount'].forEach(id=>$t(id)?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcProjectSave()}}));$t('tcAddItemBtn')?.addEventListener('click',()=>add());$t('tcNameManageBtn')?.addEventListener('click',()=>{renderTCNameManager();tcResetNameEditor();$t('tcNameDlg')?.showModal()});$t('tcNameOptionSaveBtn')?.addEventListener('click',tcSaveNameOption);$t('tcNameOptionCancelBtn')?.addEventListener('click',tcResetNameEditor);$t('tcNameDlgCloseBtn')?.addEventListener('click',()=>{$t('tcNameDlg')?.close()});$t('tcNameOptionInput')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcSaveNameOption()}});$t('tcDetailSaveBtn')?.addEventListener('click',()=>tcDetailSave(true));$t('tcExcelBtn')?.addEventListener('click',download);$t('tcPeriodHistory')?.addEventListener('change',tcPeriodSelect);
+function bind(){tcLoadCloudForDropdown();const tab=$t('taichungPurchaseTabBtn');if(tab)tab.onclick=e=>{e.preventDefault();open()};tcRenderProjects();$t('tcProjectNewBtn')?.addEventListener('click',tcProjectClear);$t('tcProjectSaveBtn')?.addEventListener('click',tcProjectSave);$t('tcProjectFilter')?.addEventListener('change',tcRenderProjects);$t('tcAssignmentSelect')?.addEventListener('change',()=>{});$t('tcRefreshProjectBtn')?.addEventListener('click',()=>{tcSyncQuotes();tcRenderProjects();tcRenderAssignmentOptions();});['tcNoPrefix','tcProjectNo','tcProjectCase','tcProjectAmount'].forEach(id=>$t(id)?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcProjectSave()}}));$t('tcAddItemBtn')?.addEventListener('click',()=>add());$t('tcNameManageBtn')?.addEventListener('click',()=>{renderTCNameManager();tcResetNameEditor();$t('tcNameDlg')?.showModal()});$t('tcNameOptionSaveBtn')?.addEventListener('click',tcSaveNameOption);$t('tcNameOptionCancelBtn')?.addEventListener('click',tcResetNameEditor);$t('tcNameDlgCloseBtn')?.addEventListener('click',()=>{$t('tcNameDlg')?.close()});$t('tcNameOptionInput')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcSaveNameOption()}});$t('tcDetailSaveBtn')?.addEventListener('click',()=>tcDetailSave(true));$t('tcExcelBtn')?.addEventListener('click',download);$t('tcPeriodHistory')?.addEventListener('change',tcPeriodSelect);
 $t('tcExportPeriod')?.addEventListener('input',()=>tcRememberEnteredPeriod(false));
 $t('tcPeriodHistory')?.addEventListener('focus',()=>{tcRememberEnteredPeriod(false);tcPeriodRender($t('tcPeriodHistory')?.value||'')});
 $t('tcExportPeriod')?.addEventListener('change',()=>tcRememberEnteredPeriod(false));
@@ -3254,7 +3271,7 @@ tcPeriodRender();if(tcPeriodList().length&&!$t('tcExportPeriod')?.value){$t('tcE
  const sync=()=>{if(document.body.classList.contains('admin-account'))tab?.classList.remove('hidden');else tab?.classList.add('hidden')};sync();new MutationObserver(sync).observe(document.body,{attributes:true,attributeFilter:['class']});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();
-// 台中採購單與其他功能頁完全分開：切換其他頁籤時強制隱藏台中採購單。
+// 草屯採購單與其他功能頁完全分開：切換其他頁籤時強制隱藏草屯採購單。
 document.querySelectorAll('.featureTabs button').forEach(b=>{if(b.id!=='taichungPurchaseTabBtn')b.addEventListener('click',()=>{$t('taichungPurchaseView')?.classList.add('hidden')});});
 })();
 </script>
