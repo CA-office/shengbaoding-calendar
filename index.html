@@ -500,7 +500,15 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
 .tcProjectRecordsTable th:nth-child(3),.tcProjectRecordsTable td:nth-child(3){width:6cm!important;max-width:6cm!important}
 </style><style id="oe-sevenflag-layout-v79">
 #otherExpensesView{background:#fff;border:1px solid #dce5ee;border-radius:16px}
-#otherExpensesView .oeEntry{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) auto auto;gap:12px;align-items:end;padding:16px 0;background:#fff}
+#otherExpensesView{background:transparent!important;border:0!important;box-shadow:none!important;padding:12px 8px!important;max-width:none!important}
+#otherExpensesView .oeEntry{display:grid;grid-template-columns:160px 210px 220px 150px auto auto;gap:10px;align-items:end;padding:8px 0;background:transparent;border:0;box-shadow:none;width:max-content;max-width:100%}
+#otherExpensesView .oeEntry button{height:38px;white-space:nowrap;padding:6px 12px}
+#otherExpensesView .oeEntry label{font-size:13px!important;font-weight:400!important;gap:5px!important}
+#otherExpensesView .oeEntry input{height:38px!important;padding:6px 9px!important;border-radius:5px!important}
+#otherExpensesView .oeEntry input[list]{background:#fff}
+#otherExpensesView .oeTable{margin-top:12px}
+#otherExpensesView .oeTable td button[data-edit]{border:1px solid #cbd5e1;background:#fff;color:#19334c;border-radius:6px}
+#otherExpensesView .oeTable td button[data-delete]{border:1px solid #f4c4c4;background:#fff;color:#c52626;border-radius:6px}
 #otherExpensesView .oeEntry label{display:flex;flex-direction:column;gap:7px;font-size:14px;font-weight:700;min-width:0}
 #otherExpensesView .oeEntry input{height:49px;padding:10px 12px;border:1px solid #c9d5e2;border-radius:10px;width:100%;min-width:0;background:#fff;color:#18324d}
 #otherExpensesView button{padding:10px 13px;border:1px solid #c9d5e2;border-radius:9px;background:#fff;color:#17324d;cursor:pointer}
@@ -843,11 +851,11 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
 <button type="button" id="crSaveVerifiedCost" style="margin-left:12px;padding:7px 12px;border:1px solid #b5c6d7;border-radius:7px;background:#f4f8fc;cursor:pointer">儲存至所選請款區間</button>
 <span id="crPdfCostStatus" style="margin-left:10px;font-size:12px;color:#62758a">請先選擇對應請款區間；不會修改原有 PDF 明細</span>
 </div><div id="crCards" style="margin:16px 0"></div><div id="crSummary" style="background:#fff;border:1px solid #dce5ee;border-radius:14px;padding:20px;overflow-x:auto"></div><div style="display:none;background:white;border:1px solid #e2e8f0;border-radius:14px;padding:18px;margin-top:16px;overflow:auto"><h3>案件成本與銷售明細</h3><table style="width:100%;min-width:780px;border-collapse:collapse"><thead><tr style="background:#eef3f8"><th>月份</th><th>單號</th><th>案名</th><th>銷售</th><th>成本</th></tr></thead><tbody id="crRows"></tbody></table></div></section><section class="hidden" id="otherExpensesView" style="max-width:1150px;margin:22px auto;padding:16px;color:#20344a">
-<h2>其他支出</h2><p style="color:#63778c">依請款區間日期統計，並自動計入成本／銷售報表的成本總額。</p>
+<h2 style="font-size:18px;margin:0 0 10px">其他支出</h2>
 <div class="oeEntry">
 <label>日期<input id="oeDate" type="date"/></label>
 <label>支出<input id="oeCategory" list="oeCategories" placeholder="例如：油資、雜支"/></label>
-<datalist id="oeCategories"><option value="油資"><option value="運費"><option value="文具用品"><option value="餐費"><option value="雜支"><option value="維修費"><option value="其他"></option></option></option></option></option></option></option></datalist>
+<datalist id="oeCategories"><option value="油資"></option><option value="運費"></option><option value="文具用品"></option><option value="餐費"></option><option value="雜支"></option><option value="維修費"></option><option value="其他"></option></datalist>
 <label>項目<input id="oeDescription" placeholder="輸入支出項目"/></label>
 <label>金額<input id="oeAmount" min="0" placeholder="0" step="1" type="number"/></label>
 <button id="oeSave" type="button">新增支出</button><button id="oeCancel" style="display:none" type="button">取消修改</button></div>
@@ -3573,9 +3581,9 @@ function init(){
  $('oeDate').value=new Date().toLocaleDateString('en-CA');
  $('oeSave').onclick=async()=>{const date=$('oeDate').value,category=$('oeCategory').value.trim(),description=$('oeDescription').value.trim(),amount=Number($('oeAmount').value);if(!date||!Number.isFinite(amount)||amount<0){message('請輸入日期及正確金額');return}
  const item={id:editId||('oe-'+Date.now()+'-'+Math.random().toString(36).slice(2)),date,category,description,amount};
- const next=editId?records.map(x=>x.id===editId?item:x):[item,...records];$('oeSave').disabled=true;try{await persist(next);clear()}catch(e){alert('儲存失敗，原始資料未更動：'+e.message)}finally{$('oeSave').disabled=false}};
+ const next=editId?records.map(x=>x.id===editId?item:x):[item,...records];$('oeSave').disabled=true;try{await persist(next);clear()}catch(e){message('儲存失敗，原始資料未更動：'+e.message)}finally{$('oeSave').disabled=false}};
  $('oeCancel').onclick=clear;
- $('oeRows').onclick=async e=>{const edit=e.target.closest('[data-edit]'),del=e.target.closest('[data-delete]');if(edit){const x=records.find(r=>r.id===edit.dataset.edit);if(!x)return;editId=x.id;$('oeDate').value=x.date;$('oeCategory').value=x.category;$('oeDescription').value=x.description;$('oeAmount').value=x.amount;$('oeSave').textContent='儲存修改';$('oeCancel').style.display='inline-block';$('otherExpensesView').scrollIntoView({behavior:'smooth'})}else if(del){if(!confirm('確定刪除這筆支出？'))return;try{await persist(records.filter(r=>r.id!==del.dataset.delete))}catch(e){alert('刪除失敗：'+e.message)}}};
+ $('oeRows').onclick=async e=>{const edit=e.target.closest('[data-edit]'),del=e.target.closest('[data-delete]');if(edit){const x=records.find(r=>r.id===edit.dataset.edit);if(!x)return;editId=x.id;$('oeDate').value=x.date;$('oeCategory').value=x.category;$('oeDescription').value=x.description;$('oeAmount').value=x.amount;$('oeSave').textContent='儲存修改';$('oeCancel').style.display='inline-block';$('otherExpensesView').scrollIntoView({behavior:'smooth'})}else if(del){if(del.dataset.confirm!=='yes'){del.dataset.confirm='yes';del.textContent='確認刪除';message('再按一次「確認刪除」才會刪除這筆紀錄');return}try{await persist(records.filter(r=>r.id!==del.dataset.delete))}catch(e){message('刪除失敗：'+e.message)}}};
  $('oePeriod').onchange=render;$('oeAll').onclick=()=>{$('oePeriod').value='all';render()};
  $('oeExport').onclick=()=>{const a=records.filter(x=>sbdDateInPeriod(x.date,$('oePeriod').value));const q=x=>'"'+String(x??'').replace(/"/g,'""')+'"';const csv='\ufeff'+[['日期','支出','項目','金額'],...a.map(x=>[x.date,x.category,x.description,x.amount])].map(row=>row.map(q).join(',')).join('\r\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='勝寶鼎_其他支出.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
 }
