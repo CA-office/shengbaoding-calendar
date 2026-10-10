@@ -658,6 +658,8 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
       <button type="button" id="poProjectNewBtn">＋ 新增</button>
       <button type="button" id="poProjectSaveBtn" class="primary">儲存</button>
       <select id="poProjectFilter" aria-label="單號篩選"><option value="">全部單號</option><option value="G5DD">G5DD</option><option value="G5DE">G5DE</option></select>
+      <select id="poCaseFilter" aria-label="案名篩選" title="依案名篩選紀錄"><option value="">全部案名</option></select>
+      <span id="poCaseFilterCount" style="align-self:center;font-weight:800;color:#18324d;white-space:nowrap" aria-live="polite">共 0 筆</span>
     </div>
     <div class="purchaseMeta">
       <label>單號<div style="display:flex;gap:6px"><select id="poNoPrefix" style="width:92px;flex:0 0 92px"><option value="G5DD">G5DD</option><option value="G5DE" selected>G5DE</option></select><input id="poNo" inputmode="numeric" placeholder="後面輸入數字" style="min-width:0;flex:1"></div></label>
@@ -2420,12 +2422,22 @@ function poProjectSave(){
 function poRenderProjects(){
   const b=$("poProjectRecords");if(!b)return;
   const filter=$("poProjectFilter")?.value??"";
+  const caseSelect=$("poCaseFilter");
+  const records=poProjects();
+  if(caseSelect){
+    const selected=caseSelect.value;
+    const names=[...new Set(records.map(r=>String(r.caseName||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"zh-Hant"));
+    caseSelect.replaceChildren(new Option("全部案名",""),...names.map(n=>new Option(n,n)));
+    caseSelect.value=names.includes(selected)?selected:"";
+  }
+  const caseFilter=caseSelect?.value??"";
   const numPart=v=>{const m=String(v||"").match(/^(?:G5DD|G5DE)(\d+)/);return m?BigInt(m[1]):0n};
-  const a=poProjects().filter(r=>!filter || String(r.no||"").startsWith(filter)).sort((x,y)=>{const a=numPart(x.no),b=numPart(y.no);return a<b?-1:a>b?1:String(x.no||"").localeCompare(String(y.no||""));});
+  const a=records.filter(r=>(!filter || String(r.no||"").startsWith(filter)) && (!caseFilter || String(r.caseName||"").trim()===caseFilter)).sort((x,y)=>{const a=numPart(x.no),b=numPart(y.no);return a<b?-1:a>b?1:String(x.no||"").localeCompare(String(y.no||""));});
   const total=a.reduce((sum,r)=>sum+(Number(String(r.caseAmount??0).replace(/,/g,""))||0),0);
   const totalEl=$("poProjectGrandTotal");
   if(totalEl)totalEl.textContent=poFmt(total);
   const countEl=$("poProjectCount");if(countEl)countEl.textContent=String(a.length);
+  const caseCount=$("poCaseFilterCount");if(caseCount)caseCount.textContent=`共 ${a.length} 筆`;
 b.innerHTML=a.map(r=>`<tr><td><button data-a="edit" data-k="${r.key}">修改</button><button data-a="del" data-k="${r.key}">刪除</button></td><td>${poEsc(r.no)}</td><td>${poEsc(r.caseName)}</td><td>${poFmt(r.caseAmount)}</td></tr>`).join("");
   b.querySelectorAll("button").forEach(btn=>btn.onclick=()=>{
     const a=poProjects(),r=a.find(x=>x.key===btn.dataset.k);
@@ -2674,6 +2686,7 @@ $("installStatsTabBtn")?.addEventListener("click",()=>showFeature("stats"));
 $("purchaseTabBtn")?.addEventListener("click",()=>showFeature("purchase"));
 $("poProjectNewBtn")?.addEventListener("click",poProjectClear);
 $("poProjectFilter")?.addEventListener("change",poRenderProjects);
+$("poCaseFilter")?.addEventListener("change",poRenderProjects);
 $("poProjectSaveBtn")?.addEventListener("click",poProjectSave);
 $("poSaveAllBtn")?.addEventListener("click",()=>poSaveAllWork(true));
 // 單號／案名管理：在前綴、單號、案名、案件金額任一欄按 Enter 直接儲存
@@ -3428,7 +3441,7 @@ async function render(){
  const total={name:'總計',sale:groups.reduce((n,g)=>n+g.sale,0),cost:groups.reduce((n,g)=>n+g.cost,0),known:groups.every(g=>g.known),count:groups.reduce((n,g)=>n+g.count,0)};
  document.getElementById('crCards').innerHTML='';
  const cell=(value,muted=false)=>`<td style="padding:17px 20px;text-align:right;font-size:19px;font-weight:700;color:${muted?'#718096':'#183a62'};white-space:nowrap">${value}</td>`;
- document.getElementById('crSummary').innerHTML=`<h3 style="margin:0 0 16px;color:#173653">銷售／成本／件數統計</h3><table style="width:13cm;min-width:13cm;table-layout:fixed;border-collapse:collapse"><colgroup><col style="width:3cm"><col style="width:4cm"><col style="width:4cm"><col style="width:2cm"></colgroup><thead><tr style="background:#eef3f8;color:#173653"><th style="padding:13px;text-align:left">業務類別</th><th style="text-align:right;padding:13px">銷售額</th><th style="text-align:right;padding:13px">成本</th><th style="text-align:right;padding:13px">件數</th></tr></thead><tbody>${[...groups,total].map((g,i)=>`<tr style="border-bottom:1px solid #e0e7ef;${i===groups.length?'background:#f0f5fa;':''}"><th style="padding:17px 13px;text-align:left;color:#173653;font-size:18px">${g.name}</th>${cell(fmt(g.sale))}${cell(g.name==='代安裝'&&!g.known&&!g.cost?'0':(g.known?fmt(g.cost):(g.cost?fmt(g.cost):'尚無成本資料')),g.name==='代安裝'?false:!g.known)}${cell(i===groups.length ? g.count+' 件' : String(g.count))}</tr>`).join('')}</tbody></table><p style="color:#718096;font-size:12px;margin:12px 0 0">其他支出依所選請款區間的日期計入成本，件數為 0；成本未儲存的案件不會當作 0；浤富成本取已保存 PDF 最後一頁的「本期合計」，相同請款區間不重複加總；未指定並保存請款區間成本時顯示尚無成本資料。</p>`;
+ document.getElementById('crSummary').innerHTML=`<h3 style="margin:0 0 16px;color:#173653">銷售／成本／件數統計</h3><table style="width:13cm;min-width:13cm;table-layout:fixed;border-collapse:collapse"><colgroup><col style="width:3cm"><col style="width:4cm"><col style="width:4cm"><col style="width:2cm"></colgroup><thead><tr style="background:#eef3f8;color:#173653"><th style="padding:13px;text-align:left">業務類別</th><th style="text-align:right;padding:13px">銷售額</th><th style="text-align:right;padding:13px">成本</th><th style="text-align:right;padding:13px">件數</th></tr></thead><tbody>${[...groups,total].map((g,i)=>`<tr style="border-bottom:1px solid #e0e7ef;${i===groups.length?'background:#f0f5fa;':''}"><th style="padding:17px 13px;text-align:left;color:#173653;font-size:18px">${g.name}</th>${cell(fmt(g.sale))}${cell(g.name==='代安裝'&&!g.known&&!g.cost?'0':(g.known?fmt(g.cost):(g.cost?fmt(g.cost):'尚無成本資料')),g.name==='代安裝'?false:!g.known)}${cell(String(g.count))}</tr>`).join('')}</tbody></table><p style="color:#718096;font-size:12px;margin:12px 0 0">其他支出依所選請款區間的日期計入成本，件數為 0；成本未儲存的案件不會當作 0；浤富成本取已保存 PDF 最後一頁的「本期合計」，相同請款區間不重複加總；未指定並保存請款區間成本時顯示尚無成本資料。</p>`;
  document.getElementById('crRows').innerHTML='';
 }
 function bind(){const b=document.getElementById('costReportTabBtn');if(!b)return;b.classList.toggle('hidden',typeof isAdminAccount==='function'&&!isAdminAccount());b.onclick=()=>{if(typeof isAdminAccount==='function'&&!isAdminAccount())return;document.querySelectorAll('#appPage main > section,#calendarView').forEach(el=>el.classList.add('hidden'));document.getElementById('costReportView').classList.remove('hidden');document.getElementById('calendarControls')?.classList.add('hidden');document.querySelectorAll('.featureTabs button').forEach(x=>x.classList.remove('active'));b.classList.add('active');render()};document.getElementById('crMonth').onchange=render;document.getElementById('crPeriod').onchange=render;document.getElementById('crSaveVerifiedCost').onclick=hfSave;document.querySelectorAll('.featureTabs button').forEach(x=>{if(x!==b)x.addEventListener('click',()=>document.getElementById('costReportView')?.classList.add('hidden'))})}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();document.addEventListener('sbdOtherExpensesChanged',()=>{if(!document.getElementById('costReportView')?.classList.contains('hidden'))render()});})();</script><script id="source-cost-export-v47">
