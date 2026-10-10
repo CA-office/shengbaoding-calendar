@@ -862,6 +862,8 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
       <button type="button" id="tcProjectNewBtn">＋ 新增</button>
       <button type="button" id="tcProjectSaveBtn" class="primary">儲存</button>
       <select id="tcProjectFilter" aria-label="單號篩選"><option value="">全部單號</option><option value="G5DD">G5DD</option><option value="G5DE">G5DE</option></select>
+      <select id="tcCaseFilter" aria-label="案名關鍵字篩選" title="依案名篩選"><option value="">全部案名</option></select>
+      <span id="tcCaseFilterCount" style="align-self:center;font-weight:800;white-space:nowrap;color:#18324d">共 0 筆</span>
     </div>
     <div class="purchaseMeta">
       <label>單號<div style="display:flex;gap:6px"><select id="tcNoPrefix" style="width:92px;flex:0 0 92px"><option value="G5DD">G5DD</option><option value="G5DE" selected>G5DE</option></select><input id="tcProjectNo" inputmode="numeric" placeholder="後面輸入數字" style="min-width:0;flex:1"></div></label>
@@ -893,7 +895,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
       <table class="purchaseTable" style="min-width:1250px">
         <thead><tr><th style="min-width:150px">請款日</th><th>操作</th><th>指定單號</th><th>指定案名</th><th>明細內容</th><th>合計</th></tr></thead>
         <tbody id="tcSavedDetailRows"></tbody>
-        <tfoot><tr style="background:#eef2f6;font-weight:800"><td colspan="6" style="text-align:left;padding:12px 16px">請款區間總計（<span id="tcDetailPeriodLabel">尚未選擇</span>）｜<span id="tcDetailPeriodCount">0</span> 件｜總金額：<span id="tcDetailPeriodTotal">0</span></td></tr></tfoot>
+        <tfoot><tr style="background:#e8f0f7;font-weight:800"><td colspan="6" style="text-align:left;padding:12px 16px">全部已儲存明細總計｜<span id="tcAllDetailCount">0</span> 件｜總金額：<span id="tcAllDetailTotal">0</span></td></tr><tr style="background:#eef2f6;font-weight:800"><td colspan="6" style="text-align:left;padding:12px 16px">請款區間總計（<span id="tcDetailPeriodLabel">尚未選擇</span>）｜<span id="tcDetailPeriodCount">0</span> 件｜總金額：<span id="tcDetailPeriodTotal">0</span></td></tr></tfoot>
       </table>
     </div>
     <div id="tcSavedDetailEmpty" class="quoteEmpty">目前沒有已儲存的草屯採購單明細</div>
@@ -2419,6 +2421,11 @@ function poProjectSave(){
   $("poNo").value="";$("poCase").value="";$("poCaseAmount").value="";
   requestAnimationFrame(()=>{const el=$("poNo");if(el){el.focus();el.select();}});
 }
+function projectCaseKeyword(name){
+  const cleaned=String(name||'').trim().replace(/^[A-Za-z]+\d+\s*/, '');
+  const match=cleaned.match(/[\u3400-\u9fff]+/);
+  return match ? match[0] : cleaned.split(/[\s_－-]/)[0];
+}
 function poRenderProjects(){
   const b=$("poProjectRecords");if(!b)return;
   const filter=$("poProjectFilter")?.value??"";
@@ -2426,13 +2433,7 @@ function poRenderProjects(){
   const records=poProjects();
   if(caseSelect){
     const selected=caseSelect.value;
-    // 從完整案名擷取客戶／案名關鍵字，例如「A411 仕虹Ⅱ_中壢...」→「仕虹」
-    const keyword=name=>{
-      const cleaned=String(name||"").trim().replace(/^[A-Za-z]+\\d+\\s*/,"");
-      const match=cleaned.match(/[\\u3400-\\u9fff]+/);
-      return match?match[0]:cleaned.split(/[\\s_－-]/)[0];
-    };
-    const names=[...new Set(records.map(r=>keyword(r.caseName)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"zh-Hant"));
+    const names=[...new Set(records.map(r=>projectCaseKeyword(r.caseName)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"zh-Hant"));
     caseSelect.replaceChildren(new Option("全部案名",""),...names.map(n=>new Option(n,n)));
     caseSelect.value=names.includes(selected)?selected:"";
   }
@@ -3128,8 +3129,19 @@ function tcRenderAssignmentOptions(){
  if(a.some(r=>r.key===keep))sel.value=keep;
 }
 window.tcRenderAgency=function(){const a=tcProjects().filter(r=>r.category==='代安裝'),b=document.getElementById('tcAgencyRows');if(!b)return;b.innerHTML=a.map(r=>`<tr><td>${String(r.no||'')}</td><td>${String(r.caseName||'')}</td><td>${Number(String(r.caseAmount||0).replace(/,/g,'')).toLocaleString('en-US')}</td></tr>`).join('');document.getElementById('tcAgencyCount').textContent=a.length+' 件';document.getElementById('tcAgencyTotal').textContent=a.reduce((n,r)=>n+(Number(String(r.caseAmount||0).replace(/,/g,''))||0),0).toLocaleString('en-US')};
-function tcRenderProjects(){const b=$t('tcProjectRecords');if(!b)return;const filter=$t('tcProjectFilter')?.value||'';const np=v=>{const m=String(v||'').match(/^(?:G5DD|G5DE)(\d+)/);return m?BigInt(m[1]):0n};const a=tcProjects().filter(r=>!filter||String(r.no||'').startsWith(filter)).sort((x,y)=>{const a=np(x.no),b=np(y.no);return a<b?-1:a>b?1:0});  const total=a.reduce((sum,r)=>sum+(Number(String(r.caseAmount??0).replace(/,/g,""))||0),0);
+function tcRenderProjects(){const b=$t('tcProjectRecords');if(!b)return;const filter=$t('tcProjectFilter')?.value||'';
+const records=tcProjects();
+const caseSelect=$t('tcCaseFilter');
+if(caseSelect){
+  const previous=caseSelect.value;
+  const names=[...new Set(records.map(r=>projectCaseKeyword(r.caseName)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-Hant'));
+  caseSelect.replaceChildren(new Option('全部案名',''),...names.map(n=>new Option(n,n)));
+  caseSelect.value=names.includes(previous)?previous:'';
+}
+const caseFilter=caseSelect?.value||'';
+const np=v=>{const m=String(v||'').match(/^(?:G5DD|G5DE)(\d+)/);return m?BigInt(m[1]):0n};const a=records.filter(r=>(!filter||String(r.no||'').startsWith(filter))&&(!caseFilter||String(r.caseName||'').includes(caseFilter))).sort((x,y)=>{const a=np(x.no),b=np(y.no);return a<b?-1:a>b?1:0});  const total=a.reduce((sum,r)=>sum+(Number(String(r.caseAmount??0).replace(/,/g,""))||0),0);
 const countEl=$t('tcProjectCount');if(countEl)countEl.textContent=String(a.length);
+const caseCount=$t('tcCaseFilterCount');if(caseCount)caseCount.textContent=`共 ${a.length} 筆`;
 const totalEl=$t('tcProjectGrandTotal');if(totalEl)totalEl.textContent=total.toLocaleString('en-US',{maximumFractionDigits:2});
 b.innerHTML=a.map(r=>`<tr><td><button data-a="edit" data-k="${r.key}">修改</button><button data-a="del" data-k="${r.key}">刪除</button></td><td>${String(r.no||'')}</td><td>${String(r.caseName||'')}</td><td>${String(r.caseAmount||'')}</td><td><select class="tcAgencyCategory" data-k="${r.key}"><option value="">一般案件</option><option value="代安裝" ${r.category==="代安裝"?"selected":""}>代安裝</option></select></td><td><select class="tcProjectPeriod" data-k="${r.key}"><option value="">選擇區間日期</option>${[...new Set([r.claimPeriod||"",...tcPeriodList()])].filter(Boolean).map(v=>`<option value="${tcEsc(v)}" ${r.claimPeriod===v?"selected":""}>${tcEsc(v)}</option>`).join("")}</select></td></tr>`).join('');b.querySelectorAll('.tcProjectPeriod').forEach(el=>el.onchange=()=>{const all=tcProjects(),r=all.find(x=>String(x.key)===el.dataset.k);if(r){r.claimPeriod=el.value;tcSaveProjects(all);tcRenderProjects();}});b.querySelectorAll('.tcAgencyCategory').forEach(el=>el.onchange=()=>{const a=tcProjects(),r=a.find(x=>String(x.key)===el.dataset.k);if(r){r.category=el.value;tcSaveProjects(a);tcRenderProjects();}});b.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{const all=tcProjects(),r=all.find(x=>x.key===btn.dataset.k);if(!r)return;if(btn.dataset.a==='edit'){tcProjectEditKey=r.key;const m=String(r.no||'').match(/^(G5DD|G5DE)(.*)$/);$t('tcNoPrefix').value=m?m[1]:'G5DE';$t('tcProjectNo').value=m?m[2]:r.no||'';$t('tcProjectCase').value=r.caseName||'';$t('tcProjectAmount').value=r.caseAmount||''}if(btn.dataset.a==='del'){if(tcCloudProjects.some(z=>String(z.key)===String(r.key))){alert('此案件存在公司雲端備份，為保護原始資料，暫不允許在這裡刪除。');return;}if(!confirm('確定刪除這筆？'))return;tcSaveProjects(all.filter(x=>x.key!==r.key));const ds=tcDetails();delete ds[r.key];tcSaveDetails(ds);tcRenderProjects();tcRenderSavedDetails()}});tcRenderAssignmentOptions();tcRenderSavedDetails();window.tcRenderAgency?.()}
 function tcCurrentProject(){const key=$t('tcAssignmentSelect')?.value||'';return tcProjects().find(x=>x.key===key)||null}
@@ -3162,6 +3174,9 @@ function tcRenderSavedDetails(){
  });
  if(migrated)tcSaveDetails(ds);
  Object.keys(ds).forEach(key=>{const d=ds[key]||{},p=ps.find(x=>x.key===key)||{};const its=Array.isArray(d.items)?d.items:[];const total=its.reduce((n,x)=>n+Number(x.qty||0)*Number(x.price||0),0);const detail=its.length?its.map((x,i)=>`${i+1}. ${x.name||''}${x.size?'｜尺寸 '+x.size:''}${x.qty!==''&&x.qty!=null?'｜'+x.qty+' '+(x.unit||''):''}${x.price!==''&&x.price!=null?'｜單價 '+money(x.price):''}${x.qty!==''&&x.qty!=null&&x.price!==''&&x.price!=null?'｜合計 '+money(Number(x.qty||0)*Number(x.price||0)):''}`).join('<br>'):'—';rows.push({key,d,p,total,detail})});
+ const allCount=$t('tcAllDetailCount'),allTotal=$t('tcAllDetailTotal');
+ if(allCount)allCount.textContent=String(rows.length);
+ if(allTotal)allTotal.textContent=money(rows.reduce((sum,r)=>sum+r.total,0));
  rows.sort((a,b)=>String(b.d.updatedAt||'').localeCompare(String(a.d.updatedAt||'')));
  body.innerHTML=rows.map(r=>`<tr><td style="white-space:nowrap">${tcEsc(tcResolvedClaimPeriod(r.d,r.p)||"—")}</td><td style="white-space:nowrap"><button type="button" data-tc-act="edit" data-k="${tcEsc(r.key)}">修改</button> <button type="button" data-tc-act="del" data-k="${tcEsc(r.key)}" style="background:#d62d2d;color:#fff;border-color:#d62d2d">刪除</button></td><td>${tcEsc(r.p.no||'')}</td><td>${tcEsc(r.p.caseName||'')}</td><td style="text-align:left;white-space:normal;min-width:420px;line-height:1.65">${r.detail}</td><td>${money(r.total)}</td></tr>`).join('');
  const chosen=String($t('tcExportPeriod')?.value||$t('tcPeriodHistory')?.value||'').trim();
@@ -3329,7 +3344,7 @@ async function download(){
    a.href=u;a.download=`草屯採購單_${start}-${end}.xlsx`;a.click();setTimeout(()=>URL.revokeObjectURL(u),1200);
  }catch(e){console.error(e);alert('草屯採購單 Excel 產生失敗：'+e.message)}
 }
-function bind(){tcLoadCloudForDropdown();const tab=$t('taichungPurchaseTabBtn');if(tab)tab.onclick=e=>{e.preventDefault();open()};tcRenderProjects();$t('tcProjectNewBtn')?.addEventListener('click',tcProjectClear);$t('tcProjectSaveBtn')?.addEventListener('click',tcProjectSave);$t('tcProjectFilter')?.addEventListener('change',tcRenderProjects);$t('tcAssignmentSelect')?.addEventListener('change',()=>{});$t('tcRefreshProjectBtn')?.addEventListener('click',()=>{tcSyncQuotes();tcRenderProjects();tcRenderAssignmentOptions();});['tcNoPrefix','tcProjectNo','tcProjectCase','tcProjectAmount'].forEach(id=>$t(id)?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcProjectSave()}}));$t('tcAddItemBtn')?.addEventListener('click',()=>add());$t('tcNameManageBtn')?.addEventListener('click',()=>{renderTCNameManager();tcResetNameEditor();$t('tcNameDlg')?.showModal()});$t('tcNameOptionSaveBtn')?.addEventListener('click',tcSaveNameOption);$t('tcNameOptionCancelBtn')?.addEventListener('click',tcResetNameEditor);$t('tcNameDlgCloseBtn')?.addEventListener('click',()=>{$t('tcNameDlg')?.close()});$t('tcNameOptionInput')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcSaveNameOption()}});$t('tcDetailSaveBtn')?.addEventListener('click',()=>tcDetailSave(true));$t('tcExcelBtn')?.addEventListener('click',download);$t('tcPeriodHistory')?.addEventListener('change',tcPeriodSelect);
+function bind(){tcLoadCloudForDropdown();const tab=$t('taichungPurchaseTabBtn');if(tab)tab.onclick=e=>{e.preventDefault();open()};tcRenderProjects();$t('tcProjectNewBtn')?.addEventListener('click',tcProjectClear);$t('tcProjectSaveBtn')?.addEventListener('click',tcProjectSave);$t('tcProjectFilter')?.addEventListener('change',tcRenderProjects);$t('tcCaseFilter')?.addEventListener('change',tcRenderProjects);$t('tcAssignmentSelect')?.addEventListener('change',()=>{});$t('tcRefreshProjectBtn')?.addEventListener('click',()=>{tcSyncQuotes();tcRenderProjects();tcRenderAssignmentOptions();});['tcNoPrefix','tcProjectNo','tcProjectCase','tcProjectAmount'].forEach(id=>$t(id)?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcProjectSave()}}));$t('tcAddItemBtn')?.addEventListener('click',()=>add());$t('tcNameManageBtn')?.addEventListener('click',()=>{renderTCNameManager();tcResetNameEditor();$t('tcNameDlg')?.showModal()});$t('tcNameOptionSaveBtn')?.addEventListener('click',tcSaveNameOption);$t('tcNameOptionCancelBtn')?.addEventListener('click',tcResetNameEditor);$t('tcNameDlgCloseBtn')?.addEventListener('click',()=>{$t('tcNameDlg')?.close()});$t('tcNameOptionInput')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcSaveNameOption()}});$t('tcDetailSaveBtn')?.addEventListener('click',()=>tcDetailSave(true));$t('tcExcelBtn')?.addEventListener('click',download);$t('tcPeriodHistory')?.addEventListener('change',tcPeriodSelect);
 $t('tcExportPeriod')?.addEventListener('input',()=>tcRememberEnteredPeriod(false));
 $t('tcPeriodHistory')?.addEventListener('focus',()=>{tcRememberEnteredPeriod(false);tcPeriodRender($t('tcPeriodHistory')?.value||'')});
 $t('tcExportPeriod')?.addEventListener('change',()=>tcRememberEnteredPeriod(false));
