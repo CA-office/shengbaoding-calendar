@@ -530,35 +530,52 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
 @media(max-width:540px){#otherExpensesView{width:calc(100% - 12px)!important;padding:12px 8px!important}#otherExpensesView .oeEntry{grid-template-columns:1fr!important}#otherExpensesView .oeTable{margin-left:auto!important;margin-right:auto!important}}
 </style>
 <style id="v86-period-layout">.tcProjectRecordsTable th:last-child,.tcProjectRecordsTable td:last-child{width:5cm!important}.tcProjectPeriod{width:100%;padding:7px;border:1px solid #cbd5e1;border-radius:6px;background:white}#quoteFormTitle{scroll-margin-top:165px}</style>
-<style id="v89-colorful-feature-tabs">
-/* 僅修改功能切換按鈕的視覺，保留原始事件與權限 */
-#appPage .featureTabs{gap:7px;align-items:stretch;flex-wrap:wrap;}
-#appPage .featureTabs button:not(.hidden){display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:43px;border-radius:11px!important;padding:9px 12px!important;font-size:13px!important;font-weight:800;letter-spacing:.1px;white-space:nowrap;box-shadow:0 2px 5px rgba(21,43,70,.07);transition:filter .15s,transform .15s,box-shadow .15s;}
-#appPage .featureTabs button:not(.hidden):before{content:attr(data-tab-icon);font-size:18px;line-height:1;font-weight:900;}
-#appPage .featureTabs button:not(.hidden):hover{filter:brightness(.96);transform:translateY(-1px)}
-#appPage .featureTabs button.active:not(.hidden){outline:2px solid #19334b!important;outline-offset:2px;box-shadow:0 3px 9px rgba(21,43,70,.17)!important;}
-#appPage .featureTabs #calendarTabBtn:not(.hidden),#appPage .featureTabs #calendarTabBtn.active:not(.hidden){background:#142e49!important;color:#fff!important;border:1.5px solid #142e49!important;}
-#appPage .featureTabs #quoteTabBtn:not(.hidden),#appPage .featureTabs #quoteTabBtn.active:not(.hidden){background:#f4f9ff!important;color:#075fb9!important;border:1.5px solid #1685ed!important;}
-#appPage .featureTabs #quoteQuickNoteHeaderBtn:not(.hidden),#appPage .featureTabs #quoteQuickNoteHeaderBtn.active:not(.hidden){background:#075139!important;color:#fff!important;border:1.5px solid #075139!important;}
-#appPage .featureTabs #installStatsTabBtn:not(.hidden),#appPage .featureTabs #installStatsTabBtn.active:not(.hidden){background:#fff8f1!important;color:#a64d00!important;border:1.5px solid #ff8c28!important;}
-#appPage .featureTabs #purchaseTabBtn:not(.hidden),#appPage .featureTabs #purchaseTabBtn.active:not(.hidden){background:#542083!important;color:#fff!important;border:1.5px solid #542083!important;}
-#appPage .featureTabs #taichungPurchaseTabBtn:not(.hidden),#appPage .featureTabs #taichungPurchaseTabBtn.active:not(.hidden){background:#f2f8ff!important;color:#0768bd!important;border:1.5px solid #2385eb!important;}
-#appPage .featureTabs #costReportTabBtn:not(.hidden),#appPage .featureTabs #costReportTabBtn.active:not(.hidden){background:#951919!important;color:#fff!important;border:1.5px solid #951919!important;}
-#appPage .featureTabs #otherExpensesTabBtn:not(.hidden),#appPage .featureTabs #otherExpensesTabBtn.active:not(.hidden){background:#fbf5ff!important;color:#8024ba!important;border:1.5px solid #9c40d8!important;}
-#appPage .featureTabs #invoiceCustomerTabBtn:not(.hidden),#appPage .featureTabs #invoiceCustomerTabBtn.active:not(.hidden){background:#a46000!important;color:#fff!important;border:1.5px solid #a46000!important;}
-#appPage .featureTabs #overtimeTabBtn:not(.hidden),#appPage .featureTabs #overtimeTabBtn.active:not(.hidden){background:#eefaff!important;color:#006d9e!important;border:1.5px solid #1aa3d8!important;}
-@media(max-width:700px){
-#appPage .featureTabs{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important;padding:7px!important;}
-#appPage .featureTabs button:not(.hidden){min-width:0!important;min-height:46px!important;padding:7px 2px!important;gap:3px!important;font-size:10px!important;flex-direction:column;white-space:normal!important;line-height:1.25!important;}
-#appPage .featureTabs button:not(.hidden):before{font-size:17px!important;}
+<style id="v93-simple-gray-white-tabs">
+/* v93：簡潔灰白交錯、無圖示，保留原有功能與權限 */
+#appPage .featureTabs{
+  display:flex!important;justify-content:center;align-items:stretch;
+  flex-wrap:wrap;gap:7px!important;padding:5px!important;
+  background:transparent!important;border:0!important;
 }
-@media(max-width:370px){#appPage .featureTabs{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+#appPage .featureTabs button:not(.hidden){
+  display:inline-flex!important;align-items:center;justify-content:center;
+  flex-direction:row!important;min-height:40px!important;min-width:0!important;
+  padding:8px 13px!important;border-radius:9px!important;
+  font-size:13px!important;font-weight:700!important;line-height:1.3!important;
+  white-space:nowrap!important;letter-spacing:0!important;
+  box-shadow:none!important;outline:none!important;transform:none!important;
+  color:#24364a!important;border:1px solid #bdc8d4!important;
+  background:#fff!important;transition:background-color .15s,border-color .15s!important;
+}
+#appPage .featureTabs button:not(.hidden)::before{content:none!important;display:none!important}
+#appPage .featureTabs button:not(.hidden):nth-child(odd){
+  background:#d6dbe1!important;border-color:#cbd2da!important;
+}
+#appPage .featureTabs button:not(.hidden):hover{filter:none!important;background:#e8edf2!important}
+#appPage .featureTabs button.active:not(.hidden){
+  outline:2px solid #718398!important;outline-offset:1px!important;
+  box-shadow:none!important;
+}
+@media(max-width:700px){
+  #appPage .featureTabs{
+    display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;
+    gap:6px!important;padding:7px!important;background:#fff!important;
+    border:1px solid #e8eaf1!important;border-radius:16px!important;
+  }
+  #appPage .featureTabs button:not(.hidden){
+    width:100%!important;min-height:41px!important;padding:7px 2px!important;
+    font-size:11px!important;white-space:normal!important;line-height:1.3!important;
+  }
+}
+@media(max-width:370px){
+  #appPage .featureTabs{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+}
 </style>
 </head>
 <body>
 <div id="pullRefreshIndicator" aria-hidden="true"><div class="pull-spinner"></div></div>
 <section id="loginPage" class="loginWrap"><div class="loginCard"><h1>勝寶鼎/新弘股公司</h1><label class="field">Email<input id="loginEmail" type="email" autocomplete="username"></label><label class="field">密碼<input id="loginPassword" type="password" autocomplete="current-password"></label><button id="loginBtn" class="loginBtn">登入</button><button id="passkeyBtn" class="loginBtn" type="button" style="margin-top:10px;background:#fff;border:1px solid #81D8D0">使用 Face ID／裝置解鎖登入</button><div id="loginErr" class="err"></div></div></section>
-<section id="appPage" class="hidden"><header><div class="toprow"><div class="brand">勝寶鼎/新弘股公司｜行事曆</div><button id="logoutBtn" class="userBtn">登出</button></div><div id="roleLine" class="roleLine"></div><div class="featureTabs"><button id="calendarTabBtn" data-tab-icon="▦" class="active">行事曆</button><button id="quoteTabBtn" data-tab-icon="▤" class="hidden">報價單</button><button id="quoteQuickNoteHeaderBtn" data-tab-icon="▣" class="hidden">記事本／複製</button><button id="installStatsTabBtn" data-tab-icon="▥" class="hidden">安裝統計表</button><button id="purchaseTabBtn" data-tab-icon="▰" class="hidden">浤富</button><button id="taichungPurchaseTabBtn" data-tab-icon="▰" class="hidden">草屯</button><button id="costReportTabBtn" data-tab-icon="◕" class="hidden">成本銷售報表</button><button id="otherExpensesTabBtn" data-tab-icon="◈" class="hidden">其他支出</button><button id="invoiceCustomerTabBtn" data-tab-icon="▤" class="hidden">客戶發票</button><button id="overtimeTabBtn" data-tab-icon="◷" class="hidden">超時打卡紀錄</button></div><div class="controls" id="calendarControls"><button id="prevBtn">‹</button><div id="monthTitle" class="month"></div><button id="nextBtn">›</button><button id="todayBtn">本月</button><button id="noteBtn" class="hidden">備註</button></div><div class="legend"><span class="lg"><i class="dot" style="background:#20aa5a"></i>綠－石英石</span><span class="lg"><i class="dot" style="background:#2196f3"></i>藍－人造石</span><span class="lg"><i class="dot" style="background:#e52424"></i>紅－維修</span><span class="lg"><i class="dot" style="background:#ff851b"></i>橘－草屯接單</span><span class="lg"><i class="dot" style="background:#8c35d5"></i>紫－浤富代裝石英</span><span class="lg"><i class="dot" style="background:#e5b800"></i>黃－自安送料</span><span class="lg"><i class="dot" style="background:#8b5a2b"></i>咖啡－我司單草屯代裝</span><span class="lg symbolLegend">☑</span><span class="lg symbolLegend">☒</span><span class="lg symbolLegend">➜</span><span class="lg symbolLegend">●</span><span class="lg symbolLegend">▲</span><span class="lg symbolLegend">✔</span><span class="lg symbolLegend">✘</span></div></header><main>
+<section id="appPage" class="hidden"><header><div class="toprow"><div class="brand">勝寶鼎/新弘股公司｜行事曆</div><button id="logoutBtn" class="userBtn">登出</button></div><div id="roleLine" class="roleLine"></div><div class="featureTabs"><button id="calendarTabBtn" class="active">行事曆</button><button id="quoteTabBtn" class="hidden">報價單</button><button id="quoteQuickNoteHeaderBtn" class="hidden">記事本／複製</button><button id="installStatsTabBtn" class="hidden">安裝統計表</button><button id="purchaseTabBtn" class="hidden">浤富</button><button id="taichungPurchaseTabBtn" class="hidden">草屯</button><button id="costReportTabBtn" class="hidden">成本銷售報表</button><button id="otherExpensesTabBtn" class="hidden">其他支出</button><button id="invoiceCustomerTabBtn" class="hidden">客戶發票</button><button id="overtimeTabBtn" class="hidden">超時打卡紀錄</button></div><div class="controls" id="calendarControls"><button id="prevBtn">‹</button><div id="monthTitle" class="month"></div><button id="nextBtn">›</button><button id="todayBtn">本月</button><button id="noteBtn" class="hidden">備註</button></div><div class="legend"><span class="lg"><i class="dot" style="background:#20aa5a"></i>綠－石英石</span><span class="lg"><i class="dot" style="background:#2196f3"></i>藍－人造石</span><span class="lg"><i class="dot" style="background:#e52424"></i>紅－維修</span><span class="lg"><i class="dot" style="background:#ff851b"></i>橘－草屯接單</span><span class="lg"><i class="dot" style="background:#8c35d5"></i>紫－浤富代裝石英</span><span class="lg"><i class="dot" style="background:#e5b800"></i>黃－自安送料</span><span class="lg"><i class="dot" style="background:#8b5a2b"></i>咖啡－我司單草屯代裝</span><span class="lg symbolLegend">☑</span><span class="lg symbolLegend">☒</span><span class="lg symbolLegend">➜</span><span class="lg symbolLegend">●</span><span class="lg symbolLegend">▲</span><span class="lg symbolLegend">✔</span><span class="lg symbolLegend">✘</span></div></header><main>
 <div id="calendarView"><section class="calendar"><div class="weekhead"><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div class="weekend">六</div><div class="weekend">日</div></div><div id="weeks"></div></section><section class="outing-card" id="outingRecords" style="display:none!important">
 <h3>外出紀錄</h3>
 <table class="outing-table"><colgroup><col><col><col><col><col></colgroup><thead><tr>
