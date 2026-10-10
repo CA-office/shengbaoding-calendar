@@ -3403,11 +3403,12 @@ async function cloudTc(){
  try{
   const {data:auth,error:authError}=await sb.auth.getUser();
   if(authError||!auth?.user)throw Error('尚未登入雲端帳號');
-  const {data,error}=await sb.from('sbd_app_data').select('data_key,payload').eq('user_id',auth.user.id).in('data_key',['sbd_taichung_purchase_projects_v1','sbd_taichung_purchase_details_v1']);
+  const {data,error}=await sb.from('sbd_app_data').select('data_key,payload').eq('user_id',auth.user.id).in('data_key',['sbd_taichung_purchase_projects_v1','sbd_taichung_purchase_details_v1','sbd_purchase_projects']);
   if(error)throw error;
   const get=k=>{const r=(data||[]).find(x=>x.data_key===k);if(!r)return null;const v=r.payload?.value;return typeof v==='string'?JSON.parse(v):v};
-  const cp=get('sbd_taichung_purchase_projects_v1'),cd=get('sbd_taichung_purchase_details_v1');
+  const cp=get('sbd_taichung_purchase_projects_v1'),cd=get('sbd_taichung_purchase_details_v1'),hp=get('sbd_purchase_projects');
   if(cp!==null&&!Array.isArray(cp))throw Error('雲端草屯案件格式不符');
+  if(hp!==null&&!Array.isArray(hp))throw Error('雲端浤富案件格式不符');
   if(cd!==null&&(!cd||typeof cd!=='object'||Array.isArray(cd)))throw Error('雲端草屯明細格式不符');
   // Cloud record wins only in this temporary display. Do not write or delete local or cloud data.
   const merged=new Map();
@@ -3415,17 +3416,18 @@ async function cloudTc(){
   for(const x of cp||[])if(x?.key)merged.set(String(x.key),x);
   const details={...(localDetails&&typeof localDetails==='object'?localDetails:{}),...(cd||{})};
   status.textContent='草屯資料：本機 '+(Array.isArray(localProjects)?localProjects.length:0)+' 筆、雲端 '+(cp?.length||0)+' 筆；報表暫時合併顯示，不覆蓋原始資料';
-  return {projects:[...merged.values()],details};
+  const hm=new Map();for(const x of read('sbd_purchase_projects','[]'))if(x?.key)hm.set(String(x.key),x);for(const x of hp||[])if(x?.key)hm.set(String(x.key),x);
+  return {projects:[...merged.values()],details,hongfu:[...hm.values()]};
  }catch(e){
   status.textContent='草屯雲端讀取未成功（'+(e.message||e)+'）；目前僅顯示本機資料，不代表公司資料消失';
-  return {projects:Array.isArray(localProjects)?localProjects:[],details:localDetails&&typeof localDetails==='object'?localDetails:{}};
+  return {projects:Array.isArray(localProjects)?localProjects:[],details:localDetails&&typeof localDetails==='object'?localDetails:{},hongfu:read('sbd_purchase_projects','[]')};
  }
 }
 function source(tcData){
- const purchase=read('sbd_purchase_projects','[]'),tc=tcData.projects,details=tcData.details;
+ const purchase=tcData.hongfu||read('sbd_purchase_projects','[]'),tc=tcData.projects,details=tcData.details;
  const result=[];
  for(const p of purchase){const no=String(p.no||p.number||'').trim();if(!no)continue;result.push({group:'浤富',no,name:p.caseName||p.case||'',sale:amount(p.caseAmount??p.amount),cost:null,period:''})}
- for(const p of tc){const no=String(p.no||'').trim();if(!no)continue;const d=details[p.key];result.push({group:p.category==='代安裝'?'代安裝':'草屯',no,name:p.caseName||'',sale:amount(p.caseAmount),cost:d?(d.items||[]).reduce((n,it)=>n+amount(it.qty)*amount(it.price),0):null,period:d?.claimPeriod||''})}
+ for(const p of tc){const no=String(p.no||'').trim();if(!no)continue;const d=details[p.key];result.push({group:p.category==='代安裝'?'代安裝':'草屯',no,name:p.caseName||'',sale:amount(p.caseAmount),cost:d?(d.items||[]).reduce((n,it)=>n+amount(it.qty)*amount(it.price),0):null,period:p.claimPeriod||d?.claimPeriod||''})}
  return result.map(r=>{const m=r.no.match(/^(?:G5DD|G5DE)(\d{2})(\d{2})/i);return {...r,month:m?`20${m[1]}-${m[2]}`:'未分類'}})
 }
 async function render(){
@@ -3442,7 +3444,7 @@ async function render(){
  const periods=[...new Set([...all.map(r=>r.period).filter(Boolean),...(Array.isArray(saved)?saved:[]),...all.map(r=>r.period).filter(Boolean),...Object.keys(hfCosts),localStorage.getItem('sbd_hongfu_last_period')].filter(Boolean))].sort();
  period.innerHTML='<option value="all">全部請款區間</option>'+periods.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');
  period.value=periods.includes(op)?op:'all';
- const rows=all.filter(r=>(sel.value==='all'||r.month===sel.value)&&(period.value==='all'||r.period===period.value));
+ const rows=all.filter(r=>(sel.value==='all'||r.month===sel.value)&&(period.value==='all'||r.period===period.value||(r.group==='浤富'&&!r.period&&period.value===localStorage.getItem('sbd_hongfu_last_period'))));
  let hongfuCost=null;
  try {
   const request=indexedDB.open('sbd_hongfu_pdf_archive_v1',1);
