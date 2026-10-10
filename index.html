@@ -2426,13 +2426,19 @@ function poRenderProjects(){
   const records=poProjects();
   if(caseSelect){
     const selected=caseSelect.value;
-    const names=[...new Set(records.map(r=>String(r.caseName||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"zh-Hant"));
+    // 從完整案名擷取客戶／案名關鍵字，例如「A411 仕虹Ⅱ_中壢...」→「仕虹」
+    const keyword=name=>{
+      const cleaned=String(name||"").trim().replace(/^[A-Za-z]+\\d+\\s*/,"");
+      const match=cleaned.match(/[\\u3400-\\u9fff]+/);
+      return match?match[0]:cleaned.split(/[\\s_－-]/)[0];
+    };
+    const names=[...new Set(records.map(r=>keyword(r.caseName)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"zh-Hant"));
     caseSelect.replaceChildren(new Option("全部案名",""),...names.map(n=>new Option(n,n)));
     caseSelect.value=names.includes(selected)?selected:"";
   }
   const caseFilter=caseSelect?.value??"";
   const numPart=v=>{const m=String(v||"").match(/^(?:G5DD|G5DE)(\d+)/);return m?BigInt(m[1]):0n};
-  const a=records.filter(r=>(!filter || String(r.no||"").startsWith(filter)) && (!caseFilter || String(r.caseName||"").trim()===caseFilter)).sort((x,y)=>{const a=numPart(x.no),b=numPart(y.no);return a<b?-1:a>b?1:String(x.no||"").localeCompare(String(y.no||""));});
+  const a=records.filter(r=>(!filter || String(r.no||"").startsWith(filter)) && (!caseFilter || String(r.caseName||"").includes(caseFilter))).sort((x,y)=>{const a=numPart(x.no),b=numPart(y.no);return a<b?-1:a>b?1:String(x.no||"").localeCompare(String(y.no||""));});
   const total=a.reduce((sum,r)=>sum+(Number(String(r.caseAmount??0).replace(/,/g,""))||0),0);
   const totalEl=$("poProjectGrandTotal");
   if(totalEl)totalEl.textContent=poFmt(total);
