@@ -3103,7 +3103,7 @@ async function tcLoadCloudForDropdown(){
 function tcSaveProjects(a){localStorage.setItem(TC_PROJECT_KEY,JSON.stringify(a))}
 function tcProjectClear(){tcProjectEditKey=null;$t('tcNoPrefix').value='G5DE';$t('tcProjectNo').value='';$t('tcProjectCase').value='';$t('tcProjectAmount').value='';}
 function tcFullNo(){const x=$t('tcProjectNo')?.value.trim()||'';return x?(($t('tcNoPrefix')?.value||'')+x):''}
-function tcProjectSave(){const no=tcFullNo(),caseName=$t('tcProjectCase').value.trim(),caseAmount=$t('tcProjectAmount').value.trim();if(!no&&!caseName)return alert('請輸入單號或案名');const a=tcProjects(),key=tcProjectEditKey||Date.now().toString(),rec={key,no,caseName,caseAmount,updatedAt:new Date().toISOString()};const i=a.findIndex(x=>x.key===key);if(i>=0){rec.category=a[i].category||"";a[i]=rec;}else a.unshift(rec);tcSaveProjects(a);tcProjectEditKey=null;tcRenderProjects();tcProjectClear();}
+function tcProjectSave(){const no=tcFullNo(),caseName=$t('tcProjectCase').value.trim(),caseAmount=$t('tcProjectAmount').value.trim();if(!no&&!caseName)return alert('請輸入單號或案名');const a=tcProjects(),key=tcProjectEditKey||Date.now().toString();const i=a.findIndex(x=>String(x.key)===String(key));const rec={...(i>=0?a[i]:{}),key,no,caseName,caseAmount,updatedAt:new Date().toISOString()};if(i>=0){a[i]=rec;}else a.unshift(rec);tcSaveProjects(a);tcProjectEditKey=null;tcRenderProjects();tcProjectClear();}
 // 報價單只帶入「客戶名稱」與「未稅合計 subtotal」；以報價單 ID 固定識別，避免重複。
 // 原本手動草屯資料優先保留；已有相同報價單的資料不覆蓋修改內容。
 function tcSyncQuotes(){
@@ -3460,7 +3460,21 @@ async function render(){
  // 其他支出按月份統計，與採購請款區間無關，不計入案件件數。
  groups.push({name:'其他支出',sale:0,cost:expenseCost,known:true,count:0});
  const total={name:'總計',sale:groups.reduce((n,g)=>n+g.sale,0),cost:groups.reduce((n,g)=>n+g.cost,0),known:groups.every(g=>g.known),count:groups.reduce((n,g)=>n+g.count,0)};
- document.getElementById('crCards').innerHTML='';
+ const maxValue=Math.max(1,...groups.flatMap(g=>[g.sale,g.cost]));
+ const moneyHeight=v=>Math.max(0,Math.round(v/maxValue*155));
+ const barGroups=groups.map((g,i)=>{
+   const x=92+i*154,hs=moneyHeight(g.sale),hc=moneyHeight(g.cost);
+   return `<rect x="${x}" y="${193-hs}" width="38" height="${hs}" rx="3" fill="#83baf0"/><rect x="${x+43}" y="${193-hc}" width="38" height="${hc}" rx="3" fill="#92d0a8"/><text x="${x+40}" y="218" text-anchor="middle" font-size="13" fill="#183a62">${g.name}</text><text x="${x+18}" y="${Math.max(20,189-hs)}" text-anchor="middle" font-size="11" fill="#24486f">${fmt(g.sale)}</text><text x="${x+61}" y="${Math.max(20,189-hc)}" text-anchor="middle" font-size="11" fill="#28764b">${fmt(g.cost)}</text>`;
+ }).join('');
+ const counts=groups.map((g,i)=>({x:132+i*154,y:184-(g.count/Math.max(1,...groups.map(x=>x.count)))*135,count:g.count}));
+ const countPath=counts.map((p,i)=>`${i?'L':'M'}${p.x},${p.y}`).join(' ');
+ const countDots=counts.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="5" fill="#f28a39"/><text x="${p.x}" y="${p.y-11}" text-anchor="middle" font-size="12" font-weight="bold" fill="#c76721">${p.count}</text>`).join('');
+ const margin=total.sale-total.cost;
+ document.getElementById('crCards').innerHTML=`<div style="width:100%;max-width:900px;margin-bottom:18px">
+ <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-bottom:14px">
+ ${[['銷售額',total.sale,'#3475bd'],['成本',total.cost,'#28875a'],['件數',total.count,'#b96b28'],['毛利',margin,'#9b4b62']].map(([name,val,color])=>`<div style="background:#f6f9fc;border:1px solid #e1e8f0;border-left:4px solid ${color};border-radius:9px;padding:12px"><div style="font-size:13px;color:#65758b">${name}</div><div style="font-size:clamp(18px,3vw,26px);font-weight:800;color:${color};margin-top:5px">${fmt(val)}</div></div>`).join('')}
+ </div><div style="border:1px solid #e2e8f0;border-radius:10px;padding:12px;background:#fff"><div style="font-weight:700;color:#173653;margin-bottom:8px">銷售／成本／件數圖表</div><div style="font-size:12px;color:#60738a">🔵 銷售額　🟢 成本　🟠 件數（右側刻度）</div><div style="overflow-x:auto"><svg viewBox="0 0 740 240" style="display:block;width:100%;min-width:560px;height:auto" role="img" aria-label="銷售、成本柱狀圖及件數折線圖"><line x1="50" y1="193" x2="720" y2="193" stroke="#bdcbd9"/>${[0,1,2,3,4].map(i=>`<line x1="50" y1="${193-i*38.75}" x2="720" y2="${193-i*38.75}" stroke="#e6edf4" stroke-dasharray="3 4"/>`).join('')}${barGroups}<path d="${countPath}" stroke="#f28a39" stroke-width="2.5" fill="none"/>${countDots}</svg></div></div></div>`;
+
  const cell=(value,muted=false)=>`<td style="padding:17px 20px;text-align:right;font-size:19px;font-weight:700;color:${muted?'#718096':'#183a62'};white-space:nowrap">${value}</td>`;
  document.getElementById('crSummary').innerHTML=`<h3 style="margin:0 0 16px;color:#173653">銷售／成本／件數統計</h3><table style="width:13cm;min-width:13cm;table-layout:fixed;border-collapse:collapse"><colgroup><col style="width:3cm"><col style="width:4cm"><col style="width:4cm"><col style="width:2cm"></colgroup><thead><tr style="background:#eef3f8;color:#173653"><th style="padding:13px;text-align:left">業務類別</th><th style="text-align:right;padding:13px">銷售額</th><th style="text-align:right;padding:13px">成本</th><th style="text-align:right;padding:13px">件數</th></tr></thead><tbody>${[...groups,total].map((g,i)=>`<tr style="border-bottom:1px solid #e0e7ef;${i===groups.length?'background:#f0f5fa;':''}"><th style="padding:17px 13px;text-align:left;color:#173653;font-size:18px">${g.name}</th>${cell(fmt(g.sale))}${cell(g.name==='代安裝'&&!g.known&&!g.cost?'0':(g.known?fmt(g.cost):(g.cost?fmt(g.cost):'尚無成本資料')),g.name==='代安裝'?false:!g.known)}${cell(String(g.count))}</tr>`).join('')}</tbody></table><p style="color:#718096;font-size:12px;margin:12px 0 0">其他支出依所選請款區間的日期計入成本，件數為 0；成本未儲存的案件不會當作 0；浤富成本取已保存 PDF 最後一頁的「本期合計」，相同請款區間不重複加總；未指定並保存請款區間成本時顯示尚無成本資料。</p>`;
  document.getElementById('crRows').innerHTML='';
