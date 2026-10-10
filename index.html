@@ -510,10 +510,10 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
 #otherExpensesView .oeTable td button[data-edit]{border:1px solid #cbd5e1;background:#fff;color:#19334c;border-radius:6px}
 #otherExpensesView .oeTable td button[data-delete]{border:1px solid #f4c4c4;background:#fff;color:#c52626;border-radius:6px}
 #otherExpensesView .oeEntry label{display:flex;flex-direction:column;gap:7px;font-size:14px;font-weight:700;min-width:0}
-#otherExpensesView .oeEntry input{height:49px;padding:10px 12px;border:1px solid #c9d5e2;border-radius:10px;width:100%;min-width:0;background:#fff;color:#18324d}
+#otherExpensesView .oeEntry input,#otherExpensesView .oeEntry select{height:49px;padding:10px 12px;border:1px solid #c9d5e2;border-radius:10px;width:100%;min-width:0;background:#fff;color:#18324d}
 #otherExpensesView button{padding:10px 13px;border:1px solid #c9d5e2;border-radius:9px;background:#fff;color:#17324d;cursor:pointer}
 #otherExpensesView #oeSave{background:#142942;color:#fff;border-color:#142942;font-weight:700;height:49px}
-#otherExpensesView .oeTable{width:10cm;min-width:10cm;table-layout:fixed;border-collapse:collapse}
+#otherExpensesView .oeTable{width:8cm;min-width:8cm;table-layout:fixed;border-collapse:collapse}
 #otherExpensesView .oeTable col{width:2cm}
 #otherExpensesView .oeTable th,#otherExpensesView .oeTable td{width:2cm;max-width:2cm;box-sizing:border-box;padding:10px 5px;text-align:center;overflow-wrap:anywhere;border-bottom:1px solid #e0e6ed;font-size:13px}
 #otherExpensesView .oeTable th{background:#eaf1f8}
@@ -524,16 +524,41 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
 <style id="oe-centered-layout-v85">
 /* 其他支出：整個內容區置中，保留既有欄位、資料及功能 */
 #otherExpensesView{width:min(1100px,calc(100% - 24px))!important;max-width:1100px!important;margin:22px auto 32px!important;padding:16px 18px!important;box-sizing:border-box}
-#otherExpensesView .oeEntry{width:100%!important;max-width:100%!important;grid-template-columns:minmax(150px,1fr) minmax(160px,1.15fr) minmax(160px,1.15fr) minmax(120px,.8fr) auto auto!important;justify-content:center!important;align-items:end!important}
+#otherExpensesView .oeEntry{width:100%!important;max-width:100%!important;grid-template-columns:minmax(150px,1fr) minmax(160px,1.15fr) minmax(120px,.8fr) auto auto!important;justify-content:center!important;align-items:end!important}
 #otherExpensesView .oeTable{margin:12px auto 0!important}
 @media(max-width:900px){#otherExpensesView .oeEntry{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 @media(max-width:540px){#otherExpensesView{width:calc(100% - 12px)!important;padding:12px 8px!important}#otherExpensesView .oeEntry{grid-template-columns:1fr!important}#otherExpensesView .oeTable{margin-left:auto!important;margin-right:auto!important}}
 </style>
-<style id="v86-period-layout">.tcProjectRecordsTable th:last-child,.tcProjectRecordsTable td:last-child{width:5cm!important}.tcProjectPeriod{width:100%;padding:7px;border:1px solid #cbd5e1;border-radius:6px;background:white}#quoteFormTitle{scroll-margin-top:165px}</style></head>
+<style id="v86-period-layout">.tcProjectRecordsTable th:last-child,.tcProjectRecordsTable td:last-child{width:5cm!important}.tcProjectPeriod{width:100%;padding:7px;border:1px solid #cbd5e1;border-radius:6px;background:white}#quoteFormTitle{scroll-margin-top:165px}</style>
+<style id="v89-colorful-feature-tabs">
+/* 僅修改功能切換按鈕的視覺，保留原始事件與權限 */
+#appPage .featureTabs{gap:7px;align-items:stretch;flex-wrap:wrap;}
+#appPage .featureTabs button:not(.hidden){display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:43px;border-radius:11px!important;padding:9px 12px!important;font-size:13px!important;font-weight:800;letter-spacing:.1px;white-space:nowrap;box-shadow:0 2px 5px rgba(21,43,70,.07);transition:filter .15s,transform .15s,box-shadow .15s;}
+#appPage .featureTabs button:not(.hidden):before{content:attr(data-tab-icon);font-size:18px;line-height:1;font-weight:900;}
+#appPage .featureTabs button:not(.hidden):hover{filter:brightness(.96);transform:translateY(-1px)}
+#appPage .featureTabs button.active:not(.hidden){outline:2px solid #19334b!important;outline-offset:2px;box-shadow:0 3px 9px rgba(21,43,70,.17)!important;}
+#appPage .featureTabs #calendarTabBtn:not(.hidden),#appPage .featureTabs #calendarTabBtn.active:not(.hidden){background:#142e49!important;color:#fff!important;border:1.5px solid #142e49!important;}
+#appPage .featureTabs #quoteTabBtn:not(.hidden),#appPage .featureTabs #quoteTabBtn.active:not(.hidden){background:#f4f9ff!important;color:#075fb9!important;border:1.5px solid #1685ed!important;}
+#appPage .featureTabs #quoteQuickNoteHeaderBtn:not(.hidden),#appPage .featureTabs #quoteQuickNoteHeaderBtn.active:not(.hidden){background:#075139!important;color:#fff!important;border:1.5px solid #075139!important;}
+#appPage .featureTabs #installStatsTabBtn:not(.hidden),#appPage .featureTabs #installStatsTabBtn.active:not(.hidden){background:#fff8f1!important;color:#a64d00!important;border:1.5px solid #ff8c28!important;}
+#appPage .featureTabs #purchaseTabBtn:not(.hidden),#appPage .featureTabs #purchaseTabBtn.active:not(.hidden){background:#542083!important;color:#fff!important;border:1.5px solid #542083!important;}
+#appPage .featureTabs #taichungPurchaseTabBtn:not(.hidden),#appPage .featureTabs #taichungPurchaseTabBtn.active:not(.hidden){background:#f2f8ff!important;color:#0768bd!important;border:1.5px solid #2385eb!important;}
+#appPage .featureTabs #costReportTabBtn:not(.hidden),#appPage .featureTabs #costReportTabBtn.active:not(.hidden){background:#951919!important;color:#fff!important;border:1.5px solid #951919!important;}
+#appPage .featureTabs #otherExpensesTabBtn:not(.hidden),#appPage .featureTabs #otherExpensesTabBtn.active:not(.hidden){background:#fbf5ff!important;color:#8024ba!important;border:1.5px solid #9c40d8!important;}
+#appPage .featureTabs #invoiceCustomerTabBtn:not(.hidden),#appPage .featureTabs #invoiceCustomerTabBtn.active:not(.hidden){background:#a46000!important;color:#fff!important;border:1.5px solid #a46000!important;}
+#appPage .featureTabs #overtimeTabBtn:not(.hidden),#appPage .featureTabs #overtimeTabBtn.active:not(.hidden){background:#eefaff!important;color:#006d9e!important;border:1.5px solid #1aa3d8!important;}
+@media(max-width:700px){
+#appPage .featureTabs{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important;padding:7px!important;}
+#appPage .featureTabs button:not(.hidden){min-width:0!important;min-height:46px!important;padding:7px 2px!important;gap:3px!important;font-size:10px!important;flex-direction:column;white-space:normal!important;line-height:1.25!important;}
+#appPage .featureTabs button:not(.hidden):before{font-size:17px!important;}
+}
+@media(max-width:370px){#appPage .featureTabs{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+</style>
+</head>
 <body>
 <div id="pullRefreshIndicator" aria-hidden="true"><div class="pull-spinner"></div></div>
 <section id="loginPage" class="loginWrap"><div class="loginCard"><h1>勝寶鼎/新弘股公司</h1><label class="field">Email<input id="loginEmail" type="email" autocomplete="username"></label><label class="field">密碼<input id="loginPassword" type="password" autocomplete="current-password"></label><button id="loginBtn" class="loginBtn">登入</button><button id="passkeyBtn" class="loginBtn" type="button" style="margin-top:10px;background:#fff;border:1px solid #81D8D0">使用 Face ID／裝置解鎖登入</button><div id="loginErr" class="err"></div></div></section>
-<section id="appPage" class="hidden"><header><div class="toprow"><div class="brand">勝寶鼎/新弘股公司｜行事曆</div><button id="logoutBtn" class="userBtn">登出</button></div><div id="roleLine" class="roleLine"></div><div class="featureTabs"><button id="calendarTabBtn" class="active">行事曆</button><button id="quoteTabBtn" class="hidden">報價單</button><button id="quoteQuickNoteHeaderBtn" class="hidden">記事本／複製</button><button id="installStatsTabBtn" class="hidden">安裝統計表</button><button id="purchaseTabBtn" class="hidden">浤富</button><button id="taichungPurchaseTabBtn" class="hidden">草屯</button><button id="costReportTabBtn" class="hidden">成本銷售報表</button><button id="otherExpensesTabBtn" class="hidden">其他支出</button><button id="invoiceCustomerTabBtn" class="hidden">客戶發票</button><button id="overtimeTabBtn" class="hidden">超時打卡紀錄</button></div><div class="controls" id="calendarControls"><button id="prevBtn">‹</button><div id="monthTitle" class="month"></div><button id="nextBtn">›</button><button id="todayBtn">本月</button><button id="noteBtn" class="hidden">備註</button></div><div class="legend"><span class="lg"><i class="dot" style="background:#20aa5a"></i>綠－石英石</span><span class="lg"><i class="dot" style="background:#2196f3"></i>藍－人造石</span><span class="lg"><i class="dot" style="background:#e52424"></i>紅－維修</span><span class="lg"><i class="dot" style="background:#ff851b"></i>橘－草屯接單</span><span class="lg"><i class="dot" style="background:#8c35d5"></i>紫－浤富代裝石英</span><span class="lg"><i class="dot" style="background:#e5b800"></i>黃－自安送料</span><span class="lg"><i class="dot" style="background:#8b5a2b"></i>咖啡－我司單草屯代裝</span><span class="lg symbolLegend">☑</span><span class="lg symbolLegend">☒</span><span class="lg symbolLegend">➜</span><span class="lg symbolLegend">●</span><span class="lg symbolLegend">▲</span><span class="lg symbolLegend">✔</span><span class="lg symbolLegend">✘</span></div></header><main>
+<section id="appPage" class="hidden"><header><div class="toprow"><div class="brand">勝寶鼎/新弘股公司｜行事曆</div><button id="logoutBtn" class="userBtn">登出</button></div><div id="roleLine" class="roleLine"></div><div class="featureTabs"><button id="calendarTabBtn" data-tab-icon="▦" class="active">行事曆</button><button id="quoteTabBtn" data-tab-icon="▤" class="hidden">報價單</button><button id="quoteQuickNoteHeaderBtn" data-tab-icon="▣" class="hidden">記事本／複製</button><button id="installStatsTabBtn" data-tab-icon="▥" class="hidden">安裝統計表</button><button id="purchaseTabBtn" data-tab-icon="▰" class="hidden">浤富</button><button id="taichungPurchaseTabBtn" data-tab-icon="▰" class="hidden">草屯</button><button id="costReportTabBtn" data-tab-icon="◕" class="hidden">成本銷售報表</button><button id="otherExpensesTabBtn" data-tab-icon="◈" class="hidden">其他支出</button><button id="invoiceCustomerTabBtn" data-tab-icon="▤" class="hidden">客戶發票</button><button id="overtimeTabBtn" data-tab-icon="◷" class="hidden">超時打卡紀錄</button></div><div class="controls" id="calendarControls"><button id="prevBtn">‹</button><div id="monthTitle" class="month"></div><button id="nextBtn">›</button><button id="todayBtn">本月</button><button id="noteBtn" class="hidden">備註</button></div><div class="legend"><span class="lg"><i class="dot" style="background:#20aa5a"></i>綠－石英石</span><span class="lg"><i class="dot" style="background:#2196f3"></i>藍－人造石</span><span class="lg"><i class="dot" style="background:#e52424"></i>紅－維修</span><span class="lg"><i class="dot" style="background:#ff851b"></i>橘－草屯接單</span><span class="lg"><i class="dot" style="background:#8c35d5"></i>紫－浤富代裝石英</span><span class="lg"><i class="dot" style="background:#e5b800"></i>黃－自安送料</span><span class="lg"><i class="dot" style="background:#8b5a2b"></i>咖啡－我司單草屯代裝</span><span class="lg symbolLegend">☑</span><span class="lg symbolLegend">☒</span><span class="lg symbolLegend">➜</span><span class="lg symbolLegend">●</span><span class="lg symbolLegend">▲</span><span class="lg symbolLegend">✔</span><span class="lg symbolLegend">✘</span></div></header><main>
 <div id="calendarView"><section class="calendar"><div class="weekhead"><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div class="weekend">六</div><div class="weekend">日</div></div><div id="weeks"></div></section><section class="outing-card" id="outingRecords" style="display:none!important">
 <h3>外出紀錄</h3>
 <table class="outing-table"><colgroup><col><col><col><col><col></colgroup><thead><tr>
@@ -863,13 +888,11 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
 <h2 style="font-size:18px;margin:0 0 10px">其他支出</h2>
 <div class="oeEntry">
 <label>日期<input id="oeDate" type="date"/></label>
-<label>支出<input id="oeCategory" list="oeCategories" placeholder="例如：油資、雜支"/></label>
-<datalist id="oeCategories"><option value="油資"></option><option value="運費"></option><option value="文具用品"></option><option value="餐費"></option><option value="雜支"></option><option value="維修費"></option><option value="其他"></option></datalist>
-<label>項目<input id="oeDescription" placeholder="輸入支出項目"/></label>
+<label>支出<select id="oeCategory" required><option value="">請選擇支出</option><option value="油資">油資</option><option value="ETC">ETC</option><option value="停車費">停車費</option></select></label>
 <label>金額<input id="oeAmount" min="0" placeholder="0" step="1" type="number"/></label>
 <button id="oeSave" type="button">新增支出</button><button id="oeCancel" style="display:none" type="button">取消修改</button></div>
-<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0"><label>請款區間 <select id="oePeriod" style="padding:9px;border:1px solid #cbd5e1;border-radius:8px"><option value="all">全部請款區間</option></select></label><button id="oeAll" type="button">全部紀錄</button><button id="oeExport" type="button">匯出 CSV（Excel 可開啟）</button><strong id="oeTotal"></strong><span id="oeStatus" style="color:#586b7d"></span></div>
-<div style="overflow:auto"><table class="oeTable"><colgroup><col><col><col><col><col></colgroup><thead><tr><th>日期</th><th>支出</th><th>項目</th><th>金額</th><th>操作</th></tr></thead><tbody id="oeRows"></tbody></table></div></section></main></section>
+<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0"><label>請款區間 <select id="oePeriod" style="padding:9px;border:1px solid #cbd5e1;border-radius:8px"><option value="all">全部請款區間</option></select></label><button id="oeAll" type="button">全部紀錄</button><button id="oeExport" type="button">下載 Excel（含總計）</button><strong id="oeTotal"></strong><span id="oeStatus" style="color:#586b7d"></span></div>
+<div style="overflow:auto"><table class="oeTable"><colgroup><col><col><col><col></colgroup><thead><tr><th>日期</th><th>支出</th><th>金額</th><th>操作</th></tr></thead><tbody id="oeRows"></tbody><tfoot><tr style="background:#eaf1f8;font-weight:900"><td colspan="2">支出總計</td><td id="oeTableTotal" style="text-align:right">0</td><td></td></tr></tfoot></table></div></section></main></section>
 <dialog id="viewDlg">
   <div class="form">
     <h2>查看行程</h2>
@@ -3630,23 +3653,40 @@ function render(){
  const periods=[...new Set([...(Array.isArray(saved)?saved:[]),...Object.values(details||{}).map(x=>x?.claimPeriod)].filter(x=>sbdPeriodBounds(x)))].sort();
  picker.innerHTML='<option value="all">全部請款區間</option>'+periods.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');picker.value=periods.includes(old)?old:'all';
  const chosen=picker.value;const a=records.filter(x=>sbdDateInPeriod(x.date,chosen)).sort((x,y)=>String(y.date).localeCompare(String(x.date)));
- $('oeRows').innerHTML=a.map(x=>`<tr style="border-bottom:1px solid #ddd"><td>${esc(x.date)}</td><td>${esc(x.category)}</td><td>${esc(x.description)}</td><td style="text-align:right">${fmt(x.amount)}</td><td><button type="button" data-edit="${esc(x.id)}">修改</button><button type="button" data-delete="${esc(x.id)}">刪除</button></td></tr>`).join('');
- $('oeTotal').textContent=`共 ${a.length} 筆，支出合計 ${fmt(a.reduce((n,x)=>n+Number(x.amount||0),0))}`;
+ $('oeRows').innerHTML=a.map(x=>`<tr style="border-bottom:1px solid #ddd"><td>${esc(String(x.date||'').slice(5,7)+'/'+String(x.date||'').slice(8,10))}</td><td>${esc(x.category)}</td><td style="text-align:right">${fmt(x.amount)}</td><td><button type="button" data-edit="${esc(x.id)}">修改</button><button type="button" data-delete="${esc(x.id)}">刪除</button></td></tr>`).join('');
+ const total=a.reduce((n,x)=>n+Number(x.amount||0),0);$('oeTotal').textContent=`共 ${a.length} 筆，支出合計 ${fmt(total)}`;$('oeTableTotal').textContent=fmt(total);
 }
-function clear(){editId=null;['oeCategory','oeDescription','oeAmount'].forEach(id=>$(id).value='');$('oeSave').textContent='新增支出';$('oeCancel').style.display='none'}
+function clear(){editId=null;['oeCategory','oeAmount'].forEach(id=>$(id).value='');$('oeSave').textContent='新增支出';$('oeCancel').style.display='none'}
 function init(){
  const tab=$('otherExpensesTabBtn');if(!tab)return;
  tab.classList.toggle('hidden',typeof isAdminAccount==='function'&&!isAdminAccount());
  tab.onclick=()=>{if(typeof isAdminAccount==='function'&&!isAdminAccount())return;document.querySelectorAll('#appPage main > section,#calendarView').forEach(el=>el.classList.add('hidden'));$('otherExpensesView').classList.remove('hidden');$('calendarControls')?.classList.add('hidden');document.querySelectorAll('.featureTabs button').forEach(x=>x.classList.remove('active'));tab.classList.add('active');load()};
  document.querySelectorAll('.featureTabs button').forEach(x=>{if(x!==tab)x.addEventListener('click',()=>$('otherExpensesView').classList.add('hidden'))});
  $('oeDate').value=new Date().toLocaleDateString('en-CA');
- $('oeSave').onclick=async()=>{const date=$('oeDate').value,category=$('oeCategory').value.trim(),description=$('oeDescription').value.trim(),amount=Number($('oeAmount').value);if(!date||!Number.isFinite(amount)||amount<0){message('請輸入日期及正確金額');return}
- const item={id:editId||('oe-'+Date.now()+'-'+Math.random().toString(36).slice(2)),date,category,description,amount};
+ $('oeSave').onclick=async()=>{const date=$('oeDate').value,category=$('oeCategory').value.trim(),amount=Number($('oeAmount').value);if(!date||!category||!Number.isFinite(amount)||amount<0){message('請輸入日期及正確金額');return}
+ const previous=editId?records.find(x=>x.id===editId):null;const item={...(previous||{}),id:editId||('oe-'+Date.now()+'-'+Math.random().toString(36).slice(2)),date,category,description:previous?.description||'',amount};
  const next=editId?records.map(x=>x.id===editId?item:x):[item,...records];$('oeSave').disabled=true;try{await persist(next);clear()}catch(e){message('儲存失敗，原始資料未更動：'+e.message)}finally{$('oeSave').disabled=false}};
  $('oeCancel').onclick=clear;
- $('oeRows').onclick=async e=>{const edit=e.target.closest('[data-edit]'),del=e.target.closest('[data-delete]');if(edit){const x=records.find(r=>r.id===edit.dataset.edit);if(!x)return;editId=x.id;$('oeDate').value=x.date;$('oeCategory').value=x.category;$('oeDescription').value=x.description;$('oeAmount').value=x.amount;$('oeSave').textContent='儲存修改';$('oeCancel').style.display='inline-block';$('otherExpensesView').scrollIntoView({behavior:'smooth'})}else if(del){if(del.dataset.confirm!=='yes'){del.dataset.confirm='yes';del.textContent='確認刪除';message('再按一次「確認刪除」才會刪除這筆紀錄');return}try{await persist(records.filter(r=>r.id!==del.dataset.delete))}catch(e){message('刪除失敗：'+e.message)}}};
+ $('oeRows').onclick=async e=>{const edit=e.target.closest('[data-edit]'),del=e.target.closest('[data-delete]');if(edit){const x=records.find(r=>r.id===edit.dataset.edit);if(!x)return;editId=x.id;$('oeDate').value=x.date;if(x.category&&!Array.from($('oeCategory').options).some(o=>o.value===x.category)){$('oeCategory').add(new Option(x.category+'（舊資料）',x.category))}$('oeCategory').value=x.category;$('oeAmount').value=x.amount;$('oeSave').textContent='儲存修改';$('oeCancel').style.display='inline-block';$('otherExpensesView').scrollIntoView({behavior:'smooth'})}else if(del){if(del.dataset.confirm!=='yes'){del.dataset.confirm='yes';del.textContent='確認刪除';message('再按一次「確認刪除」才會刪除這筆紀錄');return}try{await persist(records.filter(r=>r.id!==del.dataset.delete))}catch(e){message('刪除失敗：'+e.message)}}};
  $('oePeriod').onchange=render;$('oeAll').onclick=()=>{$('oePeriod').value='all';render()};
- $('oeExport').onclick=()=>{const a=records.filter(x=>sbdDateInPeriod(x.date,$('oePeriod').value));const q=x=>'"'+String(x??'').replace(/"/g,'""')+'"';const csv='\ufeff'+[['日期','支出','項目','金額'],...a.map(x=>[x.date,x.category,x.description,x.amount])].map(row=>row.map(q).join(',')).join('\r\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='勝寶鼎_其他支出.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
+ $('oeExport').onclick=()=>{
+  const a=records.filter(x=>sbdDateInPeriod(x.date,$('oePeriod').value)).sort((x,y)=>String(y.date).localeCompare(String(x.date)));
+  if(typeof XLSX==='undefined'){message('Excel 元件尚未載入，請確認網路後重試');return;}
+  const rows=[['日期','支出','金額'],...a.map(x=>[String(x.date||'').slice(5,7)+'/'+String(x.date||'').slice(8,10),x.category,Number(x.amount||0)])];
+  const last=rows.length+1;
+  rows.push(['支出總計','',{f:`SUM(C2:C${last-1})`,v:a.reduce((n,x)=>n+Number(x.amount||0),0)}]);
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:18},{wch:20},{wch:18}];
+  ws['!autofilter']={ref:`A1:C${Math.max(1,last-1)}`};
+  for(let r=1;r<=last;r++){
+   for(let c=0;c<3;c++){const addr=XLSX.utils.encode_cell({r:r-1,c});const cell=ws[addr];if(!cell)continue;
+    cell.s={font:{name:'Noto Sans HK',sz:12,bold:r===1||r===last,color:{rgb:'18324D'}},fill:{fgColor:{rgb:r===1||r===last?'EAF1F8':'FFFFFF'}},alignment:{horizontal:c===2?'right':'center',vertical:'center'},border:{bottom:{style:'thin',color:{rgb:'D8E0E7'}}}};
+    if(c===2&&r>1)cell.z='#,##0';
+   }
+  }
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'其他支出');
+  XLSX.writeFile(wb,'勝寶鼎_其他支出.xlsx',{bookType:'xlsx',cellStyles:true});
+ };
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
