@@ -576,6 +576,20 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
   #appPage .featureTabs{grid-template-columns:repeat(3,minmax(0,1fr))!important}
 }
 </style>
+
+<style id="v134-user-two-tabs-center">
+/* 手機版使用者：行事曆與成本銷售報表兩個頁籤水平置中 */
+@media(max-width:700px){
+ body:not(.admin-account) #appPage .featureTabs{
+   display:flex!important;flex-wrap:wrap!important;justify-content:center!important;
+   align-items:center!important;gap:6px!important;
+ }
+ body:not(.admin-account) #appPage .featureTabs button:not(.hidden){
+   width:auto!important;flex:0 0 auto!important;min-width:0!important;
+   padding:9px 13px!important;
+ }
+}
+</style>
 </head>
 <body>
 <div id="pullRefreshIndicator" aria-hidden="true"><div class="pull-spinner"></div></div>
@@ -2829,38 +2843,7 @@ initInstallerPicker();updateMasterBillingRange();renderStatsEditingPreviewRow();
 
 
 
-<script id="mobile-calendar-swipe-month-clean">
-(function(){
-  const allowed = new Set([
-    "a0985029910@gmail.com",
-    "numberoneaustin@yahoo.com.tw",
-    "rman770212@yahoo.com.tw",
-    "gen20312@gmail.com"
-  ]);
-  let sx=0, sy=0, tracking=false;
-  function userEmail(){
-    try { return String(currentUser && currentUser.email || "").toLowerCase(); }
-    catch(e){ return ""; }
-  }
-  function enabled(){ return window.matchMedia("(max-width: 700px)").matches && allowed.has(userEmail()); }
-  document.addEventListener("touchstart", function(e){
-    if(!enabled() || !e.touches || e.touches.length!==1) return;
-    const cal=e.target.closest && e.target.closest("#calendarView .calendar");
-    if(!cal) return;
-    const t=e.touches[0]; sx=t.clientX; sy=t.clientY; tracking=true;
-  }, {passive:true});
-  document.addEventListener("touchend", function(e){
-    if(!tracking){ return; }
-    tracking=false;
-    if(!enabled() || !e.changedTouches || !e.changedTouches.length) return;
-    const t=e.changedTouches[0], dx=t.clientX-sx, dy=t.clientY-sy;
-    if(Math.abs(dx)<60 || Math.abs(dx)<=Math.abs(dy)*1.15) return;
-    const btn=document.getElementById(dx<0 ? "nextBtn" : "prevBtn");
-    if(btn) btn.click();
-  }, {passive:true});
-  document.addEventListener("touchcancel", function(){ tracking=false; }, {passive:true});
-})();
-</script>
+
 
 <script id="overtime-simple-module">
 (function(){
@@ -3429,7 +3412,7 @@ const HF_COST_KEY='sbd_hongfu_pdf_verified_cost_v1';
 function hfLocal(){const v=read(HF_COST_KEY,'{}');return v&&typeof v==='object'&&!Array.isArray(v)?v:{}}
 async function hfCloud(){
  try{const a=await sb.auth.getUser();if(!a.data?.user)return null;
- const q=await sb.from('sbd_app_data').select('payload').eq('user_id',a.data.user.id).eq('data_key',HF_COST_KEY).maybeSingle();
+ const q=await sb.from('sbd_app_data').select('payload').eq('user_id',await costReportSourceOwner()).eq('data_key',HF_COST_KEY).maybeSingle();
  if(q.error)throw q.error;const v=q.data?.payload?.value;return v?JSON.parse(v):null;
  }catch(e){console.warn('讀取浤富成本雲端失敗',e);return null}
 }
@@ -3466,6 +3449,18 @@ function sbdAgencyBackupAudit(current){
  return sbdAgencyBackupSnapshot.map(x=>({...x,found:existing.has(String(x.no||'').trim()+'|'+String(x.caseName||'').trim())}));
 }
 
+// v135: For read-only users, attempt to read the administrator's saved source records.
+// This requires Supabase SELECT policies allowing the users to see those records.
+async function costReportSourceOwner(){
+ const auth=await sb.auth.getUser();
+ if(!auth.data?.user)throw Error('尚未登入');
+ if(isAdminAccount())return auth.data.user.id;
+ const {data,error}=await sb.from('sbd_users').select('user_id,role').eq('role','admin');
+ if(error)throw Error('無法查詢管理員資料來源：'+error.message);
+ const admins=(data||[]).filter(x=>x.user_id);
+ if(admins.length!==1)throw Error('無法唯一確認管理員資料來源，請檢查資料權限');
+ return admins[0].user_id;
+}
 async function cloudTc(){
  const status=document.getElementById('crCloudStatus');
  const localProjects=read('sbd_taichung_purchase_projects_v1','[]');
@@ -3473,7 +3468,7 @@ async function cloudTc(){
  try{
   const {data:auth,error:authError}=await sb.auth.getUser();
   if(authError||!auth?.user)throw Error('尚未登入雲端帳號');
-  const {data,error}=await sb.from('sbd_app_data').select('data_key,payload').eq('user_id',auth.user.id).in('data_key',['sbd_taichung_purchase_projects_v1','sbd_taichung_purchase_details_v1','sbd_purchase_projects']);
+  const {data,error}=await sb.from('sbd_app_data').select('data_key,payload').eq('user_id',await costReportSourceOwner()).in('data_key',['sbd_taichung_purchase_projects_v1','sbd_taichung_purchase_details_v1','sbd_purchase_projects']);
   if(error)throw error;
   const get=k=>{const r=(data||[]).find(x=>x.data_key===k);if(!r)return null;const v=r.payload?.value;return typeof v==='string'?JSON.parse(v):v};
   const cp=get('sbd_taichung_purchase_projects_v1'),cd=get('sbd_taichung_purchase_details_v1'),hp=get('sbd_purchase_projects');
@@ -3485,11 +3480,11 @@ async function cloudTc(){
   for(const x of Array.isArray(localProjects)?localProjects:[])if(x?.key)merged.set(String(x.key),x);
   for(const x of cp||[])if(x?.key)merged.set(String(x.key),x);
   const details={...(localDetails&&typeof localDetails==='object'?localDetails:{}),...(cd||{})};
-  status.textContent='草屯資料：本機 '+(Array.isArray(localProjects)?localProjects.length:0)+' 筆、雲端 '+(cp?.length||0)+' 筆；報表暫時合併顯示，不覆蓋原始資料';
+  status.textContent='雲端資料已讀取；本機 '+(Array.isArray(localProjects)?localProjects.length:0)+' 筆、雲端 '+(cp?.length||0)+' 筆；報表暫時合併顯示，不覆蓋原始資料';
   const hm=new Map();for(const x of read('sbd_purchase_projects','[]'))if(x?.key)hm.set(String(x.key),x);for(const x of hp||[])if(x?.key)hm.set(String(x.key),x);
   return {projects:[...merged.values()],details,hongfu:[...hm.values()]};
  }catch(e){
-  status.textContent='草屯雲端讀取未成功（'+(e.message||e)+'）；目前僅顯示本機資料，不代表公司資料消失';
+  status.textContent='無法同步管理員銷售資料（'+(e.message||e)+'）；目前數字不是完整公司報表，請檢查 Supabase 讀取權限';
   return {projects:Array.isArray(localProjects)?localProjects:[],details:localDetails&&typeof localDetails==='object'?localDetails:{},hongfu:read('sbd_purchase_projects','[]')};
  }
 }
@@ -3512,7 +3507,7 @@ async function render(){
  }
  const all=[...uniqueRows.values()],sel=document.getElementById('crMonth'),period=document.getElementById('crPeriod'),old=sel.value,op=period.value;
  let expenses=read('sbd_other_expenses_v1','[]');
- try{const {data:userData}=await sb.auth.getUser();if(userData?.user){const {data:cloud,error:cloudErr}=await sb.from('sbd_app_data').select('payload').eq('user_id',userData.user.id).eq('data_key','sbd_other_expenses_v1').maybeSingle();if(!cloudErr&&cloud?.payload?.value){const remote=JSON.parse(cloud.payload.value);if(Array.isArray(remote))expenses=remote}}}catch(e){console.warn('其他支出讀取失敗',e)}
+ try{const {data:userData}=await sb.auth.getUser();if(userData?.user){const {data:cloud,error:cloudErr}=await sb.from('sbd_app_data').select('payload').eq('user_id',await costReportSourceOwner()).eq('data_key','sbd_other_expenses_v1').maybeSingle();if(!cloudErr&&cloud?.payload?.value){const remote=JSON.parse(cloud.payload.value);if(Array.isArray(remote))expenses=remote}}}catch(e){console.warn('其他支出讀取失敗',e)}
  if(!Array.isArray(expenses))expenses=[];
  const expenseMonths=expenses.map(x=>String(x.date||'').slice(0,7)).filter(x=>/^\d{4}-\d{2}$/.test(x));
  const months=[...new Set([...all.map(r=>r.month),...expenseMonths])].sort();
