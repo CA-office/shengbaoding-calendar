@@ -3451,6 +3451,8 @@ function sbdAgencyBackupAudit(current){
 // v137: Restricted report RPC. The server checks an explicit viewer allowlist,
 // returns only report source keys, and never grants direct cross-account table access.
 let __costReportRpcPromise=null;
+let __reportCloudLastPeriod='';
+let __reportCloudTcPeriods=[];
 async function costReportRows(){
  if(isAdminAccount())return null;
  if(!__costReportRpcPromise){
@@ -3494,6 +3496,12 @@ async function cloudTc(){
   }else data=(await costReportRows()).filter(x=>['sbd_taichung_purchase_projects_v1','sbd_taichung_purchase_details_v1','sbd_purchase_projects'].includes(x.data_key));
   const get=k=>{const r=(data||[]).find(x=>x.data_key===k);if(!r)return null;const v=r.payload?.value;return typeof v==='string'?JSON.parse(v):v};
   const cp=get('sbd_taichung_purchase_projects_v1'),cd=get('sbd_taichung_purchase_details_v1'),hp=get('sbd_purchase_projects');
+  if(!isAdminAccount()){
+   const cloudLast=get('sbd_hongfu_last_period');
+   __reportCloudLastPeriod=typeof cloudLast==='string'?cloudLast:'';
+   const cloudPeriods=get('sbd_tc_invoice_periods_v1');
+   __reportCloudTcPeriods=Array.isArray(cloudPeriods)?cloudPeriods:[];
+  }
   if(cp!==null&&!Array.isArray(cp))throw Error('雲端草屯案件格式不符');
   if(hp!==null&&!Array.isArray(hp))throw Error('雲端浤富案件格式不符');
   if(cd!==null&&(!cd||typeof cd!=='object'||Array.isArray(cd)))throw Error('雲端草屯明細格式不符');
@@ -3537,7 +3545,7 @@ async function render(){
  sel.value=months.includes(old)?old:'all';
  const saved=read('sbd_tc_invoice_periods_v1','[]');
  const hfCosts={...hfLocal(),...(await hfCloud()||{})};
- const periods=[...new Set([...all.map(r=>r.period).filter(Boolean),...(Array.isArray(saved)?saved:[]),...all.map(r=>r.period).filter(Boolean),...Object.keys(hfCosts),localStorage.getItem('sbd_hongfu_last_period')].filter(Boolean))].sort();
+ const periods=[...new Set([...all.map(r=>r.period).filter(Boolean),...(Array.isArray(saved)?saved:[]),...__reportCloudTcPeriods,...all.map(r=>r.period).filter(Boolean),...Object.keys(hfCosts),(__reportCloudLastPeriod||localStorage.getItem('sbd_hongfu_last_period'))].filter(Boolean))].sort();
  period.innerHTML='<option value="all">全部請款區間（含所有日期）</option>'+periods.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');
  // v122: Never silently start with every invoice period combined.
  // Preserve the user's chosen period during rerenders and across page reloads.
@@ -3553,7 +3561,8 @@ async function render(){
   const parts=[...buckets.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([k,v])=>`${esc(k)}：${v.count} 件／${fmt(v.sale)} 元`);
   periodSummary.textContent='草屯各請款區間（僅供核對，不更動資料）：'+(parts.join('　｜　')||'尚無案件')+'。目前報表：'+(period.value==='all'?'全部請款區間':period.value);
  }
- const rows=all.filter(r=>(sel.value==='all'||r.month===sel.value)&&(period.value==='all'||r.period===period.value||(r.group==='浤富'&&!r.period&&period.value===localStorage.getItem('sbd_hongfu_last_period'))));
+ const rows=all.filter(r=>(sel.value==='all'||r.month===sel.value)&&(period.value==='all'||r.period===period.value||(r.group==='浤富'&&!r.period&&period.value===(__reportCloudLastPeriod||localStorage.getItem('sbd_hongfu_last_period')))));
+ if(!isAdminAccount()&&!__reportCloudLastPeriod){document.getElementById('crCloudStatus').textContent+='；注意：管理員浤富請款區間未同步，浤富銷售可能不完整';}
  let hongfuCost=null;
  try {
   const request=indexedDB.open('sbd_hongfu_pdf_archive_v1',1);
