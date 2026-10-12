@@ -3491,9 +3491,9 @@ async function cloudTc(){
   if(authError||!auth?.user)throw Error('尚未登入雲端帳號');
   let data;
   if(isAdminAccount()){
-   const q=await sb.from('sbd_app_data').select('data_key,payload').eq('user_id',auth.user.id).in('data_key',['sbd_taichung_purchase_projects_v1','sbd_taichung_purchase_details_v1','sbd_purchase_projects']);
+   const q=await sb.from('sbd_app_data').select('data_key,payload').eq('user_id',auth.user.id).in('data_key',['sbd_taichung_purchase_projects_v1','sbd_taichung_purchase_details_v1','sbd_purchase_projects','sbd_hongfu_last_period','sbd_tc_invoice_periods_v1']);
    if(q.error)throw q.error;data=q.data;
-  }else data=(await costReportRows()).filter(x=>['sbd_taichung_purchase_projects_v1','sbd_taichung_purchase_details_v1','sbd_purchase_projects'].includes(x.data_key));
+  }else data=(await costReportRows()).filter(x=>['sbd_taichung_purchase_projects_v1','sbd_taichung_purchase_details_v1','sbd_purchase_projects','sbd_hongfu_last_period','sbd_tc_invoice_periods_v1'].includes(x.data_key));
   const get=k=>{const r=(data||[]).find(x=>x.data_key===k);if(!r)return null;const v=r.payload?.value;return typeof v==='string'?JSON.parse(v):v};
   const cp=get('sbd_taichung_purchase_projects_v1'),cd=get('sbd_taichung_purchase_details_v1'),hp=get('sbd_purchase_projects');
   if(!isAdminAccount()){
@@ -3507,22 +3507,22 @@ async function cloudTc(){
   if(cd!==null&&(!cd||typeof cd!=='object'||Array.isArray(cd)))throw Error('雲端草屯明細格式不符');
   // Cloud record wins only in this temporary display. Do not write or delete local or cloud data.
   const merged=new Map();
-  for(const x of Array.isArray(localProjects)?localProjects:[])if(x?.key)merged.set(String(x.key),x);
+  for(const x of (isAdminAccount()&&Array.isArray(localProjects)?localProjects:[]))if(x?.key)merged.set(String(x.key),x);
   for(const x of cp||[])if(x?.key)merged.set(String(x.key),x);
-  const details={...(localDetails&&typeof localDetails==='object'?localDetails:{}),...(cd||{})};
+  const details={...(isAdminAccount()&&localDetails&&typeof localDetails==='object'?localDetails:{}),...(cd||{})};
   status.textContent='雲端資料已讀取；本機 '+(Array.isArray(localProjects)?localProjects.length:0)+' 筆、雲端 '+(cp?.length||0)+' 筆；報表暫時合併顯示，不覆蓋原始資料';
-  const hm=new Map();for(const x of read('sbd_purchase_projects','[]'))if(x?.key)hm.set(String(x.key),x);for(const x of hp||[])if(x?.key)hm.set(String(x.key),x);
+  const hm=new Map();for(const x of (isAdminAccount()?read('sbd_purchase_projects','[]'):[]))if(x?.key)hm.set(String(x.key),x);for(const x of hp||[])if(x?.key)hm.set(String(x.key),x);
   return {projects:[...merged.values()],details,hongfu:[...hm.values()]};
  }catch(e){
   status.textContent='無法同步管理員銷售資料（'+(e.message||e)+'）；目前數字不是完整公司報表，請檢查 Supabase 讀取權限';
-  return {projects:Array.isArray(localProjects)?localProjects:[],details:localDetails&&typeof localDetails==='object'?localDetails:{},hongfu:read('sbd_purchase_projects','[]')};
+  return {projects:isAdminAccount()&&Array.isArray(localProjects)?localProjects:[],details:isAdminAccount()&&localDetails&&typeof localDetails==='object'?localDetails:{},hongfu:isAdminAccount()?read('sbd_purchase_projects','[]'):[]};
  }
 }
 function source(tcData){
  const purchase=tcData.hongfu||read('sbd_purchase_projects','[]'),tc=tcData.projects,details=tcData.details;
  const result=[];
- for(const p of purchase){const no=String(p.no||p.number||'').trim();if(!no)continue;result.push({group:'浤富',no,name:p.caseName||p.case||'',sale:amount(p.caseAmount??p.amount),cost:null,period:''})}
- for(const p of tc){const no=String(p.no||'').trim();if(!no)continue;const d=details[p.key];result.push({group:p.category==='代安裝'?'代安裝':'草屯',no,name:p.caseName||'',sale:amount(p.caseAmount),cost:d?(d.items||[]).reduce((n,it)=>n+amount(it.qty)*amount(it.price),0):null,period:p.claimPeriod||d?.claimPeriod||''})}
+ for(const p of purchase){const no=String(p.no||p.number||'').trim();if(!no)continue;result.push({group:'浤富',no,name:p.caseName||p.case||'',sale:amount(p.caseAmount??p.amount),cost:null,period:'',sourceKey:String(p.key||'')})}
+ for(const p of tc){const no=String(p.no||'').trim();if(!no)continue;const d=details[p.key];result.push({group:p.category==='代安裝'?'代安裝':'草屯',no,name:p.caseName||'',sale:amount(p.caseAmount),cost:d?(d.items||[]).reduce((n,it)=>n+amount(it.qty)*amount(it.price),0):null,period:p.claimPeriod||d?.claimPeriod||'',sourceKey:String(p.key||'')})}
  return result.map(r=>{const m=r.no.match(/^(?:G5DD|G5DE)(\d{2})(\d{2})/i);return {...r,month:m?`20${m[1]}-${m[2]}`:'未分類'}})
 }
 async function render(){
@@ -3531,7 +3531,7 @@ async function render(){
  // Never merge merely by order number: legitimate cases may reuse one number.
  const uniqueRows=new Map();
  for(const r of sourceRows){
-  const identity=[r.group,String(r.no||'').trim(),String(r.name||'').trim(),r.sale,String(r.period||'').trim()].join('\u001f');
+  const identity=r.sourceKey?[r.group,r.sourceKey].join('\u001f'):[r.group,String(r.no||'').trim(),String(r.name||'').trim(),r.sale,String(r.period||'').trim()].join('\u001f');
   const prev=uniqueRows.get(identity);
   if(!prev || (prev.cost===null && r.cost!==null))uniqueRows.set(identity,r);
  }
