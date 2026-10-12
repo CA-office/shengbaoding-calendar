@@ -3318,7 +3318,18 @@ async function download(){
  const period=String($t('tcExportPeriod')?.value||'').trim();const parts=period.split(/\s*[-～~至]\s*/);const start=normalizeDate(parts[0]),end=normalizeDate(parts[1]);
  if(!/^\d{6}$/.test(start)||!/^\d{6}$/.test(end)||start>end)return alert('請輸入正確請款區間，例如 260825 至 260926');
  const projectDate=p=>{const m=String(p.no||'').match(/(?:G5DD|G5DE)(\d{6})/i);return m?m[1]:''};
- const projects=tcProjects().filter(p=>ds[p.key]&&Array.isArray(ds[p.key].items)&&ds[p.key].items.length&&projectDate(p)>=start&&projectDate(p)<=end);
+ // 匯出必須依已指定的請款區間，不可只依單號中的日期篩選。
+ // 例如 G5DD260818003 雖然單號日期為 260818，但已指定 260826-260925，仍應匯出。
+ const targetPeriod=start+'-'+end;
+ const projects=tcProjects().filter(p=>{
+   const d=ds[p.key];
+   if(!d||!Array.isArray(d.items)||!d.items.length||p.category==='代安裝')return false;
+   const assigned=String(p.claimPeriod||d.claimPeriod||'').trim();
+   if(assigned)return assigned===targetPeriod;
+   // 舊資料未指定請款區間時才依單號日期暫時判斷。
+   const noDate=projectDate(p);
+   return noDate>=start&&noDate<=end;
+ });
  projects.sort((a,b)=>String(a.no||'').localeCompare(String(b.no||''),undefined,{numeric:true}));
  if(!projects.length)return alert('這個請款區間內沒有已儲存的草屯採購單明細');
  tcPeriodSave(start,end);
@@ -3390,6 +3401,7 @@ async function download(){
        });
      });
    });
+   if(pi!==projects.length){throw new Error('採購單範本最多容納 '+pi+' 筆，但本期共有 '+projects.length+' 筆；為避免遺漏，已取消匯出，請聯絡調整範本容量。')}
    const buf=await wb.xlsx.writeBuffer(),blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),u=URL.createObjectURL(blob),a=document.createElement('a');
    a.href=u;a.download=`草屯採購單_${start}-${end}.xlsx`;a.click();setTimeout(()=>URL.revokeObjectURL(u),1200);
  }catch(e){console.error(e);alert('草屯採購單 Excel 產生失敗：'+e.message)}
