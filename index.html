@@ -878,7 +878,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
         <td id="tcProjectCount" style="text-align:center;padding:12px">0</td>
         <td id="tcProjectGrandTotal" style="text-align:right;padding:12px">0</td><td></td><td></td>
       </tr></tfoot>
-    </table><div style="margin-top:18px"><h3>代安裝明細</h3><table class="purchaseRecords"><thead><tr><th>單號</th><th>案名</th><th>案件金額</th></tr></thead><tbody id="tcAgencyRows"></tbody><tfoot><tr><th>總計</th><th id="tcAgencyCount">0 件</th><th id="tcAgencyTotal">0</th></tr></tfoot></table></div>
+    </table><div style="margin-top:18px"><h3>代安裝明細</h3><table class="purchaseRecords"><thead><tr><th>單號</th><th>案名</th><th>案件金額</th></tr></thead><tbody id="tcAgencyRows"></tbody><tfoot><tr><th>總計</th><th id="tcAgencyCount">0 件</th><th id="tcAgencyTotal">0</th></tr></tfoot></table></div><details style="margin:10px 0 18px;border:1px solid #d8e0e7;border-radius:8px;padding:10px"><summary style="cursor:pointer;font-weight:700">核對 10/10 舊備份代安裝（不計入目前金額／件數）</summary><p style="font-size:12px;color:#66788a">以下只是歷史備份，不代表目前有效案件。標示「未找到」的資料不會自動恢復，避免重複計算。</p><div style="overflow-x:auto"><table class="purchaseRecords" style="min-width:470px"><thead><tr><th>單號</th><th>案名</th><th>舊備份金額</th><th>比對</th></tr></thead><tbody id="tcAgencyBackupAudit"></tbody></table></div></details>
   </div>
   <div class="quoteCard">
     <h2 class="quoteTitle">草屯採購單</h2>
@@ -905,7 +905,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
 <strong>浤富 PDF 成本（115年09月）</strong>：已核對本期合計 <strong>302,994</strong> 元。
 <button type="button" id="crSaveVerifiedCost" style="margin-left:12px;padding:7px 12px;border:1px solid #b5c6d7;border-radius:7px;background:#f4f8fc;cursor:pointer">儲存至所選請款區間</button>
 <span id="crPdfCostStatus" style="margin-left:10px;font-size:12px;color:#62758a">請先選擇對應請款區間；不會修改原有 PDF 明細</span>
-</div><div id="crCloudStatus" style="font-size:13px;color:#52687c;margin:8px 0">正在檢查雲端草屯資料…</div><div id="crCards" style="margin:16px 0"></div><div id="crSummary" style="background:#fff;border:1px solid #dce5ee;border-radius:14px;padding:20px;overflow-x:auto"></div><div style="display:none;background:white;border:1px solid #e2e8f0;border-radius:14px;padding:18px;margin-top:16px;overflow:auto"><h3>案件成本與銷售明細</h3><table style="width:100%;min-width:780px;border-collapse:collapse"><thead><tr style="background:#eef3f8"><th>月份</th><th>單號</th><th>案名</th><th>銷售</th><th>成本</th></tr></thead><tbody id="crRows"></tbody></table></div></section><section class="hidden" id="otherExpensesView" style="max-width:1150px;margin:22px auto;padding:16px;color:#20344a">
+</div><div id="crCloudStatus" style="font-size:13px;color:#52687c;margin:8px 0">正在檢查雲端草屯資料…</div><div id="crPeriodBreakdown" style="font-size:13px;line-height:1.7;color:#334b63;background:#f6f8fa;padding:9px 12px;border-radius:8px;margin:8px 0;overflow-wrap:anywhere" aria-live="polite"></div><div id="crCards" style="margin:16px 0"></div><div id="crSummary" style="background:#fff;border:1px solid #dce5ee;border-radius:14px;padding:20px;overflow-x:auto"></div><div style="display:none;background:white;border:1px solid #e2e8f0;border-radius:14px;padding:18px;margin-top:16px;overflow:auto"><h3>案件成本與銷售明細</h3><table style="width:100%;min-width:780px;border-collapse:collapse"><thead><tr style="background:#eef3f8"><th>月份</th><th>單號</th><th>案名</th><th>銷售</th><th>成本</th></tr></thead><tbody id="crRows"></tbody></table></div></section><section class="hidden" id="otherExpensesView" style="max-width:1150px;margin:22px auto;padding:16px;color:#20344a">
 <h2 style="font-size:18px;margin:0 0 10px">其他支出</h2>
 <div class="oeEntry">
 <label>日期<input id="oeDate" type="date"/></label>
@@ -3106,7 +3106,7 @@ async function tcLoadCloudForDropdown(){
 function tcSaveProjects(a){localStorage.setItem(TC_PROJECT_KEY,JSON.stringify(a))}
 function tcProjectClear(){tcProjectEditKey=null;$t('tcNoPrefix').value='G5DE';$t('tcProjectNo').value='';$t('tcProjectCase').value='';$t('tcProjectAmount').value='';}
 function tcFullNo(){const x=$t('tcProjectNo')?.value.trim()||'';return x?(($t('tcNoPrefix')?.value||'')+x):''}
-function tcProjectSave(){const no=tcFullNo(),caseName=$t('tcProjectCase').value.trim(),caseAmount=$t('tcProjectAmount').value.trim();if(!no&&!caseName)return alert('請輸入單號或案名');const a=tcProjects(),key=tcProjectEditKey||Date.now().toString();const i=a.findIndex(x=>String(x.key)===String(key));const rec={...(i>=0?a[i]:{}),key,no,caseName,caseAmount,updatedAt:new Date().toISOString()};if(i>=0){a[i]=rec;}else a.unshift(rec);tcSaveProjects(a);tcProjectEditKey=null;tcRenderProjects();tcProjectClear();}
+function tcProjectSave(){const no=tcFullNo(),caseName=$t('tcProjectCase').value.trim(),caseAmount=$t('tcProjectAmount').value.trim();if(!no&&!caseName)return alert('請輸入單號或案名');const a=tcProjects(),key=tcProjectEditKey||Date.now().toString();const i=a.findIndex(x=>String(x.key)===String(key));const rec={...(i>=0?a[i]:{}),key,no,caseName,caseAmount,updatedAt:new Date().toISOString(),...(i>=0?{}:{sortAddedAt:Date.now()})};if(i>=0){a[i]=rec;}else a.unshift(rec);tcSaveProjects(a);tcProjectEditKey=null;tcRenderProjects();tcProjectClear();}
 // 報價單只帶入「客戶名稱」與「未稅合計 subtotal」；以報價單 ID 固定識別，避免重複。
 // 原本手動草屯資料優先保留；已有相同報價單的資料不覆蓋修改內容。
 function tcSyncQuotes(){
@@ -3120,7 +3120,7 @@ function tcSyncQuotes(){
   if(a.some(r=>String(r.key)===key))continue;
   const no=String(q.quote_no||'').trim();
   if(no&&a.some(r=>String(r.no||'').trim()===no))continue;
-  a.push({key,no,caseName:String(q.customer_name||'').trim(),caseAmount:String(Number(q.subtotal||0)),category:'',sourceQuoteId:String(q.id),updatedAt:new Date().toISOString()});changed=true;
+  a.unshift({key,no,caseName:String(q.customer_name||'').trim(),caseAmount:String(Number(q.subtotal||0)),category:'',sourceQuoteId:String(q.id),updatedAt:new Date().toISOString(),sortAddedAt:Date.now()});changed=true;
  }
  if(changed){tcSaveProjects(a);tcRenderProjects()}
  else tcRenderAssignmentOptions();
@@ -3131,7 +3131,7 @@ function tcRenderAssignmentOptions(){
  const a=tcProjects();sel.innerHTML='<option value="">請選擇要指定的單號／案名</option>'+a.map(r=>`<option value="${r.key}">${String(r.no||'')}｜${String(r.caseName||'')}｜${String(r.caseAmount||'')}</option>`).join('');
  if(a.some(r=>r.key===keep))sel.value=keep;
 }
-window.tcRenderAgency=function(){const a=(typeof sbdAddMissingAgencySnapshot==='function' ? sbdAddMissingAgencySnapshot(tcProjects()).projects : tcProjects()).filter(r=>r.category==='代安裝'),b=document.getElementById('tcAgencyRows');if(!b)return;b.innerHTML=a.map(r=>`<tr><td>${String(r.no||'')}</td><td>${String(r.caseName||'')}</td><td>${Number(String(r.caseAmount||0).replace(/,/g,'')).toLocaleString('en-US')}</td></tr>`).join('');document.getElementById('tcAgencyCount').textContent=a.length+' 件';document.getElementById('tcAgencyTotal').textContent=a.reduce((n,r)=>n+(Number(String(r.caseAmount||0).replace(/,/g,''))||0),0).toLocaleString('en-US')};
+window.tcRenderAgency=function(){const a=tcProjects().filter(r=>r.category==='代安裝'),b=document.getElementById('tcAgencyRows');if(!b)return;b.innerHTML=a.map(r=>`<tr><td>${String(r.no||'')}</td><td>${String(r.caseName||'')}</td><td>${Number(String(r.caseAmount||0).replace(/,/g,'')).toLocaleString('en-US')}</td></tr>`).join('');document.getElementById('tcAgencyCount').textContent=a.length+' 件';document.getElementById('tcAgencyTotal').textContent=a.reduce((n,r)=>n+(Number(String(r.caseAmount||0).replace(/,/g,''))||0),0).toLocaleString('en-US');const audit=document.getElementById('tcAgencyBackupAudit');if(audit&&typeof sbdAgencyBackupAudit==='function'){audit.innerHTML=sbdAgencyBackupAudit(tcProjects()).map(x=>`<tr><td>${tcEsc(x.no)}</td><td>${tcEsc(x.caseName)}</td><td>${Number(x.caseAmount||0).toLocaleString('en-US')}</td><td>${x.found?'目前清單有同單號／案名':'未找到（僅舊備份）'}</td></tr>`).join('')}};
 function tcRenderProjects(){const b=$t('tcProjectRecords');if(!b)return;const filter=$t('tcProjectFilter')?.value||'';
 const records=tcProjects();
 const caseSelect=$t('tcCaseFilter');
@@ -3142,7 +3142,7 @@ if(caseSelect){
   caseSelect.value=names.includes(previous)?previous:'';
 }
 const caseFilter=caseSelect?.value||'';
-const np=v=>{const m=String(v||'').match(/^(?:G5DD|G5DE)(\d+)/);return m?BigInt(m[1]):0n};const a=records.filter(r=>(!filter||String(r.no||'').startsWith(filter))&&(!caseFilter||String(r.caseName||'').includes(caseFilter))).sort((x,y)=>{const a=np(x.no),b=np(y.no);return a<b?-1:a>b?1:0});  const total=a.reduce((sum,r)=>sum+(Number(String(r.caseAmount??0).replace(/,/g,""))||0),0);
+const a=records.filter(r=>(!filter||String(r.no||'').startsWith(filter))&&(!caseFilter||String(r.caseName||'').includes(caseFilter))).sort((x,y)=>(Number(y.sortAddedAt)||0)-(Number(x.sortAddedAt)||0));  const total=a.reduce((sum,r)=>sum+(Number(String(r.caseAmount??0).replace(/,/g,""))||0),0);
 const countEl=$t('tcProjectCount');if(countEl)countEl.textContent=String(a.length);
 const caseCount=$t('tcCaseFilterCount');if(caseCount)caseCount.textContent=`共 ${a.length} 筆`;
 const totalEl=$t('tcProjectGrandTotal');if(totalEl)totalEl.textContent=total.toLocaleString('en-US',{maximumFractionDigits:2});
@@ -3412,18 +3412,12 @@ function sbdDateInPeriod(date,p){if(p==='all'||!p)return true;const b=sbdPeriodB
 // v111: read-only recovery for the five agency-installation records confirmed in the 2026-10-10 user backup.
 // These are a snapshot, NOT live cloud sync. Never write these records into localStorage or the cloud.
 const sbdAgencyBackupSnapshot = [{"key":"1791648255863","no":"G5DE4564","caseName":"D999奇建","caseAmount":"45000","updatedAt":"2026-10-10T16:48:45.769Z","category":"代安裝","claimPeriod":"260926-261025"},{"key":"1791646166032","no":"G5DE441","caseName":"D993碇弘","caseAmount":"6015","updatedAt":"2026-10-10T16:46:17.087Z","category":"代安裝","claimPeriod":"260826-260925"},{"key":"1791645235383","no":"G5DE46561","caseName":"D998人造石","caseAmount":"1533","updatedAt":"2026-10-10T16:55:33.273Z","category":"代安裝","claimPeriod":"260826-260925"},{"key":"1791645208135","no":"G5DE123","caseName":"D998石英石","caseAmount":"7740","updatedAt":"2026-10-10T16:49:41.963Z","category":"代安裝","claimPeriod":"260926-261025"},{"key":"1791465219014","no":"G5DD26100001","caseName":"D998石英石","caseAmount":"13960","updatedAt":"2026-10-10T16:49:59.077Z","category":"代安裝","claimPeriod":"260826-260925"}];
-function sbdAddMissingAgencySnapshot(projects){
- const list=Array.isArray(projects)?projects.slice():[];
- const keys=new Set(list.map(x=>String(x?.key??'')));
- const identity=new Set(list.map(x=>String(x?.no??'').trim()+'|'+String(x?.caseName??'').trim()));
- let recovered=0;
- for(const x of sbdAgencyBackupSnapshot){
-  const id=String(x.no||'').trim()+'|'+String(x.caseName||'').trim();
-  if(keys.has(String(x.key))||identity.has(id))continue;
-  list.push({...x});keys.add(String(x.key));identity.add(id);recovered++;
- }
- return {projects:list,recovered};
+// v124: Historical snapshot is for visual reconciliation only. It is NEVER included in live records, totals or exports.
+function sbdAgencyBackupAudit(current){
+ const existing=new Set((Array.isArray(current)?current:[]).map(x=>String(x?.no||'').trim()+'|'+String(x?.caseName||'').trim()));
+ return sbdAgencyBackupSnapshot.map(x=>({...x,found:existing.has(String(x.no||'').trim()+'|'+String(x.caseName||'').trim())}));
 }
+
 async function cloudTc(){
  const status=document.getElementById('crCloudStatus');
  const localProjects=read('sbd_taichung_purchase_projects_v1','[]');
@@ -3445,10 +3439,10 @@ async function cloudTc(){
   const details={...(localDetails&&typeof localDetails==='object'?localDetails:{}),...(cd||{})};
   status.textContent='草屯資料：本機 '+(Array.isArray(localProjects)?localProjects.length:0)+' 筆、雲端 '+(cp?.length||0)+' 筆；報表暫時合併顯示，不覆蓋原始資料';
   const hm=new Map();for(const x of read('sbd_purchase_projects','[]'))if(x?.key)hm.set(String(x.key),x);for(const x of hp||[])if(x?.key)hm.set(String(x.key),x);
-  const recovery=sbdAddMissingAgencySnapshot([...merged.values()]); if(recovery.recovered)status.textContent+='；另從 10/10 備份暫時補顯代安裝 '+recovery.recovered+' 筆（唯讀，尚未同步雲端）'; return {projects:recovery.projects,details,hongfu:[...hm.values()]};
+  return {projects:[...merged.values()],details,hongfu:[...hm.values()]};
  }catch(e){
   status.textContent='草屯雲端讀取未成功（'+(e.message||e)+'）；目前僅顯示本機資料，不代表公司資料消失';
-  const recovery=sbdAddMissingAgencySnapshot(localProjects);if(recovery.recovered)status.textContent+='；另從 10/10 備份暫時補顯代安裝 '+recovery.recovered+' 筆（唯讀）';return {projects:recovery.projects,details:localDetails&&typeof localDetails==='object'?localDetails:{},hongfu:read('sbd_purchase_projects','[]')};
+  return {projects:Array.isArray(localProjects)?localProjects:[],details:localDetails&&typeof localDetails==='object'?localDetails:{},hongfu:read('sbd_purchase_projects','[]')};
  }
 }
 function source(tcData){
@@ -3480,7 +3474,20 @@ async function render(){
  const hfCosts={...hfLocal(),...(await hfCloud()||{})};
  const periods=[...new Set([...all.map(r=>r.period).filter(Boolean),...(Array.isArray(saved)?saved:[]),...all.map(r=>r.period).filter(Boolean),...Object.keys(hfCosts),localStorage.getItem('sbd_hongfu_last_period')].filter(Boolean))].sort();
  period.innerHTML='<option value="all">全部請款區間（含所有日期）</option>'+periods.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');
- period.value=periods.includes(op)?op:'all';
+ // v122: Never silently start with every invoice period combined.
+ // Preserve the user's chosen period during rerenders and across page reloads.
+ const remembered=localStorage.getItem('sbd_cr_selected_period_v122')||'';
+ const preferred=periods.includes('260826-260925')?'260826-260925':(periods[0]||'all');
+ const requested=periods.includes(op)?op:(periods.includes(remembered)||remembered==='all'?remembered:preferred);
+ period.value=requested;
+ const periodSummary=document.getElementById('crPeriodBreakdown');
+ if(periodSummary){
+  const tcAll=all.filter(r=>r.group==='草屯');
+  const buckets=new Map();
+  for(const r of tcAll){const k=r.period||'未指定請款區間';const a=buckets.get(k)||{count:0,sale:0};a.count++;a.sale+=r.sale;buckets.set(k,a)}
+  const parts=[...buckets.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([k,v])=>`${esc(k)}：${v.count} 件／${fmt(v.sale)} 元`);
+  periodSummary.textContent='草屯各請款區間（僅供核對，不更動資料）：'+(parts.join('　｜　')||'尚無案件')+'。目前報表：'+(period.value==='all'?'全部請款區間':period.value);
+ }
  const rows=all.filter(r=>(sel.value==='all'||r.month===sel.value)&&(period.value==='all'||r.period===period.value||(r.group==='浤富'&&!r.period&&period.value===localStorage.getItem('sbd_hongfu_last_period'))));
  let hongfuCost=null;
  try {
@@ -3521,7 +3528,7 @@ async function render(){
  document.getElementById('crSummary').innerHTML=`<h3 style="margin:0 0 16px;color:#173653">銷售／成本／件數統計</h3><div style="width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;background:#fff"><table style="width:10cm;min-width:10cm;table-layout:fixed;border-collapse:collapse;background:#fff"><colgroup><col style="width:2cm"><col style="width:3cm"><col style="width:3cm"><col style="width:2cm"></colgroup><thead><tr style="background:#f4f5f7;color:#354153"><th style="padding:14px 12px;text-align:center;font-weight:700;border-bottom:1px solid #cfd5dd;white-space:nowrap">業務類別</th><th style="padding:14px 12px;text-align:center;font-weight:700;border-bottom:1px solid #cfd5dd;white-space:nowrap">銷售額</th><th style="padding:14px 12px;text-align:center;font-weight:700;border-bottom:1px solid #cfd5dd;white-space:nowrap">成本</th><th style="padding:14px 12px;text-align:center;font-weight:700;border-bottom:1px solid #cfd5dd;white-space:nowrap">件數</th></tr></thead><tbody>${[...groups,total].map((g,i)=>{const isTotal=i===groups.length;return `<tr style="background:#fff"><th style="padding:15px 12px;text-align:left;color:#173653;font-size:16px;font-weight:${isTotal?'750':'400'};border-bottom:1px solid #e0e3e8;white-space:nowrap">${g.name}</th>${cell(g.name==='其他支出'?'－':fmt(g.sale),false,isTotal)}${cell(g.name==='代安裝'?'－':(g.known?fmt(g.cost):(g.cost?fmt(g.cost):'尚無成本資料')),g.name==='代安裝'?false:!g.known,isTotal)}${cell(g.name==='其他支出'?'－':String(g.count),false,isTotal)}</tr>`}).join('')}</tbody></table></div><p style="color:#718096;font-size:12px;margin:12px 0 0">其他支出依所選請款區間的日期計入成本，其他支出不屬於案件，件數顯示「－」且不列入總件數；成本未儲存的案件不會當作 0；浤富成本取已保存 PDF 最後一頁的「本期合計」，相同請款區間不重複加總；未指定並保存請款區間成本時顯示尚無成本資料。</p>`;
  document.getElementById('crRows').innerHTML='';
 }
-function bind(){const b=document.getElementById('costReportTabBtn');if(!b)return;b.classList.toggle('hidden',typeof isAdminAccount==='function'&&!isAdminAccount());b.onclick=()=>{if(typeof isAdminAccount==='function'&&!isAdminAccount())return;document.querySelectorAll('#appPage main > section,#calendarView').forEach(el=>el.classList.add('hidden'));document.getElementById('costReportView').classList.remove('hidden');document.getElementById('calendarControls')?.classList.add('hidden');document.querySelectorAll('.featureTabs button').forEach(x=>x.classList.remove('active'));b.classList.add('active');render()};document.getElementById('crMonth').onchange=render;document.getElementById('crPeriod').onchange=render;document.getElementById('crSaveVerifiedCost').onclick=hfSave;document.querySelectorAll('.featureTabs button').forEach(x=>{if(x!==b)x.addEventListener('click',()=>document.getElementById('costReportView')?.classList.add('hidden'))})}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();document.addEventListener('sbdOtherExpensesChanged',()=>{if(!document.getElementById('costReportView')?.classList.contains('hidden'))render()});})();</script><script id="source-cost-export-v47">
+function bind(){const b=document.getElementById('costReportTabBtn');if(!b)return;b.classList.toggle('hidden',typeof isAdminAccount==='function'&&!isAdminAccount());b.onclick=()=>{if(typeof isAdminAccount==='function'&&!isAdminAccount())return;document.querySelectorAll('#appPage main > section,#calendarView').forEach(el=>el.classList.add('hidden'));document.getElementById('costReportView').classList.remove('hidden');document.getElementById('calendarControls')?.classList.add('hidden');document.querySelectorAll('.featureTabs button').forEach(x=>x.classList.remove('active'));b.classList.add('active');render()};document.getElementById('crMonth').onchange=render;document.getElementById('crPeriod').onchange=()=>{localStorage.setItem('sbd_cr_selected_period_v122',document.getElementById('crPeriod').value);render()};document.getElementById('crSaveVerifiedCost').onclick=hfSave;document.querySelectorAll('.featureTabs button').forEach(x=>{if(x!==b)x.addEventListener('click',()=>document.getElementById('costReportView')?.classList.add('hidden'))})}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();document.addEventListener('sbdOtherExpensesChanged',()=>{if(!document.getElementById('costReportView')?.classList.contains('hidden'))render()});})();</script><script id="source-cost-export-v47">
 (function(){
 const $=id=>document.getElementById(id);
 const read=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))}catch(e){return d}};
