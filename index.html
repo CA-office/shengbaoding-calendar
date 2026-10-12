@@ -3451,15 +3451,36 @@ function sbdAgencyBackupAudit(current){
 
 // v135: For read-only users, attempt to read the administrator's saved source records.
 // This requires Supabase SELECT policies allowing the users to see those records.
+// v136: Identify the unique administrator with actual report source records.
+// Read-only discovery; never write or change existing data or access policies.
+let __costOwnerPromise=null;
 async function costReportSourceOwner(){
  const auth=await sb.auth.getUser();
  if(!auth.data?.user)throw Error('尚未登入');
  if(isAdminAccount())return auth.data.user.id;
- const {data,error}=await sb.from('sbd_users').select('user_id,role').eq('role','admin');
- if(error)throw Error('無法查詢管理員資料來源：'+error.message);
- const admins=(data||[]).filter(x=>x.user_id);
- if(admins.length!==1)throw Error('無法唯一確認管理員資料來源，請檢查資料權限');
- return admins[0].user_id;
+ if(__costOwnerPromise)return __costOwnerPromise;
+ __costOwnerPromise=(async()=>{
+  const {data:users,error:userError}=await sb.from('sbd_users').select('user_id,role').eq('role','admin');
+  if(userError)throw Error('查詢管理員名單失敗：'+userError.message);
+  const ids=[...new Set((users||[]).map(x=>x.user_id).filter(Boolean))];
+  if(!ids.length)throw Error('無法讀取管理員名單；請檢查 sbd_users 讀取權限');
+  const keys=['sbd_taichung_purchase_projects_v1','sbd_taichung_purchase_details_v1','sbd_purchase_projects'];
+  const {data:rows,error:sourceError}=await sb.from('sbd_app_data').select('user_id,data_key,payload').in('user_id',ids).in('data_key',keys);
+  if(sourceError)throw Error('管理員案件讀取失敗：'+sourceError.message);
+  const counts=new Map();
+  for(const r of rows||[]){
+   let v=r.payload?.value;
+   try{if(typeof v==='string')v=JSON.parse(v)}catch(e){continue}
+   const populated=Array.isArray(v)?v.length>0:(v&&typeof v==='object'&&Object.keys(v).length>0);
+   if(populated)counts.set(r.user_id,(counts.get(r.user_id)||0)+1);
+  }
+  const candidates=[...counts.keys()];
+  if(candidates.length!==1){
+   throw Error(candidates.length===0?'找不到可讀取的管理員案件資料；可能是 Supabase RLS 權限限制':'找到多位擁有案件資料的管理員，無法安全判定公司報表來源');
+  }
+  return candidates[0];
+ })();
+ try{return await __costOwnerPromise}catch(e){__costOwnerPromise=null;throw e}
 }
 async function cloudTc(){
  const status=document.getElementById('crCloudStatus');
