@@ -1541,6 +1541,22 @@ async function excelQuote(x){
       xf.setAttribute("fillId","0");xf.setAttribute("applyFill","0");cellXfs.appendChild(xf);cellXfs.setAttribute("count",String(cellXfs.getElementsByTagNameNS(NS,"xf").length));c.setAttribute("s",String(cellXfs.getElementsByTagNameNS(NS,"xf").length-1));zip.file(stylesPath,new XMLSerializer().serializeToString(stylesDoc));
     }
 
+    // Excel 開啟預設為「標準模式」，不要顯示分頁預覽的「第 1 頁」浮水印。
+    // 保留列印時的單頁縮放設定，僅變更工作表的開啟檢視模式。
+    {
+      let sheetViews=doc.getElementsByTagNameNS(NS,"sheetViews")[0];
+      if(!sheetViews){
+        sheetViews=doc.createElementNS(NS,"sheetViews");
+        const sheetFormat=doc.getElementsByTagNameNS(NS,"sheetFormatPr")[0];
+        const sheetDataNode=doc.getElementsByTagNameNS(NS,"sheetData")[0];
+        doc.documentElement.insertBefore(sheetViews,sheetFormat||sheetDataNode);
+      }
+      let view=sheetViews.getElementsByTagNameNS(NS,"sheetView")[0];
+      if(!view){view=doc.createElementNS(NS,"sheetView");view.setAttribute("workbookViewId","0");sheetViews.appendChild(view)}
+      view.setAttribute("view","normal");
+      view.removeAttribute("showPageBreaks");
+    }
+
     // Excel 列印預設：將工作表放入單一頁面（1 頁寬 × 1 頁高）
     let sheetPr=doc.getElementsByTagNameNS(NS,"sheetPr")[0];
     if(!sheetPr){sheetPr=doc.createElementNS(NS,"sheetPr");doc.documentElement.insertBefore(sheetPr,doc.documentElement.firstChild)}
