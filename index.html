@@ -839,6 +839,14 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
       </table>
     </div>
 
+    <div id="otSpecialLeaveSummary" style="margin-top:22px;border-top:1px solid #d7e0ea;padding-top:16px">
+      <h3 style="margin:0 0 8px">特休統計（獨立計算）</h3>
+      <p style="font-size:12px;color:#66788a;margin:0 0 10px">以 8 小時折算 1 天；僅統計已登錄的特休，不代表法定可用餘額。</p>
+      <div style="overflow-x:auto"><table class="quoteList" style="width:100%;min-width:350px">
+        <thead><tr><th>師傅</th><th>特休天數</th><th>特休小時數</th><th>筆數</th></tr></thead>
+        <tbody id="otSpecialLeaveRows"></tbody>
+      </table></div>
+    </div>
     <div id="otAdminStats" class="hidden" style="margin-top:22px">
       <hr style="border:0;border-top:1px solid #d7e0ea;margin:18px 0">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
@@ -864,6 +872,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
       <label id="otMasterField">師傅<select id="otMaster"><option value="">請選擇師傅</option><option value="洪聖凱">洪聖凱</option><option value="楊春龍">楊春龍</option><option value="陳建成">陳建成</option><option value="阿日">阿日</option></select></label>
       <label>類型<select id="otType"><option value="加班">加班</option><option value="事假">事假</option><option value="病假">病假</option><option value="特休">特休</option></select></label>
       <label id="otLeaveTimeField" class="hidden">請假時間<select id="otLeaveTime"><option value="08:00-17:30">08:00-17:30</option></select></label>
+      <label id="otSpecialHoursField" class="hidden">特休時數（小時）<input id="otSpecialHours" type="number" min="0.5" max="24" step="0.5" value="8" inputmode="decimal"><small style="display:block;font-size:11px;color:#66788a">8 小時＝1 天；半天請輸入 4</small></label>
       <label id="otStartField">上班<input id="otStart" type="time" style="width:4cm;max-width:4cm"></label>
       <label id="otEndField">下班<input id="otEnd" type="time" style="width:4cm;max-width:4cm"></label>
     </div>
@@ -2853,6 +2862,26 @@ initInstallerPicker();updateMasterBillingRange();renderStatsEditingPreviewRow();
   const allowed=()=>typeof canUseOvertime==="function" && canUseOvertime();
   function get(){try{return JSON.parse(localStorage.getItem(KEY)||"[]")}catch(e){return []}}
   function put(a){localStorage.setItem(KEY,JSON.stringify(a))}
+  // 限制非管理員僅可查看／修改自己姓名的紀錄（包括特休）。
+  function ownMaster(){return typeof overtimeMasterByAccount==="function" ? overtimeMasterByAccount() : "";}
+  function scoped(a){return isOtAdmin()?a:a.filter(x=>!!ownMaster() && String(x.master||"")===ownMaster());}
+  function leaveHours(x){
+    const n=Number(x.specialHours);
+    return Number.isFinite(n)&&n>0?n:8; // 舊有特休紀錄預設全天
+  }
+  function renderSpecialLeave(){
+    const tb=$o("otSpecialLeaveRows");if(!tb)return;
+    const map=new Map();
+    scoped(get()).filter(x=>x.type==="特休").forEach(x=>{
+      const name=String(x.master||"未填姓名");
+      const item=map.get(name)||{name,hours:0,count:0};
+      item.hours+=leaveHours(x);item.count++;map.set(name,item);
+    });
+    const rows=[...map.values()].sort((a,b)=>a.name.localeCompare(b.name,"zh-Hant"));
+    const fmt=n=>Number(n.toFixed(2)).toLocaleString("zh-TW");
+    tb.innerHTML=rows.length?rows.map(r=>`<tr><td>${esc(r.name)}</td><td>${fmt(r.hours/8)}</td><td>${fmt(r.hours)}</td><td>${r.count}</td></tr>`).join(""):'<tr><td colspan="4" style="text-align:center;color:#718096;padding:16px">目前沒有特休紀錄</td></tr>';
+  }
+
   function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
   function isOtAdmin(){ return typeof isAdminAccount==="function" && isAdminAccount(); }
   function hoursBetween(a,b){
@@ -2880,7 +2909,7 @@ initInstallerPicker();updateMasterBillingRange();renderStatsEditingPreviewRow();
   }
   function render(){
     const tb=$o("otRows"); if(!tb)return;
-    const selectedMaster=$o("otMasterFilter")?.value||""; const a=get().filter(x=>!selectedMaster||String(x.master||"")===selectedMaster).sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")) || String(b.start||"").localeCompare(String(a.start||"")));
+    const selectedMaster=$o("otMasterFilter")?.value||""; const a=scoped(get()).filter(x=>!selectedMaster||String(x.master||"")===selectedMaster).sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")) || String(b.start||"").localeCompare(String(a.start||"")));
     tb.innerHTML=a.length?a.map(x=>{const type=x.type||"加班";const tm=type==="加班"?`${esc(x.start)}–${esc(x.end)}`:esc(x.leaveTime||"08:00-17:30");return `<tr>
       <td><button type="button" onclick="otEdit('${x.id}')">修改</button> <button type="button" class="danger" onclick="otRemove('${x.id}')">刪除</button></td>
       <td>${esc(x.date)}</td><td>${esc(x.master)}</td><td>${esc(type)}</td><td>${tm}</td>
@@ -2890,6 +2919,7 @@ initInstallerPicker();updateMasterBillingRange();renderStatsEditingPreviewRow();
   function syncTypeFields(){
     const isLeave=($o("otType")?.value||"加班")!=="加班";
     $o("otLeaveTimeField")?.classList.toggle("hidden",!isLeave);
+    $o("otSpecialHoursField")?.classList.toggle("hidden",($o("otType")?.value!=="特休"));
     $o("otStartField")?.classList.toggle("hidden",isLeave);
     $o("otEndField")?.classList.toggle("hidden",isLeave);
   }
@@ -2906,33 +2936,35 @@ initInstallerPicker();updateMasterBillingRange();renderStatsEditingPreviewRow();
     const fixedMaster=(typeof overtimeMasterByAccount==="function"?overtimeMasterByAccount():"");
     $o("otMaster").value=fixedMaster || ((typeof profile!=="undefined" && profile?.display_name)||"");
     $o("otMaster").disabled=!!fixedMaster;
-    $o("otType").value="加班";$o("otLeaveTime").value="08:00-17:30";$o("otStart").value="";$o("otEnd").value="";syncTypeFields();applyFixedMasterUi();
+    $o("otType").value="加班";$o("otSpecialHours").value="8";$o("otLeaveTime").value="08:00-17:30";$o("otStart").value="";$o("otEnd").value="";syncTypeFields();applyFixedMasterUi();
     $o("otDeleteBtn").classList.add("hidden");$o("otDlg").showModal();
   }
   window.otEdit=function(id){
-    if(!allowed())return; const x=get().find(v=>String(v.id)===String(id));if(!x)return;
+    if(!allowed())return; const x=scoped(get()).find(v=>String(v.id)===String(id));if(!x)return;
     editId=id;$o("otDlgTitle").textContent="修改加班／請假";
     $o("otDate").value=x.date||"";
     const fixedMaster=(typeof overtimeMasterByAccount==="function"?overtimeMasterByAccount():"");
     $o("otMaster").value=fixedMaster || (x.master||"");
     $o("otMaster").disabled=!!fixedMaster;
-    $o("otType").value=x.type||"加班";$o("otLeaveTime").value=x.leaveTime||"08:00-17:30";$o("otStart").value=x.start||"";$o("otEnd").value=x.end||"";syncTypeFields();applyFixedMasterUi();
+    $o("otType").value=x.type||"加班";$o("otSpecialHours").value=x.type==="特休"?leaveHours(x):8;$o("otLeaveTime").value=x.leaveTime||"08:00-17:30";$o("otStart").value=x.start||"";$o("otEnd").value=x.end||"";syncTypeFields();applyFixedMasterUi();
     $o("otDeleteBtn").classList.remove("hidden");$o("otDlg").showModal();
   };
   window.otRemove=function(id){
     if(!allowed()||!confirm("確定刪除這筆加班／請假紀錄？"))return;
+    if(!scoped(get()).some(x=>String(x.id)===String(id)))return;
     put(get().filter(x=>String(x.id)!==String(id)));render();
   };
   function save(){
     if(!allowed())return;
     const fixedMaster=(typeof overtimeMasterByAccount==="function"?overtimeMasterByAccount():"");
     const type=$o("otType").value||"加班";
-    const rec={date:$o("otDate").value,master:fixedMaster || $o("otMaster").value.trim(),type,start:type==="加班"?$o("otStart").value:"",end:type==="加班"?$o("otEnd").value:"",leaveTime:type!=="加班"?($o("otLeaveTime").value||"08:00-17:30"):""};
+    const rec={date:$o("otDate").value,master:fixedMaster || $o("otMaster").value.trim(),type,start:type==="加班"?$o("otStart").value:"",end:type==="加班"?$o("otEnd").value:"",leaveTime:type!=="加班"?($o("otLeaveTime").value||"08:00-17:30"):"",specialHours:type==="特休"?Number($o("otSpecialHours").value):null};
+    if(type==="特休"&&(!Number.isFinite(rec.specialHours)||rec.specialHours<0.5||rec.specialHours>24||Math.round(rec.specialHours*2)!==rec.specialHours*2)){alert("特休請輸入 0.5～24 小時，以半小時為單位");return}
     if(!rec.date){alert("請選擇日期");return}
     if(!rec.master){alert("請選擇師傅");return}
     if(type==="加班"&&(!rec.start||!rec.end)){alert("請輸入上班、下班時間");return}
     const a=get();
-    if(editId){const i=a.findIndex(x=>String(x.id)===String(editId));if(i>=0)a[i]={...a[i],...rec}}
+    if(editId){const i=a.findIndex(x=>String(x.id)===String(editId));if(i>=0 && (isOtAdmin()||String(a[i].master||"")===ownMaster()))a[i]={...a[i],...rec}}
     else a.push({id:String(Date.now()),...rec});
     put(a);$o("otDlg").close();render();
   }
@@ -3450,18 +3482,12 @@ function sbdAgencyBackupAudit(current){
 
 // v137: Restricted report RPC. The server checks an explicit viewer allowlist,
 // returns only report source keys, and never grants direct cross-account table access.
-let __costReportRpcPromise=null;
+// v142: Always fetch a fresh, explicitly authorized RPC snapshot on each report render.
 async function costReportRows(){
- if(isAdminAccount())return null;
- if(!__costReportRpcPromise){
-  __costReportRpcPromise=(async()=>{
-   const {data,error}=await sb.rpc('sbd_read_cost_report_sources');
-   if(error)throw Error('唯讀報表服務未設定或無權限：'+error.message);
-   if(!Array.isArray(data))throw Error('唯讀報表資料格式錯誤');
-   return data;
-  })();
- }
- try{return await __costReportRpcPromise}catch(e){__costReportRpcPromise=null;throw e}
+ const {data,error}=await sb.rpc('sbd_read_cost_report_sources');
+ if(error)throw Error('唯讀報表服務讀取失敗：'+error.message);
+ if(!Array.isArray(data))throw Error('唯讀報表資料格式錯誤');
+ return data;
 }
 async function costReportSourceOwner(){
  const auth=await sb.auth.getUser();
@@ -3482,8 +3508,8 @@ async function costReportKeyValue(key){
 }
 async function cloudTc(){
  const status=document.getElementById('crCloudStatus');
- const localProjects=isAdminAccount()?read('sbd_taichung_purchase_projects_v1','[]'):[];
- const localDetails=isAdminAccount()?read('sbd_taichung_purchase_details_v1','{}'):{};
+ const localProjects=read('sbd_taichung_purchase_projects_v1','[]');
+ const localDetails=read('sbd_taichung_purchase_details_v1','{}');
  try{
   const {data:auth,error:authError}=await sb.auth.getUser();
   if(authError||!auth?.user)throw Error('尚未登入雲端帳號');
@@ -3497,17 +3523,29 @@ async function cloudTc(){
   if(cp!==null&&!Array.isArray(cp))throw Error('雲端草屯案件格式不符');
   if(hp!==null&&!Array.isArray(hp))throw Error('雲端浤富案件格式不符');
   if(cd!==null&&(!cd||typeof cd!=='object'||Array.isArray(cd)))throw Error('雲端草屯明細格式不符');
-  // Cloud record wins only in this temporary display. Do not write or delete local or cloud data.
+  // Viewer accounts must NEVER merge their own browser storage into company reports.
+  // Missing cloud keys are reported visibly rather than silently shown as 0 sales.
+  if(!isAdminAccount()){
+   const missing=['sbd_taichung_purchase_projects_v1','sbd_taichung_purchase_details_v1','sbd_purchase_projects'].filter(k=>!(data||[]).some(x=>x.data_key===k));
+   if(missing.length){
+    status.textContent='雲端報表來源不完整：缺少 '+missing.join('、')+'。請勿將目前金額視為公司總額。';
+   }else{
+    status.textContent='管理員雲端資料：草屯／代安裝 '+cp.length+' 筆，浤富 '+hp.length+' 筆；手機僅讀雲端，不混入本機資料。';
+   }
+   return {projects:cp||[],details:cd||{},hongfu:hp||[]};
+  }
+  // Administrator: preserve existing temporary local/cloud display behavior.
   const merged=new Map();
   for(const x of Array.isArray(localProjects)?localProjects:[])if(x?.key)merged.set(String(x.key),x);
   for(const x of cp||[])if(x?.key)merged.set(String(x.key),x);
   const details={...(localDetails&&typeof localDetails==='object'?localDetails:{}),...(cd||{})};
-  status.textContent='雲端資料已讀取；本機 '+(Array.isArray(localProjects)?localProjects.length:0)+' 筆、雲端 '+(cp?.length||0)+' 筆；報表暫時合併顯示，不覆蓋原始資料';
-  const hm=new Map();for(const x of (isAdminAccount()?read('sbd_purchase_projects','[]'):[]))if(x?.key)hm.set(String(x.key),x);for(const x of hp||[])if(x?.key)hm.set(String(x.key),x);
+  status.textContent='管理員暫時合併顯示：本機 '+(Array.isArray(localProjects)?localProjects.length:0)+' 筆、雲端 '+(cp?.length||0)+' 筆；不覆蓋原始資料';
+  const hm=new Map();for(const x of read('sbd_purchase_projects','[]'))if(x?.key)hm.set(String(x.key),x);for(const x of hp||[])if(x?.key)hm.set(String(x.key),x);
   return {projects:[...merged.values()],details,hongfu:[...hm.values()]};
  }catch(e){
-  status.textContent='無法同步管理員銷售資料（'+(e.message||e)+'）；目前數字不是完整公司報表，請檢查 Supabase 讀取權限';
-  return {projects:Array.isArray(localProjects)?localProjects:[],details:localDetails&&typeof localDetails==='object'?localDetails:{},hongfu:isAdminAccount()?read('sbd_purchase_projects','[]'):[]};
+  status.textContent='無法讀取管理員雲端資料（'+(e.message||e)+'）；目前不是完整公司報表。';
+  if(!isAdminAccount())return {projects:[],details:{},hongfu:[]};
+  return {projects:Array.isArray(localProjects)?localProjects:[],details:localDetails&&typeof localDetails==='object'?localDetails:{},hongfu:read('sbd_purchase_projects','[]')};
  }
 }
 function source(tcData){
@@ -3518,8 +3556,6 @@ function source(tcData){
  return result.map(r=>{const m=r.no.match(/^(?:G5DD|G5DE)(\d{2})(\d{2})/i);return {...r,month:m?`20${m[1]}-${m[2]}`:'未分類'}})
 }
 async function render(){
- // v140: each report opening/refresh obtains a fresh restricted cloud snapshot.
- __costReportRpcPromise=null;
  const sourceRows=source(await cloudTc());
  // Display-only deduplication: same group, order number, case name, amount and claim period.
  // Never merge merely by order number: legitimate cases may reuse one number.
@@ -3537,8 +3573,7 @@ async function render(){
  const months=[...new Set([...all.map(r=>r.month),...expenseMonths])].sort();
  sel.innerHTML='<option value="all">全部月份</option>'+months.map(m=>`<option value="${esc(m)}">${esc(m)} 月</option>`).join('');
  sel.value=months.includes(old)?old:'all';
- let saved=read('sbd_tc_invoice_periods_v1','[]');
- if(!isAdminAccount()){try{const v=await costReportKeyValue('sbd_tc_invoice_periods_v1');if(v)saved=JSON.parse(v)}catch(e){console.warn('雲端請款區間讀取失敗',e)}}
+ const saved=read('sbd_tc_invoice_periods_v1','[]');
  const hfCosts={...hfLocal(),...(await hfCloud()||{})};
  const periods=[...new Set([...all.map(r=>r.period).filter(Boolean),...(Array.isArray(saved)?saved:[]),...all.map(r=>r.period).filter(Boolean),...Object.keys(hfCosts),localStorage.getItem('sbd_hongfu_last_period')].filter(Boolean))].sort();
  period.innerHTML='<option value="all">全部請款區間（含所有日期）</option>'+periods.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');
@@ -3935,71 +3970,6 @@ function init(){
  };
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
-})();
-</script>
-<script id="sbd-v140-admin-append-only-reconcile">
-(function(){
-'use strict';
-const KEYS=['sbd_purchase_projects','sbd_taichung_purchase_projects_v1'];
-function ready(){
- const panel=document.getElementById('sbdSyncDrawerPanel');if(!panel)return;
- const block=document.createElement('div');block.style.cssText='border-top:1px solid #dbe3ea;margin-top:10px;padding-top:10px';
- const title=document.createElement('strong');title.textContent='v140｜比對並補齊本機缺少的雲端案件';
- const desc=document.createElement('p');desc.style.cssText='font-size:11px;margin:6px 0';desc.textContent='限管理員在有完整案件的電腦使用。先備份雲端及本機；僅新增雲端不存在的案件，同編號內容不同則停止。';
- const btn=document.createElement('button');btn.type='button';btn.textContent='備份、比對、補齊案件';
- const msg=document.createElement('div');msg.style.cssText='font-size:12px;margin-top:6px;white-space:pre-wrap';msg.setAttribute('role','status');
- block.append(title,desc,btn,msg);panel.appendChild(block);
- const download=(obj,name)=>{const url=URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000)};
- const parse=(raw,key)=>{let v=raw;if(typeof v==='string')v=JSON.parse(v);if(v==null)v=[];if(!Array.isArray(v))throw Error(key+' 格式不正確');return v};
- const identity=x=>String(x?.key??'').trim();
- const validate=(rows,key)=>{const m=new Map();for(const x of rows){const id=identity(x);if(!id||m.has(id))throw Error(key+' 有空白或重複案件識別碼，停止操作');m.set(id,x)}return m};
- btn.addEventListener('click',async()=>{
-  if(btn.disabled)return;btn.disabled=true;
-  try{
-   if(typeof isAdminAccount!=='function'||!isAdminAccount())throw Error('僅管理員可執行');
-   const {data:auth,error:ae}=await sb.auth.getUser();if(ae||!auth?.user)throw Error('請先登入管理員');
-   const user_id=auth.user.id;
-   const {data,error}=await sb.from('sbd_app_data').select('data_key,payload').eq('user_id',user_id).in('data_key',KEYS);
-   if(error)throw error;
-   const cloud=new Map((data||[]).map(x=>[x.data_key,x.payload]));
-   const plans=[],localBackup={},cloudBackup={};
-   for(const key of KEYS){
-    const localRaw=localStorage.getItem(key),remotePayload=cloud.get(key);
-    localBackup[key]=localRaw;cloudBackup[key]=remotePayload??null;
-    const local=parse(localRaw,key),remote=parse(remotePayload?.value,key);
-    const lm=validate(local,key),rm=validate(remote,key),add=[];
-    for(const [id,x] of lm){if(!rm.has(id))add.push(x);else if(JSON.stringify(rm.get(id))!==JSON.stringify(x)){
-     // Differences are common after editing. Do not overwrite either copy.
-     // Only stop when both sides have an identical ID but different contents.
-     throw Error(key+'：案件 '+id+' 的本機與雲端內容不同。為避免覆蓋，已停止。');
-    }}
-    plans.push({key,add,remote,remotePayload,remoteExists:cloud.has(key)});
-   }
-   const stamp=new Date().toISOString().replace(/[:.]/g,'-');
-   download({createdAt:new Date().toISOString(),user_id,local:localBackup,cloud:cloudBackup},'勝寶鼎_同步前雙端備份_'+stamp+'.json');
-   const count=plans.reduce((n,p)=>n+p.add.length,0);
-   msg.textContent='比對完成：浤富 '+plans[0].add.length+' 筆、草屯／代安裝 '+plans[1].add.length+' 筆雲端缺少；已下載雙端備份。';
-   if(!count)return;
-   if(!confirm('已下載備份。確定只補入雲端缺少的 '+count+' 筆案件？\n不會刪除或修改雲端已有案件。'))return;
-   let added=0;
-   for(const p of plans){if(!p.add.length)continue;
-    const merged=[...p.remote,...p.add],payload={value:JSON.stringify(merged)};
-    let result;
-    if(p.remoteExists){
-     // Optimistic compare-and-swap: reject if cloud has changed since read.
-     result=await sb.from('sbd_app_data').update({payload,updated_at:new Date().toISOString()}).eq('user_id',user_id).eq('data_key',p.key).eq('payload',p.remotePayload).select('data_key');
-     if(!result.error&&(!result.data||result.data.length!==1))throw Error(p.key+' 雲端資料同時被更新，已停止；請重新比對');
-    }else{
-     result=await sb.from('sbd_app_data').insert({user_id,data_key:p.key,payload,updated_at:new Date().toISOString()}).select('data_key');
-    }
-    if(result.error)throw result.error;
-    added+=p.add.length;
-   }
-   msg.textContent='已安全補入 '+added+' 筆。請在手機重新開啟成本銷售報表核對；若仍不同，請勿重複補入。';
-  }catch(e){msg.textContent='未補齊：'+(e?.message||e)+'。原有資料不會因這次操作被清除。'}finally{btn.disabled=false}
- });
-}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ready);else ready();
 })();
 </script>
 </body>
