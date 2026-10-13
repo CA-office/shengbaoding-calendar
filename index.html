@@ -3482,8 +3482,8 @@ async function costReportKeyValue(key){
 }
 async function cloudTc(){
  const status=document.getElementById('crCloudStatus');
- const localProjects=read('sbd_taichung_purchase_projects_v1','[]');
- const localDetails=read('sbd_taichung_purchase_details_v1','{}');
+ const localProjects=isAdminAccount()?read('sbd_taichung_purchase_projects_v1','[]'):[];
+ const localDetails=isAdminAccount()?read('sbd_taichung_purchase_details_v1','{}'):{};
  try{
   const {data:auth,error:authError}=await sb.auth.getUser();
   if(authError||!auth?.user)throw Error('尚未登入雲端帳號');
@@ -3503,11 +3503,11 @@ async function cloudTc(){
   for(const x of cp||[])if(x?.key)merged.set(String(x.key),x);
   const details={...(localDetails&&typeof localDetails==='object'?localDetails:{}),...(cd||{})};
   status.textContent='雲端資料已讀取；本機 '+(Array.isArray(localProjects)?localProjects.length:0)+' 筆、雲端 '+(cp?.length||0)+' 筆；報表暫時合併顯示，不覆蓋原始資料';
-  const hm=new Map();for(const x of read('sbd_purchase_projects','[]'))if(x?.key)hm.set(String(x.key),x);for(const x of hp||[])if(x?.key)hm.set(String(x.key),x);
+  const hm=new Map();for(const x of (isAdminAccount()?read('sbd_purchase_projects','[]'):[]))if(x?.key)hm.set(String(x.key),x);for(const x of hp||[])if(x?.key)hm.set(String(x.key),x);
   return {projects:[...merged.values()],details,hongfu:[...hm.values()]};
  }catch(e){
   status.textContent='無法同步管理員銷售資料（'+(e.message||e)+'）；目前數字不是完整公司報表，請檢查 Supabase 讀取權限';
-  return {projects:Array.isArray(localProjects)?localProjects:[],details:localDetails&&typeof localDetails==='object'?localDetails:{},hongfu:read('sbd_purchase_projects','[]')};
+  return {projects:Array.isArray(localProjects)?localProjects:[],details:localDetails&&typeof localDetails==='object'?localDetails:{},hongfu:isAdminAccount()?read('sbd_purchase_projects','[]'):[]};
  }
 }
 function source(tcData){
@@ -3518,6 +3518,8 @@ function source(tcData){
  return result.map(r=>{const m=r.no.match(/^(?:G5DD|G5DE)(\d{2})(\d{2})/i);return {...r,month:m?`20${m[1]}-${m[2]}`:'未分類'}})
 }
 async function render(){
+ // v140: each report opening/refresh obtains a fresh restricted cloud snapshot.
+ __costReportRpcPromise=null;
  const sourceRows=source(await cloudTc());
  // Display-only deduplication: same group, order number, case name, amount and claim period.
  // Never merge merely by order number: legitimate cases may reuse one number.
@@ -3535,7 +3537,8 @@ async function render(){
  const months=[...new Set([...all.map(r=>r.month),...expenseMonths])].sort();
  sel.innerHTML='<option value="all">全部月份</option>'+months.map(m=>`<option value="${esc(m)}">${esc(m)} 月</option>`).join('');
  sel.value=months.includes(old)?old:'all';
- const saved=read('sbd_tc_invoice_periods_v1','[]');
+ let saved=read('sbd_tc_invoice_periods_v1','[]');
+ if(!isAdminAccount()){try{const v=await costReportKeyValue('sbd_tc_invoice_periods_v1');if(v)saved=JSON.parse(v)}catch(e){console.warn('雲端請款區間讀取失敗',e)}}
  const hfCosts={...hfLocal(),...(await hfCloud()||{})};
  const periods=[...new Set([...all.map(r=>r.period).filter(Boolean),...(Array.isArray(saved)?saved:[]),...all.map(r=>r.period).filter(Boolean),...Object.keys(hfCosts),localStorage.getItem('sbd_hongfu_last_period')].filter(Boolean))].sort();
  period.innerHTML='<option value="all">全部請款區間（含所有日期）</option>'+periods.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');
@@ -3932,6 +3935,71 @@ function init(){
  };
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
+</script>
+<script id="sbd-v140-admin-append-only-reconcile">
+(function(){
+'use strict';
+const KEYS=['sbd_purchase_projects','sbd_taichung_purchase_projects_v1'];
+function ready(){
+ const panel=document.getElementById('sbdSyncDrawerPanel');if(!panel)return;
+ const block=document.createElement('div');block.style.cssText='border-top:1px solid #dbe3ea;margin-top:10px;padding-top:10px';
+ const title=document.createElement('strong');title.textContent='v140｜比對並補齊本機缺少的雲端案件';
+ const desc=document.createElement('p');desc.style.cssText='font-size:11px;margin:6px 0';desc.textContent='限管理員在有完整案件的電腦使用。先備份雲端及本機；僅新增雲端不存在的案件，同編號內容不同則停止。';
+ const btn=document.createElement('button');btn.type='button';btn.textContent='備份、比對、補齊案件';
+ const msg=document.createElement('div');msg.style.cssText='font-size:12px;margin-top:6px;white-space:pre-wrap';msg.setAttribute('role','status');
+ block.append(title,desc,btn,msg);panel.appendChild(block);
+ const download=(obj,name)=>{const url=URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000)};
+ const parse=(raw,key)=>{let v=raw;if(typeof v==='string')v=JSON.parse(v);if(v==null)v=[];if(!Array.isArray(v))throw Error(key+' 格式不正確');return v};
+ const identity=x=>String(x?.key??'').trim();
+ const validate=(rows,key)=>{const m=new Map();for(const x of rows){const id=identity(x);if(!id||m.has(id))throw Error(key+' 有空白或重複案件識別碼，停止操作');m.set(id,x)}return m};
+ btn.addEventListener('click',async()=>{
+  if(btn.disabled)return;btn.disabled=true;
+  try{
+   if(typeof isAdminAccount!=='function'||!isAdminAccount())throw Error('僅管理員可執行');
+   const {data:auth,error:ae}=await sb.auth.getUser();if(ae||!auth?.user)throw Error('請先登入管理員');
+   const user_id=auth.user.id;
+   const {data,error}=await sb.from('sbd_app_data').select('data_key,payload').eq('user_id',user_id).in('data_key',KEYS);
+   if(error)throw error;
+   const cloud=new Map((data||[]).map(x=>[x.data_key,x.payload]));
+   const plans=[],localBackup={},cloudBackup={};
+   for(const key of KEYS){
+    const localRaw=localStorage.getItem(key),remotePayload=cloud.get(key);
+    localBackup[key]=localRaw;cloudBackup[key]=remotePayload??null;
+    const local=parse(localRaw,key),remote=parse(remotePayload?.value,key);
+    const lm=validate(local,key),rm=validate(remote,key),add=[];
+    for(const [id,x] of lm){if(!rm.has(id))add.push(x);else if(JSON.stringify(rm.get(id))!==JSON.stringify(x)){
+     // Differences are common after editing. Do not overwrite either copy.
+     // Only stop when both sides have an identical ID but different contents.
+     throw Error(key+'：案件 '+id+' 的本機與雲端內容不同。為避免覆蓋，已停止。');
+    }}
+    plans.push({key,add,remote,remotePayload,remoteExists:cloud.has(key)});
+   }
+   const stamp=new Date().toISOString().replace(/[:.]/g,'-');
+   download({createdAt:new Date().toISOString(),user_id,local:localBackup,cloud:cloudBackup},'勝寶鼎_同步前雙端備份_'+stamp+'.json');
+   const count=plans.reduce((n,p)=>n+p.add.length,0);
+   msg.textContent='比對完成：浤富 '+plans[0].add.length+' 筆、草屯／代安裝 '+plans[1].add.length+' 筆雲端缺少；已下載雙端備份。';
+   if(!count)return;
+   if(!confirm('已下載備份。確定只補入雲端缺少的 '+count+' 筆案件？\n不會刪除或修改雲端已有案件。'))return;
+   let added=0;
+   for(const p of plans){if(!p.add.length)continue;
+    const merged=[...p.remote,...p.add],payload={value:JSON.stringify(merged)};
+    let result;
+    if(p.remoteExists){
+     // Optimistic compare-and-swap: reject if cloud has changed since read.
+     result=await sb.from('sbd_app_data').update({payload,updated_at:new Date().toISOString()}).eq('user_id',user_id).eq('data_key',p.key).eq('payload',p.remotePayload).select('data_key');
+     if(!result.error&&(!result.data||result.data.length!==1))throw Error(p.key+' 雲端資料同時被更新，已停止；請重新比對');
+    }else{
+     result=await sb.from('sbd_app_data').insert({user_id,data_key:p.key,payload,updated_at:new Date().toISOString()}).select('data_key');
+    }
+    if(result.error)throw result.error;
+    added+=p.add.length;
+   }
+   msg.textContent='已安全補入 '+added+' 筆。請在手機重新開啟成本銷售報表核對；若仍不同，請勿重複補入。';
+  }catch(e){msg.textContent='未補齊：'+(e?.message||e)+'。原有資料不會因這次操作被清除。'}finally{btn.disabled=false}
+ });
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ready);else ready();
 })();
 </script>
 </body>
