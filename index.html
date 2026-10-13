@@ -3573,9 +3573,19 @@ async function render(){
  const months=[...new Set([...all.map(r=>r.month),...expenseMonths])].sort();
  sel.innerHTML='<option value="all">全部月份</option>'+months.map(m=>`<option value="${esc(m)}">${esc(m)} 月</option>`).join('');
  sel.value=months.includes(old)?old:'all';
+ // 浤富案件沒有逐筆請款區間；使用者須依管理員雲端設定判定，不可讀手機本機設定。
+ let companyHongfuPeriod='';
+ try{
+  const raw=await costReportKeyValue('sbd_hongfu_last_period');
+  if(raw!=null){
+   let parsed=raw;
+   if(typeof parsed==='string'){try{parsed=JSON.parse(parsed)}catch(e){}}
+   companyHongfuPeriod=String(parsed||'').trim();
+  }
+ }catch(e){console.warn('浤富雲端請款區間讀取失敗',e)}
  const saved=read('sbd_tc_invoice_periods_v1','[]');
  const hfCosts={...hfLocal(),...(await hfCloud()||{})};
- const periods=[...new Set([...all.map(r=>r.period).filter(Boolean),...(Array.isArray(saved)?saved:[]),...all.map(r=>r.period).filter(Boolean),...Object.keys(hfCosts),localStorage.getItem('sbd_hongfu_last_period')].filter(Boolean))].sort();
+ const periods=[...new Set([...all.map(r=>r.period).filter(Boolean),...(Array.isArray(saved)?saved:[]),...all.map(r=>r.period).filter(Boolean),...Object.keys(hfCosts),(companyHongfuPeriod||(!isAdminAccount()?'':localStorage.getItem('sbd_hongfu_last_period')))].filter(Boolean))].sort();
  period.innerHTML='<option value="all">全部請款區間（含所有日期）</option>'+periods.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');
  // v122: Never silently start with every invoice period combined.
  // Preserve the user's chosen period during rerenders and across page reloads.
@@ -3591,7 +3601,7 @@ async function render(){
   const parts=[...buckets.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([k,v])=>`${esc(k)}：${v.count} 件／${fmt(v.sale)} 元`);
   periodSummary.textContent='草屯各請款區間（僅供核對，不更動資料）：'+(parts.join('　｜　')||'尚無案件')+'。目前報表：'+(period.value==='all'?'全部請款區間':period.value);
  }
- const rows=all.filter(r=>(sel.value==='all'||r.month===sel.value)&&(period.value==='all'||r.period===period.value||(r.group==='浤富'&&!r.period&&period.value===localStorage.getItem('sbd_hongfu_last_period'))));
+ const rows=all.filter(r=>(sel.value==='all'||r.month===sel.value)&&(period.value==='all'||r.period===period.value||(r.group==='浤富'&&!r.period&&period.value===(companyHongfuPeriod||(!isAdminAccount()?'':localStorage.getItem('sbd_hongfu_last_period'))))));
  let hongfuCost=null;
  try {
   const request=indexedDB.open('sbd_hongfu_pdf_archive_v1',1);
