@@ -1404,77 +1404,6 @@ table{width:100%;border-collapse:collapse;border:1.4px solid #111;table-layout:f
 
 
 
-<script id="sbd-v139-admin-safe-merge">
-(function(){
- 'use strict';
- const KEYS=['sbd_purchase_projects','sbd_taichung_purchase_projects_v1'];
- function show(msg){const e=document.getElementById('sbdMergeStatus139');if(e)e.textContent=msg;}
- function download(name, data){
-  const b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');
-  a.href=URL.createObjectURL(b);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),3000);
- }
- function decode(v){if(v==null)return [];const a=typeof v==='string'?JSON.parse(v):v;if(!Array.isArray(a))throw Error('案件資料格式不是陣列');return a;}
- function mapKeys(rows,label){const m=new Map();for(const x of rows){if(!x||x.key==null||String(x.key)==='')throw Error(label+'存在沒有唯一識別碼的案件，為安全起見停止');const k=String(x.key);if(m.has(k))throw Error(label+'存在重複識別碼 '+k+'，為安全起見停止');m.set(k,x)}return m;}
- async function run(){
-  const btn=document.getElementById('sbdMergeBtn139');btn.disabled=true;
-  try{
-   if(typeof isAdminAccount!=='function'||!isAdminAccount())throw Error('僅管理員可使用');
-   const {data:auth,error:authError}=await sb.auth.getUser();if(authError||!auth?.user)throw Error('管理員尚未登入');
-   const uid=auth.user.id;
-   const {data,error}=await sb.from('sbd_app_data').select('data_key,payload,updated_at').eq('user_id',uid).in('data_key',KEYS);
-   if(error)throw error;
-   const plans=[],backup={createdAt:new Date().toISOString(),user_id:uid,cloud:{},local:{}};
-   for(const key of KEYS){
-    const row=(data||[]).find(r=>r.data_key===key)||null;
-    const raw=localStorage.getItem(key);
-    const local=decode(raw),remote=decode(row?.payload?.value);
-    backup.local[key]=raw;backup.cloud[key]=row||null;
-    const lm=mapKeys(local,'本機 '+key),cm=mapKeys(remote,'雲端 '+key);
-    const additions=[...lm].filter(([k])=>!cm.has(k)).map(([,x])=>x);
-    const disagreements=[...lm].filter(([k,v])=>cm.has(k)&&JSON.stringify(cm.get(k))!==JSON.stringify(v)).length;
-    plans.push({key,row,remote,additions,disagreements});
-   }
-   download('勝寶鼎_案件同步前雙方備份_'+new Date().toISOString().slice(0,10)+'.json',backup);
-   const total=plans.reduce((n,p)=>n+p.additions.length,0),conflicts=plans.reduce((n,p)=>n+p.disagreements,0);
-   show('已下載本機及雲端備份；雲端缺少 '+total+' 筆，已有同編號但內容不同 '+conflicts+' 筆。');
-   if(conflicts)throw Error('發現同一案件內容不同，已停止自動補齊；請保留備份，避免覆蓋修改');
-   if(!total){show('已下載雙方備份；依案件識別碼比對，雲端沒有缺少的本機案件。若報表仍不同，需查報表區間及來源。');return;}
-   if(!confirm('已下載備份。確認將本機 '+total+' 筆雲端缺少的案件補入雲端？不會刪除既有案件。'))return;
-   let uploaded=0;
-   for(const plan of plans){
-    if(!plan.additions.length)continue;
-    const {data:latest,error:e}=await sb.from('sbd_app_data').select('payload,updated_at').eq('user_id',uid).eq('data_key',plan.key).maybeSingle();
-    if(e)throw e;
-    if(JSON.stringify(latest?.payload??null)!==JSON.stringify(plan.row?.payload??null)||latest?.updated_at!==plan.row?.updated_at)throw Error('雲端案件剛被其他裝置修改，已停止。請重新比對');
-    const payload={value:JSON.stringify([...plan.remote,...plan.additions])};
-    let q;
-    if(plan.row){
-     if(!plan.row.updated_at)throw Error('雲端缺少版本時間，為避免覆蓋已停止');
-     q=await sb.from('sbd_app_data').update({payload,updated_at:new Date().toISOString()}).eq('user_id',uid).eq('data_key',plan.key).eq('updated_at',plan.row.updated_at).select('data_key');
-     if(q.error)throw q.error;
-     if(q.data?.length!==1)throw Error('雲端版本已變更，已停止');
-    }else{
-     q=await sb.from('sbd_app_data').insert({user_id:uid,data_key:plan.key,payload,updated_at:new Date().toISOString()});
-     if(q.error)throw q.error;
-    }
-    uploaded+=plan.additions.length;
-   }
-   show('已補齊 '+uploaded+' 筆雲端案件。請重新開啟成本銷售報表核對；如金額仍不同，需進一步查請款區間。');
-   if(typeof window.crRender==='function')window.crRender();
-  }catch(e){show('未完成：'+(e.message||String(e)))}finally{btn.disabled=false}
- }
- function init(){
-  const panel=document.getElementById('sbdSyncDrawerPanel');if(!panel)return;
-  const div=document.createElement('div');div.style='border-top:1px solid #ccd8e2;margin-top:12px;padding-top:10px';
-  div.innerHTML='<b>v139｜管理員案件同步比對</b><p style="font-size:11px;margin:6px 0">先下載雙方備份，只補本機有、雲端沒有的案件。不同內容一律停止，不自動覆蓋。</p><button type="button" id="sbdMergeBtn139" disabled>備份、比對並補齊雲端缺少案件</button><div id="sbdMergeStatus139" role="status" style="font-size:12px;margin-top:6px;white-space:pre-wrap">管理員登入後可使用</div>';
-  panel.appendChild(div);
-  const btn=div.querySelector('button');btn.addEventListener('click',run);
-  function access(){btn.disabled=!(typeof isAdminAccount==='function'&&isAdminAccount())}
-  access();setInterval(access,2000);
- }
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
-})();
-</script>
 </body></html>`
 }
 function printQuote(x){const w=window.open("","_blank");if(!w){alert("瀏覽器阻擋新視窗，請允許彈出視窗");return}w.document.write(quotePrintHtml(x));w.document.close();w.onload=()=>setTimeout(()=>w.print(),300)}
@@ -3017,78 +2946,7 @@ initInstallerPicker();updateMasterBillingRange();renderStatsEditingPreviewRow();
     const rows=Object.values(map);
     let html='<html><head><meta charset="UTF-8"></head><body><table border="1"><tr><th>姓名</th><th>職務</th><th colspan="5">加班時數</th><th>超時時數</th><th>合計</th><th>備註</th></tr><tr><th></th><th></th><th>第一週</th><th>第二週</th><th>第三週</th><th>第四週</th><th>第五週</th><th></th><th></th><th></th></tr>';
     rows.forEach(r=>{html+=`<tr><td>${esc(r.name)}</td><td></td>${r.w.map(v=>`<td>${Math.round(v*10)/10}</td>`).join("")}<td>${Math.round(r.total*10)/10}</td><td>${Math.round(r.total*10)/10}</td><td></td></tr>`});
-    html+='</table><script id="sbd-v139-admin-safe-merge">
-(function(){
- 'use strict';
- const KEYS=['sbd_purchase_projects','sbd_taichung_purchase_projects_v1'];
- function show(msg){const e=document.getElementById('sbdMergeStatus139');if(e)e.textContent=msg;}
- function download(name, data){
-  const b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');
-  a.href=URL.createObjectURL(b);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),3000);
- }
- function decode(v){if(v==null)return [];const a=typeof v==='string'?JSON.parse(v):v;if(!Array.isArray(a))throw Error('案件資料格式不是陣列');return a;}
- function mapKeys(rows,label){const m=new Map();for(const x of rows){if(!x||x.key==null||String(x.key)==='')throw Error(label+'存在沒有唯一識別碼的案件，為安全起見停止');const k=String(x.key);if(m.has(k))throw Error(label+'存在重複識別碼 '+k+'，為安全起見停止');m.set(k,x)}return m;}
- async function run(){
-  const btn=document.getElementById('sbdMergeBtn139');btn.disabled=true;
-  try{
-   if(typeof isAdminAccount!=='function'||!isAdminAccount())throw Error('僅管理員可使用');
-   const {data:auth,error:authError}=await sb.auth.getUser();if(authError||!auth?.user)throw Error('管理員尚未登入');
-   const uid=auth.user.id;
-   const {data,error}=await sb.from('sbd_app_data').select('data_key,payload,updated_at').eq('user_id',uid).in('data_key',KEYS);
-   if(error)throw error;
-   const plans=[],backup={createdAt:new Date().toISOString(),user_id:uid,cloud:{},local:{}};
-   for(const key of KEYS){
-    const row=(data||[]).find(r=>r.data_key===key)||null;
-    const raw=localStorage.getItem(key);
-    const local=decode(raw),remote=decode(row?.payload?.value);
-    backup.local[key]=raw;backup.cloud[key]=row||null;
-    const lm=mapKeys(local,'本機 '+key),cm=mapKeys(remote,'雲端 '+key);
-    const additions=[...lm].filter(([k])=>!cm.has(k)).map(([,x])=>x);
-    const disagreements=[...lm].filter(([k,v])=>cm.has(k)&&JSON.stringify(cm.get(k))!==JSON.stringify(v)).length;
-    plans.push({key,row,remote,additions,disagreements});
-   }
-   download('勝寶鼎_案件同步前雙方備份_'+new Date().toISOString().slice(0,10)+'.json',backup);
-   const total=plans.reduce((n,p)=>n+p.additions.length,0),conflicts=plans.reduce((n,p)=>n+p.disagreements,0);
-   show('已下載本機及雲端備份；雲端缺少 '+total+' 筆，已有同編號但內容不同 '+conflicts+' 筆。');
-   if(conflicts)throw Error('發現同一案件內容不同，已停止自動補齊；請保留備份，避免覆蓋修改');
-   if(!total){show('已下載雙方備份；依案件識別碼比對，雲端沒有缺少的本機案件。若報表仍不同，需查報表區間及來源。');return;}
-   if(!confirm('已下載備份。確認將本機 '+total+' 筆雲端缺少的案件補入雲端？不會刪除既有案件。'))return;
-   let uploaded=0;
-   for(const plan of plans){
-    if(!plan.additions.length)continue;
-    const {data:latest,error:e}=await sb.from('sbd_app_data').select('payload,updated_at').eq('user_id',uid).eq('data_key',plan.key).maybeSingle();
-    if(e)throw e;
-    if(JSON.stringify(latest?.payload??null)!==JSON.stringify(plan.row?.payload??null)||latest?.updated_at!==plan.row?.updated_at)throw Error('雲端案件剛被其他裝置修改，已停止。請重新比對');
-    const payload={value:JSON.stringify([...plan.remote,...plan.additions])};
-    let q;
-    if(plan.row){
-     if(!plan.row.updated_at)throw Error('雲端缺少版本時間，為避免覆蓋已停止');
-     q=await sb.from('sbd_app_data').update({payload,updated_at:new Date().toISOString()}).eq('user_id',uid).eq('data_key',plan.key).eq('updated_at',plan.row.updated_at).select('data_key');
-     if(q.error)throw q.error;
-     if(q.data?.length!==1)throw Error('雲端版本已變更，已停止');
-    }else{
-     q=await sb.from('sbd_app_data').insert({user_id:uid,data_key:plan.key,payload,updated_at:new Date().toISOString()});
-     if(q.error)throw q.error;
-    }
-    uploaded+=plan.additions.length;
-   }
-   show('已補齊 '+uploaded+' 筆雲端案件。請重新開啟成本銷售報表核對；如金額仍不同，需進一步查請款區間。');
-   if(typeof window.crRender==='function')window.crRender();
-  }catch(e){show('未完成：'+(e.message||String(e)))}finally{btn.disabled=false}
- }
- function init(){
-  const panel=document.getElementById('sbdSyncDrawerPanel');if(!panel)return;
-  const div=document.createElement('div');div.style='border-top:1px solid #ccd8e2;margin-top:12px;padding-top:10px';
-  div.innerHTML='<b>v139｜管理員案件同步比對</b><p style="font-size:11px;margin:6px 0">先下載雙方備份，只補本機有、雲端沒有的案件。不同內容一律停止，不自動覆蓋。</p><button type="button" id="sbdMergeBtn139" disabled>備份、比對並補齊雲端缺少案件</button><div id="sbdMergeStatus139" role="status" style="font-size:12px;margin-top:6px;white-space:pre-wrap">管理員登入後可使用</div>';
-  panel.appendChild(div);
-  const btn=div.querySelector('button');btn.addEventListener('click',run);
-  function access(){btn.disabled=!(typeof isAdminAccount==='function'&&isAdminAccount())}
-  access();setInterval(access,2000);
- }
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
-})();
-</script>
-</body></html>';
+    html+='</table></body></html>';
     const blob=new Blob(["\ufeff",html],{type:"application/vnd.ms-excel"});
     const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="超時打卡統計.xls";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
   }
@@ -3592,12 +3450,18 @@ function sbdAgencyBackupAudit(current){
 
 // v137: Restricted report RPC. The server checks an explicit viewer allowlist,
 // returns only report source keys, and never grants direct cross-account table access.
-// v139: Always fetch current report rows. A cached Promise kept viewers on stale data.
+let __costReportRpcPromise=null;
 async function costReportRows(){
- const {data,error}=await sb.rpc('sbd_read_cost_report_sources');
- if(error)throw Error('唯讀報表服務未設定或無權限：'+error.message);
- if(!Array.isArray(data))throw Error('唯讀報表資料格式錯誤');
- return data;
+ if(isAdminAccount())return null;
+ if(!__costReportRpcPromise){
+  __costReportRpcPromise=(async()=>{
+   const {data,error}=await sb.rpc('sbd_read_cost_report_sources');
+   if(error)throw Error('唯讀報表服務未設定或無權限：'+error.message);
+   if(!Array.isArray(data))throw Error('唯讀報表資料格式錯誤');
+   return data;
+  })();
+ }
+ try{return await __costReportRpcPromise}catch(e){__costReportRpcPromise=null;throw e}
 }
 async function costReportSourceOwner(){
  const auth=await sb.auth.getUser();
@@ -4068,77 +3932,6 @@ function init(){
  };
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
-})();
-</script>
-<script id="sbd-v139-admin-safe-merge">
-(function(){
- 'use strict';
- const KEYS=['sbd_purchase_projects','sbd_taichung_purchase_projects_v1'];
- function show(msg){const e=document.getElementById('sbdMergeStatus139');if(e)e.textContent=msg;}
- function download(name, data){
-  const b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');
-  a.href=URL.createObjectURL(b);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),3000);
- }
- function decode(v){if(v==null)return [];const a=typeof v==='string'?JSON.parse(v):v;if(!Array.isArray(a))throw Error('案件資料格式不是陣列');return a;}
- function mapKeys(rows,label){const m=new Map();for(const x of rows){if(!x||x.key==null||String(x.key)==='')throw Error(label+'存在沒有唯一識別碼的案件，為安全起見停止');const k=String(x.key);if(m.has(k))throw Error(label+'存在重複識別碼 '+k+'，為安全起見停止');m.set(k,x)}return m;}
- async function run(){
-  const btn=document.getElementById('sbdMergeBtn139');btn.disabled=true;
-  try{
-   if(typeof isAdminAccount!=='function'||!isAdminAccount())throw Error('僅管理員可使用');
-   const {data:auth,error:authError}=await sb.auth.getUser();if(authError||!auth?.user)throw Error('管理員尚未登入');
-   const uid=auth.user.id;
-   const {data,error}=await sb.from('sbd_app_data').select('data_key,payload,updated_at').eq('user_id',uid).in('data_key',KEYS);
-   if(error)throw error;
-   const plans=[],backup={createdAt:new Date().toISOString(),user_id:uid,cloud:{},local:{}};
-   for(const key of KEYS){
-    const row=(data||[]).find(r=>r.data_key===key)||null;
-    const raw=localStorage.getItem(key);
-    const local=decode(raw),remote=decode(row?.payload?.value);
-    backup.local[key]=raw;backup.cloud[key]=row||null;
-    const lm=mapKeys(local,'本機 '+key),cm=mapKeys(remote,'雲端 '+key);
-    const additions=[...lm].filter(([k])=>!cm.has(k)).map(([,x])=>x);
-    const disagreements=[...lm].filter(([k,v])=>cm.has(k)&&JSON.stringify(cm.get(k))!==JSON.stringify(v)).length;
-    plans.push({key,row,remote,additions,disagreements});
-   }
-   download('勝寶鼎_案件同步前雙方備份_'+new Date().toISOString().slice(0,10)+'.json',backup);
-   const total=plans.reduce((n,p)=>n+p.additions.length,0),conflicts=plans.reduce((n,p)=>n+p.disagreements,0);
-   show('已下載本機及雲端備份；雲端缺少 '+total+' 筆，已有同編號但內容不同 '+conflicts+' 筆。');
-   if(conflicts)throw Error('發現同一案件內容不同，已停止自動補齊；請保留備份，避免覆蓋修改');
-   if(!total){show('已下載雙方備份；依案件識別碼比對，雲端沒有缺少的本機案件。若報表仍不同，需查報表區間及來源。');return;}
-   if(!confirm('已下載備份。確認將本機 '+total+' 筆雲端缺少的案件補入雲端？不會刪除既有案件。'))return;
-   let uploaded=0;
-   for(const plan of plans){
-    if(!plan.additions.length)continue;
-    const {data:latest,error:e}=await sb.from('sbd_app_data').select('payload,updated_at').eq('user_id',uid).eq('data_key',plan.key).maybeSingle();
-    if(e)throw e;
-    if(JSON.stringify(latest?.payload??null)!==JSON.stringify(plan.row?.payload??null)||latest?.updated_at!==plan.row?.updated_at)throw Error('雲端案件剛被其他裝置修改，已停止。請重新比對');
-    const payload={value:JSON.stringify([...plan.remote,...plan.additions])};
-    let q;
-    if(plan.row){
-     if(!plan.row.updated_at)throw Error('雲端缺少版本時間，為避免覆蓋已停止');
-     q=await sb.from('sbd_app_data').update({payload,updated_at:new Date().toISOString()}).eq('user_id',uid).eq('data_key',plan.key).eq('updated_at',plan.row.updated_at).select('data_key');
-     if(q.error)throw q.error;
-     if(q.data?.length!==1)throw Error('雲端版本已變更，已停止');
-    }else{
-     q=await sb.from('sbd_app_data').insert({user_id:uid,data_key:plan.key,payload,updated_at:new Date().toISOString()});
-     if(q.error)throw q.error;
-    }
-    uploaded+=plan.additions.length;
-   }
-   show('已補齊 '+uploaded+' 筆雲端案件。請重新開啟成本銷售報表核對；如金額仍不同，需進一步查請款區間。');
-   if(typeof window.crRender==='function')window.crRender();
-  }catch(e){show('未完成：'+(e.message||String(e)))}finally{btn.disabled=false}
- }
- function init(){
-  const panel=document.getElementById('sbdSyncDrawerPanel');if(!panel)return;
-  const div=document.createElement('div');div.style='border-top:1px solid #ccd8e2;margin-top:12px;padding-top:10px';
-  div.innerHTML='<b>v139｜管理員案件同步比對</b><p style="font-size:11px;margin:6px 0">先下載雙方備份，只補本機有、雲端沒有的案件。不同內容一律停止，不自動覆蓋。</p><button type="button" id="sbdMergeBtn139" disabled>備份、比對並補齊雲端缺少案件</button><div id="sbdMergeStatus139" role="status" style="font-size:12px;margin-top:6px;white-space:pre-wrap">管理員登入後可使用</div>';
-  panel.appendChild(div);
-  const btn=div.querySelector('button');btn.addEventListener('click',run);
-  function access(){btn.disabled=!(typeof isAdminAccount==='function'&&isAdminAccount())}
-  access();setInterval(access,2000);
- }
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
 </script>
 </body>
