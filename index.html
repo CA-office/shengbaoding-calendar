@@ -710,7 +710,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
     <div class="purchaseCard" style="margin-top:16px"><h3>已記憶的浤富 PDF（依請款區間）</h3>
 
     <div class="hint">請款區間可在上方「產出成本」旁切換；下方只顯示該區間已保存的 PDF 原檔。</div>
-    <div id="poPdfHistory"></div></div>
+    <div id="poPdfHistory"></div><div id="poSavedPeriodSummary" style="margin-top:16px"></div></div>
   </div>
 </section>
 
@@ -927,7 +927,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
         <tfoot><tr style="background:#e8f0f7;font-weight:800"><td colspan="6" style="text-align:left;padding:12px 16px">全部已儲存明細總計｜<span id="tcAllDetailCount">0</span> 件｜總金額：<span id="tcAllDetailTotal">0</span></td></tr><tr style="background:#eef2f6;font-weight:800"><td colspan="6" style="text-align:left;padding:12px 16px">請款區間總計（<span id="tcDetailPeriodLabel">尚未選擇</span>）｜<span id="tcDetailPeriodCount">0</span> 件｜總金額：<span id="tcDetailPeriodTotal">0</span></td></tr></tfoot>
       </table>
     </div>
-    <div id="tcSavedDetailEmpty" class="quoteEmpty">目前沒有已儲存的草屯採購單明細</div>
+    <div id="tcSavedDetailEmpty" class="quoteEmpty">目前沒有已儲存的草屯採購單明細</div><div style="margin-top:18px"><h3>草屯已儲存明細｜依請款區間統計</h3><table class="purchaseRecords" style="width:100%"><thead><tr><th>區間日期</th><th>儲存筆數</th><th>總金額</th></tr></thead><tbody id="tcSavedPeriodSummaryRows"><tr><td colspan="3">尚無資料</td></tr></tbody></table></div>
   </div>
 </section>
 <section id="costReportView" class="hidden" style="max-width:1250px;margin:22px auto;padding:0 15px;font-family:system-ui,'Noto Sans TC',sans-serif;color:#172b45"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px"><div><h2 style="font-size:25px;margin:0">成本・銷售・件數分析</h2><p style="color:#718096">統計資料來源：本機及雲端已保存的採購案件；不覆蓋任何原始資料</p></div><select id="crMonth" style="display:none;padding:10px;border-radius:8px;border:1px solid #cbd5e1"><option value="all">全部月份</option></select> <select id="crPeriod" style="padding:10px;border-radius:8px;border:1px solid #cbd5e1"><option value="all">全部請款區間</option></select></div><div id="crPdfCostControl" style="margin:16px 0;padding:12px 16px;border:1px solid #dce5ee;border-radius:10px;background:#fff">
@@ -3277,6 +3277,16 @@ function tcRenderSavedDetails(){
  const allCount=$t('tcAllDetailCount'),allTotal=$t('tcAllDetailTotal');
  if(allCount)allCount.textContent=String(rows.length);
  if(allTotal)allTotal.textContent=money(rows.reduce((sum,r)=>sum+r.total,0));
+ const periodSummary=$t('tcSavedPeriodSummaryRows');
+ if(periodSummary){
+  const totals=new Map();
+  rows.forEach(r=>{
+   const p=tcResolvedClaimPeriod(r.d,r.p)||'未指定區間';
+   const entry=totals.get(p)||{count:0,total:0};
+   entry.count++;entry.total+=r.total;totals.set(p,entry);
+  });
+  periodSummary.innerHTML=[...totals.entries()].sort(([a],[b])=>b.localeCompare(a)).map(([p,v])=>`<tr><td>${tcEsc(p)}</td><td>${v.count} 筆</td><td>${money(v.total)}</td></tr>`).join('')||'<tr><td colspan="3">目前尚無已儲存明細</td></tr>';
+ }
  rows.sort((a,b)=>String(b.d.updatedAt||'').localeCompare(String(a.d.updatedAt||'')));
  body.innerHTML=rows.map(r=>`<tr><td style="white-space:nowrap">${tcEsc(tcResolvedClaimPeriod(r.d,r.p)||"—")}</td><td style="white-space:nowrap"><button type="button" data-tc-act="edit" data-k="${tcEsc(r.key)}">修改</button> <button type="button" data-tc-act="del" data-k="${tcEsc(r.key)}" style="background:#d62d2d;color:#fff;border-color:#d62d2d">刪除</button></td><td>${tcEsc(r.p.no||'')}</td><td>${tcEsc(r.p.caseName||'')}</td><td style="text-align:left;white-space:normal;min-width:420px;line-height:1.65">${r.detail}</td><td>${money(r.total)}</td></tr>`).join('');
  const chosen=String($t('tcExportPeriod')?.value||$t('tcPeriodHistory')?.value||'').trim();
@@ -3743,6 +3753,22 @@ async function renderArchive(){
  const active=($('poPdfPeriod')?.value||'').trim();
  const archive=read('sbd_hongfu_period_work_v1',{});
  const periods=[...new Set([...files.map(x=>x.period),...Object.keys(archive)])].sort();
+ // 每個已儲存請款區間的明細分組與金額；不把 PDF 原檔數誤算為案件數。
+ const summary=$('poSavedPeriodSummary');
+ if(summary){
+  const entries=Object.entries(archive).filter(([p,d])=>/^\\d{6}-\\d{6}$/.test(p)&&Array.isArray(d?.groups));
+  const rows=entries.sort(([a],[b])=>b.localeCompare(a)).map(([p,d])=>{
+   const groups=d.groups.filter(g=>Array.isArray(g.rows)&&g.rows.length);
+   const amount=groups.reduce((sum,g)=>{
+    const calculated=g.rows.reduce((n,r)=>n+(Number(r.qty||0)*Number(r.price||0)),0);
+    const saved=(g.pdfTotal===null||g.pdfTotal===undefined)?calculated:Number(g.pdfTotal);
+    return sum+(Number.isFinite(saved)?saved:calculated);
+   },0);
+   return `<tr><td>${p}</td><td>${groups.length} 筆</td><td>${amount.toLocaleString('zh-TW',{maximumFractionDigits:0})}</td></tr>`;
+  });
+  summary.innerHTML='<h3>浤富已儲存明細｜依請款區間統計</h3><table class="purchaseRecords" style="width:100%"><thead><tr><th>區間日期</th><th>儲存筆數（銷貨單分組）</th><th>總金額（PDF 明細）</th></tr></thead><tbody>'+(rows.join('')||'<tr><td colspan="3">目前尚無依區間儲存的明細</td></tr>')+'</tbody></table>';
+ }
+
  const list=$('poPdfPeriods');
  if(list)list.innerHTML=periods.map(x=>`<option value="${x}"></option>`).join('');
  const picker=$('poPeriodSelect');
