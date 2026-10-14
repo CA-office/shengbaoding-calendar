@@ -686,9 +686,9 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
       <label>案件金額<input id="poCaseAmount" inputmode="decimal" placeholder="例如 68088"></label>
     </div>
     <table class="purchaseRecords">
-      <thead><tr><th>操作</th><th>單號</th><th>案名</th><th>案件金額</th><th>分類</th></tr></thead>
+      <thead><tr><th>操作</th><th>單號</th><th>案名</th><th>案件金額</th><th>分類</th><th>區間日期</th></tr></thead>
       <tbody id="poProjectRecords"></tbody>
-      <tfoot><tr style="font-weight:800;background:#f1f5f9"><td style="padding:12px">總計</td><td></td><td id="poProjectCount" style="text-align:center;padding:12px">0</td><td id="poProjectGrandTotal" style="text-align:right;padding:12px">0</td><td></td></tr></tfoot>
+      <tfoot><tr style="font-weight:800;background:#f1f5f9"><td style="padding:12px">總計</td><td></td><td id="poProjectCount" style="text-align:center;padding:12px">0</td><td id="poProjectGrandTotal" style="text-align:right;padding:12px">0</td><td></td><td></td></tr></tfoot>
     </table>
     <div style="margin-top:18px"><h3>下期請款明細</h3><div style="overflow-x:auto"><table class="purchaseRecords" style="min-width:450px"><thead><tr><th>單號</th><th>案名</th><th>案件金額</th></tr></thead><tbody id="poNextBillingRows"></tbody><tfoot><tr style="background:#f1f5f9;font-weight:800"><td>總計</td><td id="poNextBillingCount">0 件</td><td id="poNextBillingTotal">0</td></tr></tfoot></table></div></div>
   </div>
@@ -2512,7 +2512,23 @@ function poRenderProjects(){
   if(totalEl)totalEl.textContent=poFmt(total);
   const countEl=$("poProjectCount");if(countEl)countEl.textContent=String(a.length);
   const caseCount=$("poCaseFilterCount");if(caseCount)caseCount.textContent=`共 ${a.length} 筆`;
-b.innerHTML=a.map(r=>`<tr><td><button data-a="edit" data-k="${r.key}">修改</button><button data-a="del" data-k="${r.key}">刪除</button></td><td>${poEsc(r.no)}</td><td>${poEsc(r.caseName)}</td><td>${poFmt(r.caseAmount)}</td><td><select data-a="category" data-k="${r.key}" aria-label="請款分類"><option value="一般案件" ${r.category==='下期請款'?'':'selected'}>一般案件</option><option value="下期請款" ${r.category==='下期請款'?'selected':''}>下期請款</option></select></td></tr>`).join("");
+const poPeriods=[...new Set([...records.map(r=>r.claimPeriod||'').filter(Boolean),...(typeof tcPeriodList==='function'?tcPeriodList():[]),...(()=>{try{return JSON.parse(localStorage.getItem('sbd_tc_invoice_periods_v1')||'[]')}catch(e){return []}})(),localStorage.getItem('sbd_hongfu_last_period')||''].filter(Boolean))].sort();
+b.innerHTML=a.map(r=>`<tr><td><button data-a="edit" data-k="${r.key}">修改</button><button data-a="del" data-k="${r.key}">刪除</button></td><td>${poEsc(r.no)}</td><td>${poEsc(r.caseName)}</td><td>${poFmt(r.caseAmount)}</td><td><select data-a="category" data-k="${r.key}" aria-label="請款分類"><option value="一般案件" ${r.category==='下期請款'?'':'selected'}>一般案件</option><option value="下期請款" ${r.category==='下期請款'?'selected':''}>下期請款</option></select></td><td><select data-a="period" data-k="${r.key}" aria-label="區間日期"><option value="">選擇區間日期</option>${poPeriods.map(v=>`<option value="${poEsc(v)}" ${r.claimPeriod===v?'selected':''}>${poEsc(v)}</option>`).join('')}<option value="__add_period__">＋ 新增請款區間…</option></select></td></tr>`).join("");
+  b.querySelectorAll('select[data-a="period"]').forEach(el=>el.onchange=()=>{
+    if(!isAdminAccount()){poRenderProjects();return;}
+    const projects=poProjects(),rec=projects.find(r=>String(r.key)===el.dataset.k);if(!rec)return;
+    let value=el.value;
+    if(value==='__add_period__'){
+      const raw=prompt('請輸入新的請款區間（例如 260926-261025）','');
+      if(raw===null){poRenderProjects();return;}
+      const m=String(raw).trim().match(/^(\d{6})\s*[-～~]\s*(\d{6})$/);
+      const valid=x=>{const y=2000+Number(x.slice(0,2)),mo=Number(x.slice(2,4)),d=Number(x.slice(4,6)),dt=new Date(y,mo-1,d);return dt.getFullYear()===y&&dt.getMonth()===mo-1&&dt.getDate()===d};
+      if(!m||m[1]>m[2]||!valid(m[1])||!valid(m[2])){alert('日期格式錯誤，請輸入有效的請款區間，例如 260926-261025');poRenderProjects();return;}
+      value=m[1]+'-'+m[2];
+      if(typeof tcPeriodSave==='function')tcPeriodSave(m[1],m[2]);
+    }
+    rec.claimPeriod=value;rec.updatedAt=new Date().toISOString();poSaveProjects(projects);poRenderProjects();
+  });
   const next=records.filter(r=>r.category==='下期請款');
   const nextBody=$("poNextBillingRows");
   if(nextBody)nextBody.innerHTML=next.map(r=>`<tr><td>${poEsc(r.no)}</td><td>${poEsc(r.caseName)}</td><td style="text-align:right">${poFmt(r.caseAmount)}</td></tr>`).join('');
@@ -3569,7 +3585,7 @@ async function cloudTc(){
 function source(tcData){
  const purchase=tcData.hongfu||read('sbd_purchase_projects','[]'),tc=tcData.projects,details=tcData.details;
  const result=[];
- for(const p of purchase){const no=String(p.no||p.number||'').trim();if(!no)continue;result.push({group:'浤富',no,name:p.caseName||p.case||'',sale:amount(p.caseAmount??p.amount),cost:null,period:''})}
+ for(const p of purchase){const no=String(p.no||p.number||'').trim();if(!no)continue;result.push({group:'浤富',no,name:p.caseName||p.case||'',sale:amount(p.caseAmount??p.amount),cost:null,period:p.claimPeriod||''})}
  for(const p of tc){const no=String(p.no||'').trim();if(!no)continue;const d=details[p.key];result.push({group:p.category==='代安裝'?'代安裝':'草屯',no,name:p.caseName||'',sale:amount(p.caseAmount),cost:d?(d.items||[]).reduce((n,it)=>n+amount(it.qty)*amount(it.price),0):null,period:p.claimPeriod||d?.claimPeriod||''})}
  return result.map(r=>{const m=r.no.match(/^(?:G5DD|G5DE)(\d{2})(\d{2})/i);return {...r,month:m?`20${m[1]}-${m[2]}`:'未分類'}})
 }
