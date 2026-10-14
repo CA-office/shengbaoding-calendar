@@ -1220,7 +1220,7 @@ function showFeature(name){
   if(stats&&isAdminAccount()){(async()=>{await loadQuotesForStats();await syncAllQuotesToInstallStats();await loadInstallStats()})()}
   if(purchase&&isAdminAccount()){poRenderProjects();poRenderGroups();}
 }
-function addQuoteItem(item={}){const tr=document.createElement("tr");const totalCm=item.total_cm??item.qty??0;tr.innerHTML=`<td class="qidx"></td><td><input class="qname" list="qNameOptionsList" placeholder="選擇或直接輸入" value="${esc(fmtQName(item.name||item.description||""))}"></td><td><input class="qsize" value="${esc(item.process_size||"")}"></td><td><input class="qcm" type="number" min="0" step="0.01" value="${Number(totalCm||0)}"></td><td><select class="qunit"><option value=""></option><option value="cm" ${String(item.unit||"").toLowerCase()==="cm"?"selected":""}>cm</option><option value="式" ${String(item.unit||"")==="式"?"selected":""}>式</option></select></td><td><input class="qprice" type="number" min="0" step="0.01" value="${Number(item.price||0)}"></td><td class="qamount">0</td><td><button type="button" class="qremove">刪</button></td>`;$("qItemsBody").appendChild(tr);tr.querySelectorAll("input,select").forEach(i=>i.addEventListener("input",calcQuote));const qi=tr.querySelector(".qname");qi?.addEventListener("blur",()=>{qi.value=fmtQName(qi.value);calcQuote()});tr.querySelector(".qremove").addEventListener("click",()=>{tr.remove();renumberQuoteItems();calcQuote()});renumberQuoteItems();calcQuote()}
+function addQuoteItem(item={}){const tr=document.createElement("tr");const totalCm=item.total_cm??item.qty??0;tr.innerHTML=`<td class="qidx"></td><td><input class="qname" list="qNameOptionsList" placeholder="選擇或直接輸入" value="${esc(fmtQName(item.name||item.description||""))}"></td><td><input class="qsize" value="${esc(item.process_size||"")}"></td><td><input class="qcm" type="number" min="0" step="0.01" value="${Number(totalCm||0)}"></td><td><select class="qunit"><option value=""></option><option value="cm" ${String(item.unit||"").toLowerCase()==="cm"?"selected":""}>cm</option><option value="式" ${String(item.unit||"")==="式"?"selected":""}>式</option><option value="個" ${String(item.unit||"")==="個"?"selected":""}>個</option><option value="層" ${String(item.unit||"")==="層"?"selected":""}>層</option></select></td><td><input class="qprice" type="number" min="0" step="0.01" value="${Number(item.price||0)}"></td><td class="qamount">0</td><td><button type="button" class="qremove">刪</button></td>`;$("qItemsBody").appendChild(tr);tr.querySelectorAll("input,select").forEach(i=>i.addEventListener("input",calcQuote));const qi=tr.querySelector(".qname");qi?.addEventListener("blur",()=>{qi.value=fmtQName(qi.value);calcQuote()});tr.querySelector(".qremove").addEventListener("click",()=>{tr.remove();renumberQuoteItems();calcQuote()});renumberQuoteItems();calcQuote()}
 function renumberQuoteItems(){[...$("qItemsBody").children].forEach((tr,i)=>tr.querySelector(".qidx").textContent=i+1)}
 function getQuoteItems(){return [...$("qItemsBody").children].map(tr=>({name:fmtQName(tr.querySelector(".qname").value),process_size:tr.querySelector(".qsize").value.trim(),total_cm:Number(tr.querySelector(".qcm").value||0),unit:tr.querySelector(".qunit").value.trim(),price:Number(tr.querySelector(".qprice").value||0)})).filter(x=>x.name||x.process_size||x.total_cm||x.price)}
 function buildQuoteQuickNote(){
@@ -1593,6 +1593,24 @@ async function excelQuote(x){
     pageSetup.setAttribute("fitToHeight","1");
     pageSetup.removeAttribute("scale");
 
+    // 修改了報價單公式後，原範本的 calcChain.xml 已不再適用。
+    // 必須同時移除檔案、活頁簿關聯及內容類型宣告，避免 Excel 開啟時要求修復。
+    if(zip.file("xl/calcChain.xml")){
+      zip.remove("xl/calcChain.xml");
+      const relPath="xl/_rels/workbook.xml.rels";
+      const relFile=zip.file(relPath);
+      if(relFile){
+        const relDoc=new DOMParser().parseFromString(await relFile.async("string"),"application/xml");
+        [...relDoc.documentElement.children].filter(el=>el.getAttribute("Type")?.endsWith("/calcChain")).forEach(el=>el.remove());
+        zip.file(relPath,new XMLSerializer().serializeToString(relDoc));
+      }
+      const typesPath="[Content_Types].xml",typesFile=zip.file(typesPath);
+      if(typesFile){
+        const typesDoc=new DOMParser().parseFromString(await typesFile.async("string"),"application/xml");
+        [...typesDoc.documentElement.children].filter(el=>el.getAttribute("PartName")==="/xl/calcChain.xml").forEach(el=>el.remove());
+        zip.file(typesPath,new XMLSerializer().serializeToString(typesDoc));
+      }
+    }
     zip.file(sheetPath,new XMLSerializer().serializeToString(doc));
     const blob=await zip.generateAsync({type:"blob",mimeType:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",compression:"DEFLATE"});
     const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`${quoteDownloadBase(x)}.xlsx`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
