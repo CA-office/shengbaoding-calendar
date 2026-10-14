@@ -2454,7 +2454,7 @@ function poSaveAllWork(showMsg=true){
       localStorage.setItem("sbd_hongfu_last_period",period);
       window.poRefreshPeriodOptions?.();
     }
-    if(showMsg){const n=poGroups.length;const rows=poGroups.reduce((a,g)=>a+(g.rows?.length||0),0);$("poStatus").textContent=`已完整儲存：${n} 個銷貨單分組、${rows} 筆貨品與所有單號／案名配對。下次開啟會自動帶回。`;}
+    if(showMsg){const n=poGroups.length;const rows=poGroups.reduce((a,g)=>a+(g.rows?.length||0),0);$("poStatus").textContent=`已完整儲存：${n} 個銷貨單分組、${rows} 筆貨品與所有單號／案名配對。`+(/^\d{6}-\d{6}$/.test(period)?" 已歸入請款區間："+period:" 尚未指定請款區間，請在上方填入區間後再按儲存，才能列入區間統計。");window.poRefreshPeriodOptions?.();}
     return true;
   }catch(e){console.error(e);if(showMsg)alert("儲存失敗："+(e?.message||e));return false;}
 }
@@ -3756,7 +3756,16 @@ async function renderArchive(){
  // 每個已儲存請款區間的明細分組與金額；不把 PDF 原檔數誤算為案件數。
  const summary=$('poSavedPeriodSummary');
  if(summary){
-  const entries=Object.entries(archive).filter(([p,d])=>/^\\d{6}-\\d{6}$/.test(p)&&Array.isArray(d?.groups));
+  const entries=Object.entries(archive).filter(([p,d])=>/^\d{6}-\d{6}$/.test(p)&&Array.isArray(d?.groups));
+  // 舊版儲存按鈕可在未填請款區間時成功儲存至 PO_WORK_KEY；
+  // 此處仍要顯示這份明細，不能誤稱「尚無資料」。
+  const current=read('sbd_purchase_pdf_work_v1',null);
+  const currentGroups=Array.isArray(current?.groups)?current.groups:[];
+  const activePeriod=($('poPdfPeriod')?.value||'').trim();
+  const hasPeriod=/^\d{6}-\d{6}$/.test(activePeriod);
+  if(currentGroups.length && (!hasPeriod || !archive[activePeriod])){
+    entries.push([hasPeriod?activePeriod:'未指定區間（已儲存）',current]);
+  }
   const rows=entries.sort(([a],[b])=>b.localeCompare(a)).map(([p,d])=>{
    const groups=d.groups.filter(g=>Array.isArray(g.rows)&&g.rows.length);
    const amount=groups.reduce((sum,g)=>{
