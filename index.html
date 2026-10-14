@@ -3288,7 +3288,6 @@ function tcRenderSavedDetails(){
   periodSummary.innerHTML=[...totals.entries()].sort(([a],[b])=>b.localeCompare(a)).map(([p,v])=>`<tr><td>${tcEsc(p)}</td><td>${v.count} 筆</td><td>${money(v.total)}</td></tr>`).join('')||'<tr><td colspan="3">目前尚無已儲存明細</td></tr>';
  }
  rows.sort((a,b)=>String(b.d.updatedAt||'').localeCompare(String(a.d.updatedAt||'')));
- body.innerHTML=rows.map(r=>`<tr><td style="white-space:nowrap">${tcEsc(tcResolvedClaimPeriod(r.d,r.p)||"—")}</td><td style="white-space:nowrap"><button type="button" data-tc-act="edit" data-k="${tcEsc(r.key)}">修改</button> <button type="button" data-tc-act="del" data-k="${tcEsc(r.key)}" style="background:#d62d2d;color:#fff;border-color:#d62d2d">刪除</button></td><td>${tcEsc(r.p.no||'')}</td><td>${tcEsc(r.p.caseName||'')}</td><td style="text-align:left;white-space:normal;min-width:420px;line-height:1.65">${r.detail}</td><td>${money(r.total)}</td></tr>`).join('');
  const chosen=String($t('tcExportPeriod')?.value||$t('tcPeriodHistory')?.value||'').trim();
  const selected=/^\d{6}-\d{6}$/.test(chosen)?chosen:'';
  const periodParts=selected.match(/^(\d{6})-(\d{6})$/);
@@ -3299,6 +3298,10 @@ function tcRenderSavedDetails(){
    // 舊紀錄未保存請款日時，僅在可唯一推定時使用既有區間。
    return tcResolvedClaimPeriod(r.d,r.p)===selected;
  }):[];
+ const visibleRows=selected?relevant:rows;
+ if(allCount)allCount.textContent=String(visibleRows.length);
+ if(allTotal)allTotal.textContent=money(visibleRows.reduce((sum,r)=>sum+r.total,0));
+ body.innerHTML=visibleRows.map(r=>`<tr><td style="white-space:nowrap">${tcEsc(tcResolvedClaimPeriod(r.d,r.p)||"—")}</td><td style="white-space:nowrap"><button type="button" data-tc-act="edit" data-k="${tcEsc(r.key)}">修改</button> <button type="button" data-tc-act="del" data-k="${tcEsc(r.key)}" style="background:#d62d2d;color:#fff;border-color:#d62d2d">刪除</button></td><td>${tcEsc(r.p.no||'')}</td><td>${tcEsc(r.p.caseName||'')}</td><td style="text-align:left;white-space:normal;min-width:420px;line-height:1.65">${r.detail}</td><td>${money(r.total)}</td></tr>`).join('')||(selected?`<tr><td colspan="6" style="text-align:center;padding:18px">${tcEsc(selected)} 尚無已儲存的採購單明細</td></tr>`:'');
  const label=$t('tcDetailPeriodLabel'),count=$t('tcDetailPeriodCount'),sum=$t('tcDetailPeriodTotal');
  if(label)label.textContent=selected||'尚未選擇';
  if(count)count.textContent=String(relevant.length);
@@ -3316,7 +3319,7 @@ function tcRenderSavedDetails(){
   unmatched.map(p=>'<div>• '+tcEsc(p.no)+'｜'+tcEsc(p.caseName)+'｜尚無儲存明細</div>').join('')+
   '<small>若請款區間錯誤，按該筆「修改」設定請款日後儲存，統計會更新；不會自動更改既有紀錄。</small>';
  }else{diagnostic.style.display='none';diagnostic.textContent=''}
- if(empty)empty.classList.toggle('hidden',rows.length>0);
+ if(empty)empty.classList.toggle('hidden',true);
  body.querySelectorAll('button[data-tc-act]').forEach(btn=>btn.onclick=()=>{const key=btn.dataset.k;if(btn.dataset.tcAct==='edit'){if($t('tcAssignmentSelect'))$t('tcAssignmentSelect').value=key;tcDetailLoad(key);$t('taichungPurchaseView')?.scrollIntoView({behavior:'smooth',block:'start'});}else{const p=ps.find(x=>x.key===key)||{};if(!confirm(`確定刪除 ${p.no||''} ${p.caseName||''} 的草屯採購單明細？`))return;const all=tcDetails();delete all[key];tcSaveDetails(all);if($t('tcAssignmentSelect')?.value===key)clear();tcRenderSavedDetails();}});
 }
 function add(item={}){
@@ -3773,9 +3776,17 @@ async function renderArchive(){
     const saved=(g.pdfTotal===null||g.pdfTotal===undefined)?calculated:Number(g.pdfTotal);
     return sum+(Number.isFinite(saved)?saved:calculated);
    },0);
-   return `<tr><td>${p}</td><td>${groups.length} 筆</td><td>${amount.toLocaleString('zh-TW',{maximumFractionDigits:0})}</td></tr>`;
+   return `<tr><td>${poEsc(p)}</td><td>${groups.length} 筆</td><td>${amount.toLocaleString('zh-TW',{maximumFractionDigits:0})}</td><td><button type="button" class="poLoadSavedPeriod" data-period="${poEsc(p)}" style="padding:6px 12px;cursor:pointer">載入／修改</button></td></tr>`;
   });
-  summary.innerHTML='<h3>浤富已儲存明細｜依請款區間統計</h3><table class="purchaseRecords" style="width:100%"><thead><tr><th>區間日期</th><th>儲存筆數（銷貨單分組）</th><th>總金額（PDF 明細）</th></tr></thead><tbody>'+(rows.join('')||'<tr><td colspan="3">目前尚無依區間儲存的明細</td></tr>')+'</tbody></table>';
+  summary.innerHTML='<h3>浤富已儲存明細｜依請款區間統計</h3><table class="purchaseRecords" style="width:100%"><thead><tr><th>區間日期</th><th>儲存筆數（銷貨單分組）</th><th>總金額（PDF 明細）</th><th>操作</th></tr></thead><tbody>'+(rows.join('')||'<tr><td colspan="4">目前尚無依區間儲存的明細</td></tr>')+'</tbody></table>';
+  summary.querySelectorAll('.poLoadSavedPeriod').forEach(btn=>btn.addEventListener('click',()=>{
+    const p=btn.dataset.period;
+    if(!/^\\d{6}-\\d{6}$/.test(p)){alert('這份明細尚未指定區間，請先在上方設定區間並儲存。');return}
+    const current=($('poPdfPeriod')?.value||'').trim();
+    if(current!==p && Array.isArray(window.poGroups) && window.poGroups.length && !confirm('切換到 '+p+'？請先確認目前正在編輯的資料已儲存。'))return;
+    switchPeriod(p);
+    document.getElementById('poSaveAllBtn')?.scrollIntoView({behavior:'smooth',block:'center'});
+  }));
  }
 
  const list=$('poPdfPeriods');
@@ -3795,7 +3806,7 @@ window.poRefreshPeriodOptions=()=>renderArchive().catch(console.error);
 function switchPeriod(period){
  if(!periodValid(period))return;
  const current=($('poPdfPeriod')?.value||'').trim();
- if(current&&current!==period&&typeof poSaveAllWork==='function')poSaveAllWork(false);
+ // 切換區間只讀取已儲存內容，不將目前工作資料自動寫入另一個區間。
  $('poPdfPeriod').value=period;
  localStorage.setItem('sbd_hongfu_last_period',period);
  const archive=read('sbd_hongfu_period_work_v1',{});
