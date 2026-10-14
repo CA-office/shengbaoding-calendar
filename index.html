@@ -3789,7 +3789,7 @@ async function renderArchive(){
   summary.innerHTML='<h3>浤富已儲存明細｜依請款區間統計</h3><table class="purchaseRecords" style="width:100%"><thead><tr><th>區間日期</th><th>儲存筆數（銷貨單分組）</th><th>總金額（PDF 明細）</th><th>操作</th></tr></thead><tbody>'+(rows.join('')||'<tr><td colspan="4">目前尚無依區間儲存的明細</td></tr>')+'</tbody></table>';
   summary.querySelectorAll('.poLoadSavedPeriod').forEach(btn=>btn.addEventListener('click',()=>{
     const p=btn.dataset.period;
-    if(!/^\\d{6}-\\d{6}$/.test(p)){alert('這份明細尚未指定區間，請先在上方設定區間並儲存。');return}
+    if(!/^\d{6}-\d{6}$/.test(p)){alert('這份明細尚未指定區間，請先在上方設定區間並儲存。');return}
     const current=($('poPdfPeriod')?.value||'').trim();
     if(current!==p && Array.isArray(window.poGroups) && window.poGroups.length && !confirm('切換到 '+p+'？請先確認目前正在編輯的資料已儲存。'))return;
     switchPeriod(p);
