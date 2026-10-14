@@ -3139,7 +3139,7 @@ async function download(){
  }
  const buf=await wb.xlsx.writeBuffer(),blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),u=URL.createObjectURL(blob),link=document.createElement('a');link.href=u;link.download='客戶發票_列印.xlsx';link.click();setTimeout(()=>URL.revokeObjectURL(u),1000)
 }
-function open(){tcLoadCloudForDropdown();if(typeof isAdminAccount==='function'&&!isAdminAccount())return;['calendarView','quoteView','purchaseView','installStatsView','overtimeView'].forEach(id=>$i(id)?.classList.add('hidden'));$i('invoiceCustomerView')?.classList.remove('hidden');$i('calendarControls')?.classList.add('hidden');document.querySelectorAll('.featureTabs button').forEach(b=>b.classList.remove('active'));$i('invoiceCustomerTabBtn')?.classList.add('active');render()}
+function open(){if(typeof isAdminAccount==='function'&&!isAdminAccount())return;['calendarView','quoteView','purchaseView','installStatsView','overtimeView'].forEach(id=>$i(id)?.classList.add('hidden'));$i('invoiceCustomerView')?.classList.remove('hidden');$i('calendarControls')?.classList.add('hidden');document.querySelectorAll('.featureTabs button').forEach(b=>b.classList.remove('active'));$i('invoiceCustomerTabBtn')?.classList.add('active');render()}
 function bind(){const tab=$i('invoiceCustomerTabBtn');if(tab)tab.onclick=e=>{e.preventDefault();open()};$i('ciSaveBtn')?.addEventListener('click',doSave);$i('ciDownloadBtn')?.addEventListener('click',download);render()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();
 })();
