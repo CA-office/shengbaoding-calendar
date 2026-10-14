@@ -911,7 +911,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
   </div>
   <div class="quoteCard">
     <h2 class="quoteTitle">草屯採購單</h2>
-    <div id="tcCloudProjectsStatus" style="font-size:12px;color:#52687c;margin-bottom:7px">正在準備讀取雲端草屯案件…</div><div style="margin:0 0 12px"><label style="font-size:13px;font-weight:800">指定單號／案名<select id="tcAssignmentSelect" style="width:100%;padding:10px;border:1px solid #bdc8d2;border-radius:8px;margin-top:4px;background:#fff"><option value="">請選擇要指定的單號／案名</option></select></label><div style="font-size:12px;color:var(--muted);margin-top:4px">報價單會帶入客戶名稱與未稅合計；原有草屯資料不覆蓋，可在上方新增、修改。 <button type="button" id="tcRefreshProjectBtn" style="padding:4px 8px">重新讀取清單</button></div></div>
+    <div id="tcCloudProjectsStatus" style="font-size:12px;color:#52687c;margin-bottom:7px">正在準備讀取雲端草屯案件…</div><div style="margin:0 0 12px"><label style="font-size:13px;font-weight:800">指定單號／案名<select id="tcAssignmentSelect" style="width:100%;padding:10px;border:1px solid #bdc8d2;border-radius:8px;margin-top:4px;background:#fff"><option value="">請選擇要指定的單號／案名</option></select></label><div style="font-size:12px;color:var(--muted);margin-top:4px">報價單會帶入客戶名稱與未稅合計；原有草屯資料不覆蓋，可在上方新增、修改。 <button type="button" id="tcRefreshProjectBtn" style="padding:4px 8px">重新讀取清單</button><button type="button" id="tcQuoteAuditBtn" style="padding:4px 8px;margin-left:6px">檢查所有 0 元案件</button></div><div id="tcQuoteAuditPanel" style="display:none;margin:12px 0;padding:12px;border:1px solid #cbd5e1;border-radius:8px"></div></div>
     <div class="quoteItemsWrap"><table class="quoteItems tcItemsTable"><thead><tr><th>項數</th><th>名稱</th><th class="tcSizeCol">尺寸</th><th>總公分數</th><th>單位</th><th>單價</th><th>合計</th><th></th></tr></thead><tbody id="tcItemsBody"></tbody></table></div>
     <div class="quoteManageTools"><button type="button" id="tcAddItemBtn">＋ 新增項目</button><button type="button" id="tcNameManageBtn">名稱選項管理</button><span class="hint">直接輸入資料，不需要 PDF 匯入</span></div>
     <div class="quoteSummary"><span>合計</span><span id="tcSubtotal">0</span></div>
@@ -3200,14 +3200,51 @@ function tcSyncQuotes(){
  let changed=false;
  for(const q of quotes){
   if(!q||q.id==null)continue;
-  const key='quote:'+String(q.id);
-  if(a.some(r=>String(r.key)===key))continue;
-  const no=String(q.quote_no||'').trim();
-  if(no&&a.some(r=>String(r.no||'').trim()===no))continue;
-  a.unshift({key,no,caseName:String(q.customer_name||'').trim(),caseAmount:String(Number(q.subtotal||0)),category:'',sourceQuoteId:String(q.id),updatedAt:new Date().toISOString(),sortAddedAt:Date.now()});changed=true;
+  const key='quote:'+String(q.id), no=String(q.quote_no||'').trim();
+  const subtotal=Number(q.subtotal);
+  if(!Number.isFinite(subtotal))continue;
+  const existing=a.find(r=>String(r.sourceQuoteId||'')===String(q.id)||String(r.key)===key)
+    ||(no?a.find(r=>String(r.no||'').trim()===no):null);
+  if(existing){
+   const old=Number(String(existing.caseAmount??'').replace(/,/g,''));
+   if((!Number.isFinite(old)||old===0)&&subtotal>0){
+    existing.caseAmount=String(subtotal);
+    existing.sourceQuoteId=String(q.id);
+    existing.updatedAt=new Date().toISOString();
+    changed=true;
+   }
+   continue;
+  }
+  a.unshift({key,no,caseName:String(q.customer_name||'').trim(),caseAmount:String(subtotal),category:'',sourceQuoteId:String(q.id),updatedAt:new Date().toISOString(),sortAddedAt:Date.now()});changed=true;
  }
- if(changed){tcSaveProjects(a);tcRenderProjects()}
+ if(changed){tcSaveProjects(a);tcRenderProjects();}
  else tcRenderAssignmentOptions();
+ tcRenderQuoteAudit();
+}
+function tcRenderQuoteAudit(){
+ const panel=$t('tcQuoteAuditPanel');if(!panel||panel.style.display==='none')return;
+ const quotes=Array.isArray(window.sbdQuoteRowsForTc)?window.sbdQuoteRowsForTc:[];
+ const zeros=tcProjects().filter(p=>Number(String(p.caseAmount??'').replace(/,/g,''))===0);
+ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const lookup=p=>quotes.find(q=>String(q.id)===String(p.sourceQuoteId||''))||
+   quotes.find(q=>String(q.quote_no||'').trim()===String(p.no||'').trim());
+ const rows=zeros.map(p=>{
+  const match=lookup(p);
+  const amount=match?Number(match.subtotal):NaN;
+  const good=Number.isFinite(amount)&&amount>0;
+  return `<tr><td>${esc(p.no)}</td><td>${esc(p.caseName)}</td><td>${good?amount.toLocaleString('zh-TW'):(match?'報價單未稅金額也是 0':'找不到同單號的報價單')}</td><td>${good?`<button type="button" data-quote-fix="${esc(p.key)}">補入未稅金額</button>`:'需人工核對報價單編號'}</td></tr>`;
+ });
+ panel.innerHTML=`<b>草屯 0 元案件檢查：${zeros.length} 筆</b><p style="margin:6px 0">僅以報價單 ID 或完全相同的單號比對；不會以相似案名猜測金額。下方補入只更新本機草屯案件，不修改報價單或雲端。</p><div style="overflow-x:auto"><table class="purchaseRecords" style="width:100%"><thead><tr><th>單號</th><th>案名</th><th>報價單未稅金額</th><th>操作</th></tr></thead><tbody>${rows.join('')||'<tr><td colspan="4">沒有 0 元案件</td></tr>'}</tbody></table></div>`;
+ panel.querySelectorAll('[data-quote-fix]').forEach(btn=>btn.onclick=()=>{
+  const key=btn.getAttribute('data-quote-fix');
+  const a=tcProjects(),p=a.find(x=>String(x.key)===key);if(!p)return;
+  const q=lookup(p),n=Number(q?.subtotal);
+  if(!Number.isFinite(n)||n<=0)return alert('無法確認報價單未稅金額');
+  if(Number(String(p.caseAmount??'').replace(/,/g,''))!==0)return alert('此案件已有金額，未覆蓋');
+  if(!confirm(`將 ${p.no} 的案件金額從 0 改為 ${n.toLocaleString('zh-TW')}（未稅）？`))return;
+  p.caseAmount=String(n);p.sourceQuoteId=String(q.id);p.updatedAt=new Date().toISOString();
+  tcSaveProjects(a);tcRenderProjects();tcRenderQuoteAudit();
+ });
 }
 window.addEventListener('sbd-quotes-loaded',tcSyncQuotes);
 function tcRenderAssignmentOptions(){
@@ -3477,7 +3514,7 @@ async function download(){
    a.href=u;a.download=`草屯採購單_${start}-${end}.xlsx`;a.click();setTimeout(()=>URL.revokeObjectURL(u),1200);
  }catch(e){console.error(e);alert('草屯採購單 Excel 產生失敗：'+e.message)}
 }
-function bind(){tcLoadCloudForDropdown();const tab=$t('taichungPurchaseTabBtn');if(tab)tab.onclick=e=>{e.preventDefault();open()};tcRenderProjects();$t('tcProjectNewBtn')?.addEventListener('click',tcProjectClear);$t('tcProjectSaveBtn')?.addEventListener('click',tcProjectSave);$t('tcProjectFilter')?.addEventListener('change',tcRenderProjects);$t('tcCaseFilter')?.addEventListener('change',tcRenderProjects);$t('tcAssignmentSelect')?.addEventListener('change',()=>{});$t('tcRefreshProjectBtn')?.addEventListener('click',()=>{tcSyncQuotes();tcRenderProjects();tcRenderAssignmentOptions();});['tcNoPrefix','tcProjectNo','tcProjectCase','tcProjectAmount'].forEach(id=>$t(id)?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcProjectSave()}}));$t('tcAddItemBtn')?.addEventListener('click',()=>add());$t('tcNameManageBtn')?.addEventListener('click',()=>{renderTCNameManager();tcResetNameEditor();$t('tcNameDlg')?.showModal()});$t('tcNameOptionSaveBtn')?.addEventListener('click',tcSaveNameOption);$t('tcNameOptionCancelBtn')?.addEventListener('click',tcResetNameEditor);$t('tcNameDlgCloseBtn')?.addEventListener('click',()=>{$t('tcNameDlg')?.close()});$t('tcNameOptionInput')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcSaveNameOption()}});$t('tcDetailSaveBtn')?.addEventListener('click',()=>tcDetailSave(true));$t('tcExcelBtn')?.addEventListener('click',download);$t('tcPeriodHistory')?.addEventListener('change',tcPeriodSelect);
+function bind(){tcLoadCloudForDropdown();const tab=$t('taichungPurchaseTabBtn');if(tab)tab.onclick=e=>{e.preventDefault();open()};tcRenderProjects();$t('tcProjectNewBtn')?.addEventListener('click',tcProjectClear);$t('tcProjectSaveBtn')?.addEventListener('click',tcProjectSave);$t('tcProjectFilter')?.addEventListener('change',tcRenderProjects);$t('tcCaseFilter')?.addEventListener('change',tcRenderProjects);$t('tcAssignmentSelect')?.addEventListener('change',()=>{});$t('tcRefreshProjectBtn')?.addEventListener('click',()=>{tcSyncQuotes();tcRenderProjects();tcRenderAssignmentOptions();});$t('tcQuoteAuditBtn')?.addEventListener('click',()=>{const panel=$t('tcQuoteAuditPanel');panel.style.display=panel.style.display==='none'?'block':'none';tcRenderQuoteAudit()});['tcNoPrefix','tcProjectNo','tcProjectCase','tcProjectAmount'].forEach(id=>$t(id)?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcProjectSave()}}));$t('tcAddItemBtn')?.addEventListener('click',()=>add());$t('tcNameManageBtn')?.addEventListener('click',()=>{renderTCNameManager();tcResetNameEditor();$t('tcNameDlg')?.showModal()});$t('tcNameOptionSaveBtn')?.addEventListener('click',tcSaveNameOption);$t('tcNameOptionCancelBtn')?.addEventListener('click',tcResetNameEditor);$t('tcNameDlgCloseBtn')?.addEventListener('click',()=>{$t('tcNameDlg')?.close()});$t('tcNameOptionInput')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcSaveNameOption()}});$t('tcDetailSaveBtn')?.addEventListener('click',()=>tcDetailSave(true));$t('tcExcelBtn')?.addEventListener('click',download);$t('tcPeriodHistory')?.addEventListener('change',tcPeriodSelect);
 $t('tcExportPeriod')?.addEventListener('input',()=>tcRememberEnteredPeriod(false));
 $t('tcPeriodHistory')?.addEventListener('focus',()=>{tcRememberEnteredPeriod(false);tcPeriodRender($t('tcPeriodHistory')?.value||'')});
 $t('tcExportPeriod')?.addEventListener('change',()=>tcRememberEnteredPeriod(false));
