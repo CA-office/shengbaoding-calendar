@@ -927,7 +927,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
         <tfoot><tr style="background:#e8f0f7;font-weight:800"><td colspan="6" style="text-align:left;padding:12px 16px">全部已儲存明細總計｜<span id="tcAllDetailCount">0</span> 件｜總金額：<span id="tcAllDetailTotal">0</span></td></tr><tr style="background:#eef2f6;font-weight:800"><td colspan="6" style="text-align:left;padding:12px 16px">請款區間總計（<span id="tcDetailPeriodLabel">尚未選擇</span>）｜<span id="tcDetailPeriodCount">0</span> 件｜總金額：<span id="tcDetailPeriodTotal">0</span></td></tr></tfoot>
       </table>
     </div>
-    <div id="tcSavedDetailEmpty" class="quoteEmpty">目前沒有已儲存的草屯採購單明細</div><div style="margin-top:18px"><h3>草屯已儲存明細｜依請款區間統計</h3><table class="purchaseRecords" style="width:100%"><thead><tr><th>區間日期</th><th>儲存筆數</th><th>總金額</th></tr></thead><tbody id="tcSavedPeriodSummaryRows"><tr><td colspan="3">尚無資料</td></tr></tbody></table></div>
+    <div id="tcSavedDetailEmpty" class="quoteEmpty">目前沒有已儲存的草屯採購單明細</div><div style="margin-top:18px"><h3>草屯已儲存明細｜依請款區間統計</h3><table class="purchaseRecords" style="width:100%"><thead><tr><th>區間日期</th><th>儲存筆數</th><th>總金額</th><th>操作</th></tr></thead><tbody id="tcSavedPeriodSummaryRows"><tr><td colspan="4">尚無資料</td></tr></tbody></table></div>
   </div>
 </section>
 <section id="costReportView" class="hidden" style="max-width:1250px;margin:22px auto;padding:0 15px;font-family:system-ui,'Noto Sans TC',sans-serif;color:#172b45"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px"><div><h2 style="font-size:25px;margin:0">成本・銷售・件數分析</h2><p style="color:#718096">統計資料來源：本機及雲端已保存的採購案件；不覆蓋任何原始資料</p></div><select id="crMonth" style="display:none;padding:10px;border-radius:8px;border:1px solid #cbd5e1"><option value="all">全部月份</option></select> <select id="crPeriod" style="padding:10px;border-radius:8px;border:1px solid #cbd5e1"><option value="all">全部請款區間</option></select></div><div id="crPdfCostControl" style="margin:16px 0;padding:12px 16px;border:1px solid #dce5ee;border-radius:10px;background:#fff">
@@ -3285,7 +3285,15 @@ function tcRenderSavedDetails(){
    const entry=totals.get(p)||{count:0,total:0};
    entry.count++;entry.total+=r.total;totals.set(p,entry);
   });
-  periodSummary.innerHTML=[...totals.entries()].sort(([a],[b])=>b.localeCompare(a)).map(([p,v])=>`<tr><td>${tcEsc(p)}</td><td>${v.count} 筆</td><td>${money(v.total)}</td></tr>`).join('')||'<tr><td colspan="3">目前尚無已儲存明細</td></tr>';
+  periodSummary.innerHTML=[...totals.entries()].sort(([a],[b])=>b.localeCompare(a)).map(([p,v])=>`<tr><td>${tcEsc(p)}</td><td>${v.count} 筆</td><td>${money(v.total)}</td><td><button type="button" class="tcLoadPeriodDetails" data-period="${tcEsc(p)}">載入／修改</button></td></tr>`).join('')||'<tr><td colspan="4">目前尚無已儲存明細</td></tr>';
+  periodSummary.querySelectorAll('.tcLoadPeriodDetails').forEach(btn=>btn.addEventListener('click',()=>{
+   const period=btn.dataset.period;
+   if(!/^\\d{6}-\\d{6}$/.test(period)){alert('這些明細尚未指定請款區間，請逐筆修改並指定。');return;}
+   tcPeriodSave(period.slice(0,6),period.slice(7));
+   $t('tcExportPeriod').value=period;
+   tcRenderSavedDetails();
+   $t('tcSavedDetailRows')?.closest('table')?.scrollIntoView({behavior:'smooth',block:'start'});
+  }));
  }
  rows.sort((a,b)=>String(b.d.updatedAt||'').localeCompare(String(a.d.updatedAt||'')));
  const chosen=String($t('tcExportPeriod')?.value||$t('tcPeriodHistory')?.value||'').trim();
