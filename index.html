@@ -938,7 +938,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
 <h2 style="font-size:18px;margin:0 0 10px">其他支出</h2>
 <div class="oeEntry">
 <label>日期<input id="oeDate" type="text" inputmode="numeric" placeholder="輸入 1015 → 2026/10/15" autocomplete="off"/></label>
-<label>支出<select id="oeCategory" required><option value="">請選擇支出</option><option value="油資">油資</option><option value="ETC">ETC</option><option value="停車費">停車費</option></select></label>
+<label>支出<select id="oeCategory" required><option value="">請選擇支出</option><option value="油資">油資</option><option value="ETC">ETC</option><option value="停車費">停車費</option></select><button id="oeAddCategory" type="button" style="margin-top:6px;padding:5px 10px">＋新增支出項目</button></label>
 <label>金額<input id="oeAmount" min="0" placeholder="0" step="1" type="number"/></label>
 <button id="oeSave" type="button">新增支出</button><button id="oeCancel" style="display:none" type="button">取消修改</button></div>
 <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0"><label>請款區間 <select id="oePeriod" style="padding:9px;border:1px solid #cbd5e1;border-radius:8px"><option value="all">全部請款區間</option></select></label><button id="oeAll" type="button">全部紀錄</button><button id="oeExport" type="button">下載 Excel（含總計）</button><strong id="oeTotal"></strong><span id="oeStatus" style="color:#586b7d"></span></div>
@@ -3325,7 +3325,7 @@ function tcRenderSavedDetails(){
   periodSummary.innerHTML=[...totals.entries()].sort(([a],[b])=>b.localeCompare(a)).map(([p,v])=>`<tr><td>${tcEsc(p)}</td><td>${v.count} 筆</td><td>${money(v.total)}</td><td><button type="button" class="tcLoadPeriodDetails" data-period="${tcEsc(p)}">載入／修改</button></td></tr>`).join('')||'<tr><td colspan="4">目前尚無已儲存明細</td></tr>';
   periodSummary.querySelectorAll('.tcLoadPeriodDetails').forEach(btn=>btn.addEventListener('click',()=>{
    const period=btn.dataset.period;
-   if(!/^\\d{6}-\\d{6}$/.test(period)){alert('這些明細尚未指定請款區間，請逐筆修改並指定。');return;}
+   if(!/^\d{6}-\d{6}$/.test(period)){alert('這些明細尚未指定請款區間，請逐筆修改並指定。');return;}
    tcPeriodSave(period.slice(0,6),period.slice(7));
    $t('tcExportPeriod').value=period;
    tcRenderSavedDetails();
@@ -4076,6 +4076,7 @@ async function persist(next){
  records=next;localSave();render();document.dispatchEvent(new Event('sbdOtherExpensesChanged'));message('已儲存至雲端');
 }
 function render(){
+ oeRefreshCategories();
  const picker=$('oePeriod');const old=picker.value;
  let saved=[];try{saved=JSON.parse(localStorage.getItem('sbd_tc_invoice_periods_v1')||'[]')}catch(e){}
  let details={};try{details=JSON.parse(localStorage.getItem('sbd_taichung_purchase_details_v1')||'{}')}catch(e){}
@@ -4085,12 +4086,37 @@ function render(){
  $('oeRows').innerHTML=a.map(x=>`<tr style="border-bottom:1px solid #ddd"><td>${esc(String(x.date||'').slice(5,7)+'/'+String(x.date||'').slice(8,10))}</td><td>${esc(x.category)}</td><td style="text-align:right">${fmt(x.amount)}</td><td><button type="button" data-edit="${esc(x.id)}">修改</button><button type="button" data-delete="${esc(x.id)}">刪除</button></td></tr>`).join('');
  const total=a.reduce((n,x)=>n+Number(x.amount||0),0);$('oeTotal').textContent=`共 ${a.length} 筆，支出合計 ${fmt(total)}`;$('oeTableTotal').textContent=fmt(total);
 }
+const OE_CATEGORY_KEY='sbd_other_expense_categories_v1';
+function oeSavedCategories(){try{const x=JSON.parse(localStorage.getItem(OE_CATEGORY_KEY)||'[]');return Array.isArray(x)?x.filter(v=>typeof v==='string'&&v.trim()):[]}catch(e){return []}}
+function oeRefreshCategories(selected){
+ const select=$('oeCategory');if(!select)return;
+ const chosen=selected===undefined?select.value:selected;
+ const names=[...new Set(['油資','ETC','停車費',...oeSavedCategories(),...records.map(r=>r.category).filter(Boolean)])];
+ select.innerHTML='<option value="">請選擇支出</option>';
+ names.forEach(name=>select.add(new Option(name,name)));
+ if(names.includes(chosen))select.value=chosen;
+}
+function oeRememberCategory(name){
+ const current=oeSavedCategories();
+ if(!current.includes(name))localStorage.setItem(OE_CATEGORY_KEY,JSON.stringify([...current,name]));
+ oeRefreshCategories(name);
+}
 function clear(){editId=null;['oeCategory','oeAmount'].forEach(id=>$(id).value='');$('oeSave').textContent='新增支出';$('oeCancel').style.display='none'}
 function init(){
  const tab=$('otherExpensesTabBtn');if(!tab)return;
  tab.classList.toggle('hidden',typeof isAdminAccount==='function'&&!isAdminAccount());
  tab.onclick=()=>{if(typeof isAdminAccount==='function'&&!isAdminAccount())return;document.querySelectorAll('#appPage main > section,#calendarView').forEach(el=>el.classList.add('hidden'));$('otherExpensesView').classList.remove('hidden');$('calendarControls')?.classList.add('hidden');document.querySelectorAll('.featureTabs button').forEach(x=>x.classList.remove('active'));tab.classList.add('active');load()};
  document.querySelectorAll('.featureTabs button').forEach(x=>{if(x!==tab)x.addEventListener('click',()=>$('otherExpensesView').classList.add('hidden'))});
+ oeRefreshCategories();
+ $('oeAddCategory').onclick=()=>{
+  const input=prompt('請輸入新的支出項目名稱（例如：車輛保養）');
+  if(input===null)return;
+  const name=input.trim();
+  if(!name){message('請輸入支出項目名稱');return}
+  if(name.length>30){message('項目名稱請勿超過 30 個字');return}
+  oeRememberCategory(name);
+  message('已新增「'+name+'」，下次開啟仍可選擇');
+ };
  $('oeDate').value=oeFormatDate(new Date().toLocaleDateString('en-CA'));
  $('oeDate').addEventListener('blur',()=>{
   const normalized=oeNormalizeDate($('oeDate').value);
