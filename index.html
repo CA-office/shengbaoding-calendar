@@ -937,7 +937,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
 </div><div id="crCloudStatus" style="font-size:13px;color:#52687c;margin:8px 0">正在檢查雲端草屯資料…</div><div id="crPeriodBreakdown" style="font-size:13px;line-height:1.7;color:#334b63;background:#f6f8fa;padding:9px 12px;border-radius:8px;margin:8px 0;overflow-wrap:anywhere" aria-live="polite"></div><div id="crCards" style="margin:16px 0"></div><div id="crSummary" style="background:#fff;border:1px solid #dce5ee;border-radius:14px;padding:20px;overflow-x:auto"></div><div style="display:none;background:white;border:1px solid #e2e8f0;border-radius:14px;padding:18px;margin-top:16px;overflow:auto"><h3>案件成本與銷售明細</h3><table style="width:100%;min-width:780px;border-collapse:collapse"><thead><tr style="background:#eef3f8"><th>月份</th><th>單號</th><th>案名</th><th>銷售</th><th>成本</th></tr></thead><tbody id="crRows"></tbody></table></div></section><section class="hidden" id="otherExpensesView" style="max-width:1150px;margin:22px auto;padding:16px;color:#20344a">
 <h2 style="font-size:18px;margin:0 0 10px">其他支出</h2>
 <div class="oeEntry">
-<label>日期<input id="oeDate" type="date"/></label>
+<label>日期<input id="oeDate" type="text" inputmode="numeric" placeholder="輸入 1015 → 2026/10/15" autocomplete="off"/></label>
 <label>支出<select id="oeCategory" required><option value="">請選擇支出</option><option value="油資">油資</option><option value="ETC">ETC</option><option value="停車費">停車費</option></select></label>
 <label>金額<input id="oeAmount" min="0" placeholder="0" step="1" type="number"/></label>
 <button id="oeSave" type="button">新增支出</button><button id="oeCancel" style="display:none" type="button">取消修改</button></div>
@@ -4034,6 +4034,19 @@ const fmt=n=>Number(n||0).toLocaleString('en-US');
 function sbdPeriodBounds(x){const m=String(x||'').trim().match(/^(\d{6})-(\d{6})$/);if(!m)return null;const cv=t=>'20'+t.slice(0,2)+'-'+t.slice(2,4)+'-'+t.slice(4,6);return [cv(m[1]),cv(m[2])]}
 function sbdDateInPeriod(date,p){if(p==='all'||!p)return true;const b=sbdPeriodBounds(p);return !!b&&String(date||'').slice(0,10)>=b[0]&&String(date||'').slice(0,10)<=b[1]}
 
+function oeNormalizeDate(value){
+ const raw=String(value||'').trim();
+ const digits=raw.replace(/[^0-9]/g,'');
+ let y,m,d;
+ if(/^\\d{4}$/.test(digits)){y=new Date().getFullYear();m=Number(digits.slice(0,2));d=Number(digits.slice(2));}
+ else if(/^\\d{8}$/.test(digits)){y=Number(digits.slice(0,4));m=Number(digits.slice(4,6));d=Number(digits.slice(6));}
+ else if(/^\\d{7}$/.test(digits)){y=Number(digits.slice(0,3))+1911;m=Number(digits.slice(3,5));d=Number(digits.slice(5));}
+ else return null;
+ const check=new Date(y,m-1,d);
+ if(check.getFullYear()!==y||check.getMonth()!==m-1||check.getDate()!==d)return null;
+ return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+function oeFormatDate(date){return String(date||'').replace(/-/g,'/')}
 const message=x=>$('oeStatus').textContent=x;
 function readLocal(){try{const a=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(a)?a:[]}catch(e){return []}}
 function localSave(){localStorage.setItem(KEY,JSON.stringify(records))}
@@ -4078,12 +4091,16 @@ function init(){
  tab.classList.toggle('hidden',typeof isAdminAccount==='function'&&!isAdminAccount());
  tab.onclick=()=>{if(typeof isAdminAccount==='function'&&!isAdminAccount())return;document.querySelectorAll('#appPage main > section,#calendarView').forEach(el=>el.classList.add('hidden'));$('otherExpensesView').classList.remove('hidden');$('calendarControls')?.classList.add('hidden');document.querySelectorAll('.featureTabs button').forEach(x=>x.classList.remove('active'));tab.classList.add('active');load()};
  document.querySelectorAll('.featureTabs button').forEach(x=>{if(x!==tab)x.addEventListener('click',()=>$('otherExpensesView').classList.add('hidden'))});
- $('oeDate').value=new Date().toLocaleDateString('en-CA');
- $('oeSave').onclick=async()=>{const date=$('oeDate').value,category=$('oeCategory').value.trim(),amount=Number($('oeAmount').value);if(!date||!category||!Number.isFinite(amount)||amount<0){message('請輸入日期及正確金額');return}
+ $('oeDate').value=oeFormatDate(new Date().toLocaleDateString('en-CA'));
+ $('oeDate').addEventListener('blur',()=>{
+  const normalized=oeNormalizeDate($('oeDate').value);
+  if(normalized)$('oeDate').value=oeFormatDate(normalized);
+ });
+ $('oeSave').onclick=async()=>{const date=oeNormalizeDate($('oeDate').value),category=$('oeCategory').value.trim(),amount=Number($('oeAmount').value);if(!date||!category||!Number.isFinite(amount)||amount<0){message('請輸入有效日期（例如 1015）及正確金額');return}
  const previous=editId?records.find(x=>x.id===editId):null;const item={...(previous||{}),id:editId||('oe-'+Date.now()+'-'+Math.random().toString(36).slice(2)),date,category,description:previous?.description||'',amount};
  const next=editId?records.map(x=>x.id===editId?item:x):[item,...records];$('oeSave').disabled=true;try{await persist(next);clear()}catch(e){message('儲存失敗，原始資料未更動：'+e.message)}finally{$('oeSave').disabled=false}};
  $('oeCancel').onclick=clear;
- $('oeRows').onclick=async e=>{const edit=e.target.closest('[data-edit]'),del=e.target.closest('[data-delete]');if(edit){const x=records.find(r=>r.id===edit.dataset.edit);if(!x)return;editId=x.id;$('oeDate').value=x.date;if(x.category&&!Array.from($('oeCategory').options).some(o=>o.value===x.category)){$('oeCategory').add(new Option(x.category+'（舊資料）',x.category))}$('oeCategory').value=x.category;$('oeAmount').value=x.amount;$('oeSave').textContent='儲存修改';$('oeCancel').style.display='inline-block';$('otherExpensesView').scrollIntoView({behavior:'smooth'})}else if(del){if(del.dataset.confirm!=='yes'){del.dataset.confirm='yes';del.textContent='確認刪除';message('再按一次「確認刪除」才會刪除這筆紀錄');return}try{await persist(records.filter(r=>r.id!==del.dataset.delete))}catch(e){message('刪除失敗：'+e.message)}}};
+ $('oeRows').onclick=async e=>{const edit=e.target.closest('[data-edit]'),del=e.target.closest('[data-delete]');if(edit){const x=records.find(r=>r.id===edit.dataset.edit);if(!x)return;editId=x.id;$('oeDate').value=oeFormatDate(x.date);if(x.category&&!Array.from($('oeCategory').options).some(o=>o.value===x.category)){$('oeCategory').add(new Option(x.category+'（舊資料）',x.category))}$('oeCategory').value=x.category;$('oeAmount').value=x.amount;$('oeSave').textContent='儲存修改';$('oeCancel').style.display='inline-block';$('otherExpensesView').scrollIntoView({behavior:'smooth'})}else if(del){if(del.dataset.confirm!=='yes'){del.dataset.confirm='yes';del.textContent='確認刪除';message('再按一次「確認刪除」才會刪除這筆紀錄');return}try{await persist(records.filter(r=>r.id!==del.dataset.delete))}catch(e){message('刪除失敗：'+e.message)}}};
  $('oePeriod').onchange=render;$('oeAll').onclick=()=>{$('oePeriod').value='all';render()};
  $('oeExport').onclick=()=>{
   const a=records.filter(x=>sbdDateInPeriod(x.date,$('oePeriod').value)).sort((x,y)=>String(y.date).localeCompare(String(x.date)));
