@@ -621,6 +621,13 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
 #receiptView #rcMessage:empty{display:none}
 @media(max-width:650px){#receiptView .rcCustomerField{grid-column:1/-1}}
 </style>
+
+<style id="oe-expense-column-100px">
+/* 其他支出：支出欄固定 100px，其餘三欄維持約 2cm */
+#otherExpensesView .oeTable{width:calc(6cm + 100px)!important;min-width:calc(6cm + 100px)!important;table-layout:fixed!important}
+#otherExpensesView .oeTable col:nth-child(2){width:100px!important}
+#otherExpensesView .oeTable th:nth-child(2),#otherExpensesView .oeTable td:nth-child(2){width:100px!important;min-width:100px!important;max-width:100px!important}
+</style>
 </head>
 <body>
 <div id="pullRefreshIndicator" aria-hidden="true"><div class="pull-spinner"></div></div>
@@ -4115,7 +4122,7 @@ function render(){
  let details={};try{details=JSON.parse(localStorage.getItem('sbd_taichung_purchase_details_v1')||'{}')}catch(e){}
  const periods=[...new Set([...(Array.isArray(saved)?saved:[]),...Object.values(details||{}).map(x=>x?.claimPeriod)].filter(x=>sbdPeriodBounds(x)))].sort();
  picker.innerHTML='<option value="all">全部請款區間</option>'+periods.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');picker.value=periods.includes(old)?old:'all';
- const chosen=picker.value;const a=records.filter(x=>sbdDateInPeriod(x.date,chosen)).sort((x,y)=>String(y.date).localeCompare(String(x.date)));
+ const chosen=picker.value;const a=records.filter(x=>sbdDateInPeriod(x.date,chosen)).sort((x,y)=>String(x.date).localeCompare(String(y.date)));
  $('oeRows').innerHTML=a.map(x=>`<tr style="border-bottom:1px solid #ddd"><td>${esc(String(x.date||'').slice(5,7)+'/'+String(x.date||'').slice(8,10))}</td><td>${esc(x.category)}</td><td style="text-align:right">${fmt(x.amount)}</td><td><button type="button" data-edit="${esc(x.id)}">修改</button><button type="button" data-delete="${esc(x.id)}">刪除</button></td></tr>`).join('');
  const total=a.reduce((n,x)=>n+Number(x.amount||0),0);$('oeTotal').textContent=`共 ${a.length} 筆，支出合計 ${fmt(total)}`;$('oeTableTotal').textContent=fmt(total);
 }
