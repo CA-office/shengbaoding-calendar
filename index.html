@@ -67,9 +67,9 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
 #purchaseView .purchaseRecords{table-layout:fixed;width:20cm;min-width:20cm;} #purchaseView .purchaseRecords th:nth-child(3),#purchaseView .purchaseRecords td:nth-child(3){width:8cm;max-width:8cm;}
 #purchaseView .purchaseRecords th:nth-child(3),#purchaseView .purchaseRecords td:nth-child(3){overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
-/* v126: 代安裝明細固定 4 / 6 / 2 cm，不影響其他表格 */
+/* 代安裝明細固定 4 / 8 / 2 cm，不影響其他表格 */
 #tcAgencyDetailTable th:nth-child(1),#tcAgencyDetailTable td:nth-child(1){width:4cm;max-width:4cm;}
-#tcAgencyDetailTable th:nth-child(2),#tcAgencyDetailTable td:nth-child(2){width:6cm;max-width:6cm;}
+#tcAgencyDetailTable th:nth-child(2),#tcAgencyDetailTable td:nth-child(2){width:8cm;max-width:8cm;}
 #tcAgencyDetailTable th:nth-child(3),#tcAgencyDetailTable td:nth-child(3){width:2cm;max-width:2cm;}
 </style>
 
@@ -948,7 +948,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
         <td id="tcProjectCount" style="text-align:center;padding:12px">0</td>
         <td id="tcProjectGrandTotal" style="text-align:right;padding:12px">0</td><td></td><td></td>
       </tr></tfoot>
-    </table><div style="margin-top:18px"><h3>代安裝明細</h3><div style="max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch"><table class="purchaseRecords" id="tcAgencyDetailTable" style="width:12cm;min-width:12cm;max-width:12cm;table-layout:fixed"><colgroup><col style="width:4cm"><col style="width:6cm"><col style="width:2cm"></colgroup><thead><tr><th>單號</th><th>案名</th><th>案件金額</th></tr></thead><tbody id="tcAgencyRows"></tbody><tfoot><tr><th>總計</th><th id="tcAgencyCount">0 件</th><th id="tcAgencyTotal">0</th></tr></tfoot></table></div></div><details style="margin:10px 0 18px;border:1px solid #d8e0e7;border-radius:8px;padding:10px"><summary style="cursor:pointer;font-weight:700">核對 10/10 舊備份代安裝（不計入目前金額／件數）</summary><p style="font-size:12px;color:#66788a">以下只是歷史備份，不代表目前有效案件。標示「未找到」的資料不會自動恢復，避免重複計算。</p><div style="overflow-x:auto"><table class="purchaseRecords" style="min-width:470px"><thead><tr><th>單號</th><th>案名</th><th>舊備份金額</th><th>比對</th></tr></thead><tbody id="tcAgencyBackupAudit"></tbody></table></div></details>
+    </table><div style="margin-top:18px"><h3>代安裝明細</h3><div style="max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch"><table class="purchaseRecords" id="tcAgencyDetailTable" style="width:14cm;min-width:14cm;max-width:14cm;table-layout:fixed"><colgroup><col style="width:4cm"><col style="width:8cm"><col style="width:2cm"></colgroup><thead><tr><th>單號</th><th>案名</th><th>案件金額</th></tr></thead><tbody id="tcAgencyRows"></tbody><tfoot><tr><th>總計</th><th id="tcAgencyCount">0 件</th><th id="tcAgencyTotal">0</th></tr></tfoot></table></div></div><details style="margin:10px 0 18px;border:1px solid #d8e0e7;border-radius:8px;padding:10px"><summary style="cursor:pointer;font-weight:700">核對 10/10 舊備份代安裝（不計入目前金額／件數）</summary><p style="font-size:12px;color:#66788a">以下只是歷史備份，不代表目前有效案件。標示「未找到」的資料不會自動恢復，避免重複計算。</p><div style="overflow-x:auto"><table class="purchaseRecords" style="min-width:470px"><thead><tr><th>單號</th><th>案名</th><th>舊備份金額</th><th>比對</th></tr></thead><tbody id="tcAgencyBackupAudit"></tbody></table></div></details>
   </div>
   <div class="quoteCard">
     <h2 class="quoteTitle">草屯採購單</h2>
@@ -3284,7 +3284,7 @@ function tcSaveProjects(a){
 
 function tcProjectClear(){tcProjectEditKey=null;$t('tcNoPrefix').value='G5DE';$t('tcProjectNo').value='';$t('tcProjectCase').value='';$t('tcProjectAmount').value='';}
 function tcFullNo(){const x=$t('tcProjectNo')?.value.trim()||'';return x?(($t('tcNoPrefix')?.value||'')+x):''}
-function tcProjectSave(){const no=tcFullNo(),caseName=$t('tcProjectCase').value.trim(),caseAmount=$t('tcProjectAmount').value.trim();if(!no&&!caseName)return alert('請輸入單號或案名');const a=tcProjects(),key=tcProjectEditKey||Date.now().toString();const i=a.findIndex(x=>String(x.key)===String(key));const rec={...(i>=0?a[i]:{}),key,no,caseName,caseAmount,quoteSyncLocked:true,updatedAt:new Date().toISOString(),...(i>=0?{}:{sortAddedAt:Date.now()})};if(i>=0){a[i]=rec;}else a.unshift(rec);tcSaveProjects(a);tcProjectEditKey=null;tcRenderProjects();tcProjectClear();}
+function tcProjectSave(){const no=tcFullNo(),caseName=$t('tcProjectCase').value.trim(),caseAmount=$t('tcProjectAmount').value.trim();if(!no&&!caseName)return alert('請輸入單號或案名');const a=tcProjects(),key=tcProjectEditKey||Date.now().toString();const i=a.findIndex(x=>String(x.key)===String(key));const rec={...(i>=0?a[i]:{}),key,no,caseName,caseAmount,quoteSyncLocked:true,tcManuallyEdited:true,updatedAt:new Date().toISOString(),...(i>=0?{}:{sortAddedAt:Date.now()})};if(i>=0){a[i]=rec;}else a.unshift(rec);tcSaveProjects(a);tcProjectEditKey=null;tcRenderProjects();tcProjectClear();}
 // 報價單只帶入「客戶名稱」與「未稅合計 subtotal」；以報價單 ID 固定識別，避免重複。
 // 原本手動草屯資料優先保留；已有相同報價單的資料不覆蓋修改內容。
 function tcSyncQuotes(){
@@ -3295,12 +3295,25 @@ function tcSyncQuotes(){
  const normalized=v=>String(v??'').trim();
  for(const q of quotes){
   if(!q||q.id==null)continue;
+  if(normalized(q.order_no))continue; // 有訂單編號的報價單僅同步浤富
   // 報價單的「訂單編號」與系統報價單編號是不同欄位；草屯只收數字案件編號。
   const candidates=[normalized(q.order_no),normalized(q.quote_no)].filter(v=>/^\d{6,}$/.test(v));
   if(!candidates.length)continue;
   const existing=a.find(r=>normalized(r.sourceQuoteId)===normalized(q.id))||a.find(r=>candidates.includes(normalized(r.no)));
   const amount=Number(q.subtotal);
   if(existing){
+   // 舊版只帶入客戶名稱的案件：僅當案名完全等於報價單客戶名稱、
+   // 且沒有人工編輯紀錄時，補上報價單案名；其他修改一律保留。
+   const customer=normalized(q.customer_name);
+   const quoteCase=normalized(q.case_name);
+   const fullCase=[customer,quoteCase].filter(Boolean).join(' ');
+   if(!existing.tcManuallyEdited && customer && quoteCase &&
+      normalized(existing.caseName)===customer && fullCase!==customer){
+     existing.caseName=fullCase;
+     existing.tcQuoteCaseNameFilled=true;
+     existing.updatedAt=new Date().toISOString();
+     changed=true;
+   }
    // 一次性修復舊版已知錯置金額，只修正仍等於錯誤舊值的案件；
    // 其他所有已建立、已人工修改的案件完全獨立，不再覆寫。
    const legacy={'2610001':0,'2610002':5060};
