@@ -3311,20 +3311,13 @@ function tcSyncQuotes(){
    // 就表示案名尚未加上報價單案名；只改此欄，不碰金額、分類或請款區間。
    // 真正自訂過的案名不等於原客戶名稱，因此絕不覆蓋。
    if(customer && quoteCase &&
-      (normalized(existing.caseName).replace(/\s+/g,' ')===customer.replace(/\s+/g,' ') || !normalized(existing.caseName)) && fullCase!==customer){
+      normalized(existing.caseName).replace(/[\s　]+/g,' ').trim()===customer.replace(/[\s　]+/g,' ').trim() && fullCase!==customer){
      existing.caseName=fullCase;
      existing.tcQuoteCaseNameFilled=true;
      existing.updatedAt=new Date().toISOString();
      changed=true;
    }
-   // 一次性修復舊版已知錯置金額，只修正仍等於錯誤舊值的案件；
-   // 其他所有已建立、已人工修改的案件完全獨立，不再覆寫。
-   const legacy={'2610001':0,'2610002':5060};
-   const no=normalized(existing.no);
-   if(Object.prototype.hasOwnProperty.call(legacy,no) && Number(existing.caseAmount)===legacy[no] && Number.isFinite(amount)&&amount>0 && !existing.legacyQuoteAmountRepaired){
-    existing.caseAmount=String(amount);existing.legacyQuoteAmountRepaired=true;
-    existing.updatedAt=new Date().toISOString();changed=true;
-   }
+   // 已建立案件的金額完全獨立，禁止報價單同步覆蓋。
    continue;
   }
   const no=candidates[0];
