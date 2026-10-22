@@ -3355,8 +3355,14 @@ function tcRenderQuoteAudit(){
 // 草屯開啟時直接查詢 Supabase 報價單，不依賴報價單頁面先載入。
 async function tcRefreshQuotesFromSupabase(){
  if(typeof sb==='undefined')throw Error('資料庫尚未初始化');
- const {data,error}=await sb.from('sbd_quotes').select('*').order('quote_no',{ascending:false});
- if(error)throw error;
+ // 分頁讀取全部報價單，避免 Supabase 預設筆數上限漏掉舊單。
+ const data=[];
+ for(let offset=0;offset<100000;offset+=500){
+  const result=await sb.from('sbd_quotes').select('*').order('quote_no',{ascending:false}).range(offset,offset+499);
+  if(result.error)throw result.error;
+  const batch=result.data||[];data.push(...batch);
+  if(batch.length<500)break;
+ }
  if(!tcCloudLoaded)await tcLoadCloudForDropdown();
  const fresh=(data||[]).map(q=>{
   const meta=qMetaFromNote(q.note);
@@ -3369,7 +3375,7 @@ async function tcRefreshQuotesFromSupabase(){
  // 浤富同步在雲端報價單載入後直接執行，避免事件時序造成漏單。
  if(typeof poSyncQuotesWithOrderNo==='function')poSyncQuotesWithOrderNo();
  const status=document.getElementById('tcCloudProjectsStatus');
- if(status){const wanted=['2610001','2610005','2610011'];const found=wanted.map(no=>no+':'+(fresh.some(q=>String(q.quote_no).trim()===no||String(q.order_no).trim()===no)?'報價單已讀取':'雲端查無報價單'));status.textContent='報價單同步 '+fresh.length+' 筆｜'+found.join('｜');}
+ if(status){const wanted=['26101301','1155401'];const found=wanted.map(no=>no+':'+(fresh.some(q=>String(q.quote_no).trim()===no||String(q.order_no).trim()===no)?'已讀取':'未讀取'));status.textContent='報價單讀取 '+fresh.length+' 筆｜有訂單編號 '+fresh.filter(q=>String(q.order_no||'').trim()).length+' 筆｜'+found.join('｜');}
 
  tcRenderProjects();
  poRenderProjects();
@@ -3386,10 +3392,11 @@ function poSyncQuotesWithOrderNo(){
  const projects=poProjects();
  let changed=false;
  for(const q of quotes){
-  const orderNo=String(q.order_no||'').trim();
+  const orderNo=String(q.order_no||'').replace(/[\s　]+/g,'').trim();
   if(!orderNo)continue;
   const subtotal=Number(q.subtotal);
-  if(!Number.isFinite(subtotal))continue;
+  // 即使金額空白，也必須建立有訂單編號的案件。
+  const safeSubtotal=Number.isFinite(subtotal)?subtotal:0;
   const caseName=[String(q.customer_name||'').trim(),String(q.case_name||'').trim()].filter(Boolean).join(' ');
   const sourceId=String(q.id??q.quote_no??orderNo);
   const key='quote-order:'+sourceId;
@@ -3407,11 +3414,13 @@ function poSyncQuotesWithOrderNo(){
    }
 
   }else{
-   projects.unshift({key,no:orderNo,caseName,caseAmount:subtotal,category:'',quoteSyncLocked:false,sourceQuoteId:sourceId,sourceQuoteType:'hongfu',updatedAt:new Date().toISOString()});
+   projects.unshift({key,no:orderNo,caseName,caseAmount:safeSubtotal,category:'',quoteSyncLocked:false,sourceQuoteId:sourceId,sourceQuoteType:'hongfu',updatedAt:new Date().toISOString()});
    changed=true;
   }
  }
  if(changed){poSaveProjects(projects);poRenderProjects();poRenderGroups();}
+ const status=document.getElementById("poStatus");
+ if(status && quotes.length)status.textContent=`已檢查 ${quotes.length} 筆報價單；有訂單編號 ${quotes.filter(q=>String(q.order_no||" ").trim()).length} 筆；本次新增或補來源 ${changed?"有":"無"}。若仍缺單請確認篩選條件。`;
 }
 window.addEventListener('sbd-quotes-loaded',poSyncQuotesWithOrderNo);
 // 跨分頁更新案件清單時即時重畫。
