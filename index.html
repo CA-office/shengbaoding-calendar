@@ -3306,11 +3306,24 @@ async function tcRefreshQuotesFromSupabase(){
  if(error)throw error;
  const fresh=(data||[]).map(q=>{
   const meta=qMetaFromNote(q.note);
+  let subtotal=Number(q.subtotal);
+  // 舊報價單未稅小計為空或 0 時，只在明細可確實計算時才回填顯示金額。
+  if(!(subtotal>0)&&Array.isArray(q.items)&&q.items.length){
+   const amounts=q.items.map(it=>{
+    const qty=Number(it.cm??it.qty??it.quantity);
+    const price=Number(it.price??it.unit_price);
+    return Number.isFinite(qty)&&Number.isFinite(price)?qty*price:NaN;
+   });
+   if(amounts.every(Number.isFinite)&&amounts.some(v=>v>0))subtotal=amounts.reduce((a,b)=>a+b,0);
+  }
   return {id:q.id,quote_no:q.quote_no,customer_name:q.customer_name,
-   case_name:meta.case_name||q.contact_name||'',order_no:meta.order_no||'',subtotal:q.subtotal};
+   case_name:meta.case_name||q.contact_name||'',order_no:meta.order_no||'',subtotal};
  });
  window.sbdQuoteRowsForTc=fresh;
  window.dispatchEvent(new Event('sbd-quotes-loaded'));
+ const status=document.getElementById('tcCloudProjectsStatus');
+ if(status){const wanted=['2610001','2610005','2610011'];const found=wanted.map(no=>no+':'+(fresh.some(q=>String(q.quote_no).trim()===no)?'報價單已讀取':'雲端查無報價單'));status.textContent='報價單同步 '+fresh.length+' 筆｜'+found.join('｜');}
+
  tcRenderProjects();
  poRenderProjects();
  return fresh.length;
