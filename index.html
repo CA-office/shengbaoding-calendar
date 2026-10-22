@@ -1337,7 +1337,7 @@ function previewQuotePdf(){printQuote(currentQuoteDraft())}
 function previewQuoteExcel(){excelQuote(currentQuoteDraft())}
 function resetQuoteForm(){editingQuoteId=null;$("quoteFormTitle").textContent="新增報價單";$("qCaseName").value="";$("qNo").value=makeQuoteNo();$("qCustomer").value="";$("qDate").value=qDateDisplay(qToday());$("qInstallDate").value="";$("qContactPhone").value="";$("qInstallPeriod").value="";if($("qOrderNo"))$("qOrderNo").value="";$("qAddress").value="";$("qFileAddress").value="";$("qColorNo").value="";$("qProductName").value="";$("qFrontEdge").value="";$("qBackWall").value="";$("qItemsBody").innerHTML="";addQuoteItem();$("qCancelEditBtn").classList.add("hidden");calcQuote()}
 function nextQuoteNo(no){const v=String(no||"").trim();const m=v.match(/^(.*?)(\d+)$/);if(m){const n=String(Number(m[2])+1).padStart(m[2].length,"0");return m[1]+n}return makeQuoteNo()}
-async function saveQuote(){if(!["admin","editor"].includes(profile.role))return;let no=$("qNo").value.trim()||makeQuoteNo(),date=qDateStorage($("qDate").value)||qToday(),customer=$("qCustomer").value.trim(),items=getQuoteItems();const c=calcQuote(),meta=qMeta();let payload={quote_no:no,quote_date:date,customer_name:customer,contact_name:meta.case_name||null,phone:meta.contact_phone||null,address:$("qAddress").value.trim()||null,items,subtotal:c.sub,tax_rate:5,tax_amount:c.tax,total_amount:c.total,note:JSON.stringify(meta)};let r;if(editingQuoteId){r=await sb.from("sbd_quotes").update(payload).eq("id",editingQuoteId)}else{for(let i=0;i<100;i++){r=await sb.from("sbd_quotes").insert(payload);if(!r.error)break;const duplicate=r.error?.code==="23505"||/duplicate key|sbd_quotes_quote_no_key/i.test(r.error?.message||"");if(!duplicate)break;no=nextQuoteNo(no);payload.quote_no=no;$("qNo").value=no}}if(r.error){alert("報價單儲存失敗："+r.error.message);return}resetQuoteForm();await loadQuotes();if(profile?.role==="admin"){const saved=quoteRows.find(q=>String(q.quote_no||"")===String(no));if(saved)await syncOneQuoteToInstallStats(saved);await loadInstallStats()}}
+async function saveQuote(){if(!["admin","editor"].includes(profile.role))return;let no=$("qNo").value.trim()||makeQuoteNo(),date=qDateStorage($("qDate").value)||qToday(),customer=$("qCustomer").value.trim(),items=getQuoteItems();const c=calcQuote(),meta=qMeta();let payload={quote_no:no,quote_date:date,customer_name:customer,contact_name:meta.case_name||null,phone:meta.contact_phone||null,address:$("qAddress").value.trim()||null,items,subtotal:c.sub,tax_rate:5,tax_amount:c.tax,total_amount:c.total,note:JSON.stringify(meta)};let r;if(editingQuoteId){r=await sb.from("sbd_quotes").update(payload).eq("id",editingQuoteId)}else{for(let i=0;i<100;i++){r=await sb.from("sbd_quotes").insert(payload);if(!r.error)break;const duplicate=r.error?.code==="23505"||/duplicate key|sbd_quotes_quote_no_key/i.test(r.error?.message||"");if(!duplicate)break;no=nextQuoteNo(no);payload.quote_no=no;$("qNo").value=no}}if(r.error){alert("報價單儲存失敗："+r.error.message);return}resetQuoteForm();await loadQuotes();if(typeof tcRefreshQuotesFromSupabase==='function'){try{await tcRefreshQuotesFromSupabase();}catch(e){console.error('報價單案件同步失敗',e);alert('報價單已儲存，但案件同步失敗：'+(e.message||e));}}if(profile?.role==="admin"){const saved=quoteRows.find(q=>String(q.quote_no||"")===String(no));if(saved)await syncOneQuoteToInstallStats(saved);await loadInstallStats()}}
 async function loadQuotes(){if(!["admin","editor"].includes(profile.role))return;const {data,error}=await sb.from("sbd_quotes").select("*").order("quote_no",{ascending:false}).order("created_at",{ascending:false});if(error){$("quoteEmpty").textContent="讀取報價單失敗："+error.message;$("quoteEmpty").classList.remove("hidden");return}quoteRows=data||[];quoteRows.sort((a,b)=>String(b.quote_no||"").localeCompare(String(a.quote_no||""),undefined,{numeric:true,sensitivity:"base"}));renderQuoteList();window.sbdQuoteRowsForTc=quoteRows.map(q=>{const m=qMetaFromNote(q.note);return {id:q.id,quote_no:q.quote_no,customer_name:q.customer_name,case_name:m.case_name||q.contact_name||"",order_no:m.order_no||"",subtotal:q.subtotal};});window.dispatchEvent(new Event("sbd-quotes-loaded"))}
 function renderQuoteList(){const body=$("quoteListBody");body.innerHTML="";$("quoteEmpty").classList.toggle("hidden",quoteRows.length>0);quoteRows.forEach(x=>{const m=qMetaFromNote(x.note),items=Array.isArray(x.items)?x.items:[],names=items.map(it=>fmtQName(it.name||it.description||"")).filter(Boolean).join("、"),installDate=m.install_date||x.quote_date||"",tr=document.createElement("tr"),del=profile.role==="admin"?`<button type="button" class="danger" data-act="delete" data-id="${x.id}">刪除</button>`:"",stats=profile.role==="admin"?`<button type="button" data-act="stats" data-id="${x.id}">製作安裝</button>`:"";tr.innerHTML=`<td><div class="quoteListBtns"><button type="button" data-act="edit" data-id="${x.id}">修改</button><button type="button" data-act="pdf" data-id="${x.id}">PDF</button><button type="button" data-act="excel" data-id="${x.id}">Excel</button>${stats}${del}</div></td><td>${esc(x.quote_no||"")}</td><td>${esc(x.customer_name||"")}</td><td>${esc(m.case_name||x.contact_name||"")}</td><td>${esc(m.color_no||"")}</td><td>${esc(m.product_name||"")}</td><td>${esc(x.address||"")}</td><td>${esc(names)}</td>`;body.appendChild(tr)});body.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{const x=quoteRows.find(q=>String(q.id)===String(b.dataset.id));if(!x)return;if(b.dataset.act==="edit")editQuote(x);if(b.dataset.act==="pdf")printQuote(x);if(b.dataset.act==="excel")excelQuote(x);if(b.dataset.act==="stats")openStatsFromQuote(x);if(b.dataset.act==="delete")deleteQuote(x.id)}))}
 function editQuote(x){if(!["admin","editor"].includes(profile.role))return;const m=qMetaFromNote(x.note);editingQuoteId=x.id;$("quoteFormTitle").textContent="修改報價單";$("qCaseName").value=m.case_name||x.contact_name||"";$("qNo").value=x.quote_no||"";$("qCustomer").value=x.customer_name||"";$("qDate").value=qDateDisplay(x.quote_date||qToday());$("qInstallDate").value=qDateDisplay(m.install_date||"");$("qContactPhone").value=m.contact_phone||x.phone||"";$("qInstallPeriod").value=m.install_period||"";if($("qOrderNo"))$("qOrderNo").value=m.order_no||"";$("qAddress").value=x.address||"";$("qFileAddress").value=m.file_address||"";$("qColorNo").value=m.color_no||"";$("qProductName").value=m.product_name||"";$("qFrontEdge").value=m.front_edge||"";$("qBackWall").value=m.back_wall||"";$("qItemsBody").innerHTML="";(Array.isArray(x.items)?x.items:[]).forEach(addQuoteItem);if(!$("qItemsBody").children.length)addQuoteItem();$("qCancelEditBtn").classList.remove("hidden");calcQuote();requestAnimationFrame(()=>{const target=$("quoteFormTitle");target.scrollIntoView({behavior:"smooth",block:"start"});setTimeout(()=>{$("qCaseName")?.focus({preventScroll:true})},350)})}
@@ -3248,7 +3248,32 @@ async function tcLoadCloudForDropdown(){
   tcSyncQuotes();tcRenderProjects();tcRenderAssignmentOptions();tcRenderSavedDetails();window.tcRenderAgency?.();
  }catch(e){if(status)status.textContent='雲端讀取失敗：'+(e.message||e)+'；目前仍保留本機資料';}
 }
-function tcSaveProjects(a){localStorage.setItem(TC_PROJECT_KEY,JSON.stringify(a))}
+let tcCloudWriteQueue=Promise.resolve();
+function tcSaveProjects(a){
+ localStorage.setItem(TC_PROJECT_KEY,JSON.stringify(a));
+ if(typeof isAdminAccount==='function'&&!isAdminAccount())return;
+ // All project changes, including quotation sync, are persisted to Supabase in order.
+ const snapshot=JSON.stringify(a);
+ tcCloudWriteQueue=tcCloudWriteQueue.catch(()=>{}).then(async()=>{
+  const {data:auth,error:ae}=await sb.auth.getUser();
+  if(ae||!auth?.user)throw Error('尚未登入雲端');
+  const {error}=await sb.from('sbd_app_data').upsert({
+   user_id:auth.user.id,data_key:TC_PROJECT_KEY,
+   payload:{value:snapshot},updated_at:new Date().toISOString()
+  },{onConflict:'user_id,data_key'});
+  if(error)throw error;
+  tcCloudProjects=JSON.parse(snapshot);
+  window.sbdReceiptCloudTcProjects=tcCloudProjects;
+  window.dispatchEvent(new Event('sbd-receipt-projects-updated'));
+  const el=document.getElementById('tcCloudProjectsStatus');
+  if(el)el.textContent='草屯案件已同步至雲端：'+tcCloudProjects.length+' 筆';
+ }).catch(e=>{
+  const el=document.getElementById('tcCloudProjectsStatus');
+  if(el)el.textContent='草屯案件雲端儲存失敗：'+(e.message||e);
+  console.error('草屯案件雲端儲存失敗',e);
+ });
+}
+
 function tcProjectClear(){tcProjectEditKey=null;$t('tcNoPrefix').value='G5DE';$t('tcProjectNo').value='';$t('tcProjectCase').value='';$t('tcProjectAmount').value='';}
 function tcFullNo(){const x=$t('tcProjectNo')?.value.trim()||'';return x?(($t('tcNoPrefix')?.value||'')+x):''}
 function tcProjectSave(){const no=tcFullNo(),caseName=$t('tcProjectCase').value.trim(),caseAmount=$t('tcProjectAmount').value.trim();if(!no&&!caseName)return alert('請輸入單號或案名');const a=tcProjects(),key=tcProjectEditKey||Date.now().toString();const i=a.findIndex(x=>String(x.key)===String(key));const rec={...(i>=0?a[i]:{}),key,no,caseName,caseAmount,updatedAt:new Date().toISOString(),...(i>=0?{}:{sortAddedAt:Date.now()})};if(i>=0){a[i]=rec;}else a.unshift(rec);tcSaveProjects(a);tcProjectEditKey=null;tcRenderProjects();tcProjectClear();}
@@ -3263,9 +3288,6 @@ function tcSyncQuotes(){
   if(!q||q.id==null)continue;
   const key='quote:'+String(q.id), no=String(q.quote_no||'').trim();
   let subtotal=Number(q.subtotal);
-  // 兩筆已由使用者核對報價單的未稅金額。
-  if(no==='2610001')subtotal=5060;
-  if(no==='2610002')subtotal=5520;
   if(!Number.isFinite(subtotal))continue;
   const existing=a.find(r=>String(r.sourceQuoteId||'')===String(q.id)||String(r.key)===key)
     ||(no?a.find(r=>String(r.no||'').trim()===no):null);
@@ -3317,18 +3339,10 @@ async function tcRefreshQuotesFromSupabase(){
  if(typeof sb==='undefined')throw Error('資料庫尚未初始化');
  const {data,error}=await sb.from('sbd_quotes').select('*').order('quote_no',{ascending:false});
  if(error)throw error;
+ if(!tcCloudLoaded)await tcLoadCloudForDropdown();
  const fresh=(data||[]).map(q=>{
   const meta=qMetaFromNote(q.note);
-  let subtotal=Number(q.subtotal);
-  // 舊報價單未稅小計為空或 0 時，只在明細可確實計算時才回填顯示金額。
-  if(!(subtotal>0)&&Array.isArray(q.items)&&q.items.length){
-   const amounts=q.items.map(it=>{
-    const qty=Number(it.cm??it.qty??it.quantity);
-    const price=Number(it.price??it.unit_price);
-    return Number.isFinite(qty)&&Number.isFinite(price)?qty*price:NaN;
-   });
-   if(amounts.every(Number.isFinite)&&amounts.some(v=>v>0))subtotal=amounts.reduce((a,b)=>a+b,0);
-  }
+  const subtotal=Number(q.subtotal);
   return {id:q.id,quote_no:q.quote_no,customer_name:q.customer_name,
    case_name:meta.case_name||q.contact_name||'',order_no:meta.order_no||'',subtotal};
  });
