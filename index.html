@@ -3127,7 +3127,7 @@ initInstallerPicker();updateMasterBillingRange();renderStatsEditingPreviewRow();
 </script>
 
 <script id="purchase-work-restore">(function(){function restore(){try{if(typeof poLoadAllWork==="function")poLoadAllWork()}catch(e){console.error(e)}}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",restore);else setTimeout(restore,0)})();</script>
-<script id="purchase-tab-direct-fix">(function(){function openPurchase(){if(typeof isAdminAccount==="function"&&!isAdminAccount())return;["calendarView","quoteView","installStatsView","overtimeView"].forEach(id=>document.getElementById(id)?.classList.add("hidden"));document.getElementById("purchaseView")?.classList.remove("hidden");document.getElementById("calendarControls")?.classList.add("hidden");["calendarTabBtn","quoteTabBtn","installStatsTabBtn","overtimeTabBtn"].forEach(id=>document.getElementById(id)?.classList.remove("active"));document.getElementById("purchaseTabBtn")?.classList.add("active");try{if(typeof poRenderProjects==="function")poRenderProjects()}catch(e){console.error(e)}try{if(typeof poRenderGroups==="function")poRenderGroups()}catch(e){console.error(e)}}function bind(){const b=document.getElementById("purchaseTabBtn");if(!b)return;b.onclick=function(e){e.preventDefault();e.stopPropagation();openPurchase()}}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bind);else bind()})();</script>
+<script id="purchase-tab-direct-fix">(function(){function openPurchase(){if(typeof isAdminAccount==="function"&&!isAdminAccount())return;["calendarView","quoteView","installStatsView","overtimeView"].forEach(id=>document.getElementById(id)?.classList.add("hidden"));document.getElementById("purchaseView")?.classList.remove("hidden");document.getElementById("calendarControls")?.classList.add("hidden");["calendarTabBtn","quoteTabBtn","installStatsTabBtn","overtimeTabBtn"].forEach(id=>document.getElementById(id)?.classList.remove("active"));document.getElementById("purchaseTabBtn")?.classList.add("active");Promise.resolve(tcRefreshQuotesFromSupabase()).catch(e=>console.warn('浤富報價單連動讀取失敗',e));try{if(typeof poRenderProjects==="function")poRenderProjects()}catch(e){console.error(e)}try{if(typeof poRenderGroups==="function")poRenderGroups()}catch(e){console.error(e)}}function bind(){const b=document.getElementById("purchaseTabBtn");if(!b)return;b.onclick=function(e){e.preventDefault();e.stopPropagation();openPurchase()}}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bind);else bind()})();</script>
 
 <script id="customer-invoice-module">
 (function(){
@@ -3301,23 +3301,19 @@ function tcRenderQuoteAudit(){
 }
 // 草屯開啟時直接查詢 Supabase 報價單，不依賴報價單頁面先載入。
 async function tcRefreshQuotesFromSupabase(){
- if(typeof sb==='undefined')return;
- const {data,error}=await sb.from('sbd_quotes').select('id,quote_no,customer_name,contact_name,subtotal,note').order('quote_no',{ascending:false});
+ if(typeof sb==='undefined')throw Error('資料庫尚未初始化');
+ const {data,error}=await sb.from('sbd_quotes').select('*').order('quote_no',{ascending:false});
  if(error)throw error;
  const fresh=(data||[]).map(q=>{
-  let meta={};
-  try{const raw=JSON.parse(q.note||'{}');if(raw&&typeof raw==='object')meta=raw;}catch(e){}
+  const meta=qMetaFromNote(q.note);
   return {id:q.id,quote_no:q.quote_no,customer_name:q.customer_name,
    case_name:meta.case_name||q.contact_name||'',order_no:meta.order_no||'',subtotal:q.subtotal};
  });
- // 保留原本已載入的報價單，避免短暫查詢結果影響既有資料。
- const merged=new Map();
- for(const q of (Array.isArray(window.sbdQuoteRowsForTc)?window.sbdQuoteRowsForTc:[]))if(q?.id!=null)merged.set(String(q.id),q);
- for(const q of fresh)if(q.id!=null)merged.set(String(q.id),q);
- window.sbdQuoteRowsForTc=[...merged.values()];
- tcSyncQuotes();
+ window.sbdQuoteRowsForTc=fresh;
+ window.dispatchEvent(new Event('sbd-quotes-loaded'));
  tcRenderProjects();
- tcRenderAssignmentOptions();
+ poRenderProjects();
+ return fresh.length;
 }
 window.addEventListener('sbd-quotes-loaded',tcSyncQuotes);
 
@@ -3341,8 +3337,8 @@ function poSyncQuotesWithOrderNo(){
     ||projects.find(r=>String(r.no||'').trim()===orderNo);
   if(existing){
    // 相同單號既有案件僅更新對應資料，不覆蓋請款區間及分類。
-   if(existing.no!==orderNo || existing.caseName!==caseName || Number(existing.caseAmount)!==subtotal || String(existing.sourceQuoteId||'')!==String(q.id)){
-    Object.assign(existing,{no:orderNo,caseName,caseAmount:subtotal,sourceQuoteId:String(q.id),sourceQuoteType:'hongfu',updatedAt:new Date().toISOString()});
+   if(existing.no!==orderNo || (existing.sourceQuoteType==='hongfu' && existing.caseName!==caseName) || Number(existing.caseAmount)!==subtotal || String(existing.sourceQuoteId||'')!==String(q.id)){
+    Object.assign(existing,{no:orderNo,caseName:existing.sourceQuoteType==='hongfu'?caseName:(existing.caseName||caseName),caseAmount:subtotal,sourceQuoteId:String(q.id),sourceQuoteType:'hongfu',updatedAt:new Date().toISOString()});
     changed=true;
    }
   }else{
@@ -3543,7 +3539,7 @@ function tcPeriodSelect(){
  tcRenderSavedDetails();
 }
 function clear(){$t('tcItemsBody').innerHTML='';add()}
-function open(){if(typeof isAdminAccount==='function'&&!isAdminAccount())return;Promise.resolve(tcRefreshQuotesFromSupabase()).catch(e=>console.warn('草屯直接讀取報價單失敗',e));if(typeof renderQNameDatalist==='function')renderQNameDatalist();['calendarView','quoteView','purchaseView','installStatsView','overtimeView','invoiceCustomerView'].forEach(id=>$t(id)?.classList.add('hidden'));$t('taichungPurchaseView').classList.remove('hidden');$t('calendarControls')?.classList.add('hidden');document.querySelectorAll('.featureTabs button').forEach(b=>b.classList.remove('active'));$t('taichungPurchaseTabBtn').classList.add('active');tcPeriodRender($t('tcPeriodHistory')?.value||'');tcRenderSavedDetails()}
+function open(){if(typeof isAdminAccount==='function'&&!isAdminAccount())return;Promise.resolve(tcRefreshQuotesFromSupabase()).catch(e=>{console.warn('草屯直接讀取報價單失敗',e);const status=document.getElementById('tcCloudProjectsStatus');if(status)status.textContent='報價單同步失敗：'+(e.message||e)});if(typeof renderQNameDatalist==='function')renderQNameDatalist();['calendarView','quoteView','purchaseView','installStatsView','overtimeView','invoiceCustomerView'].forEach(id=>$t(id)?.classList.add('hidden'));$t('taichungPurchaseView').classList.remove('hidden');$t('calendarControls')?.classList.add('hidden');document.querySelectorAll('.featureTabs button').forEach(b=>b.classList.remove('active'));$t('taichungPurchaseTabBtn').classList.add('active');tcPeriodRender($t('tcPeriodHistory')?.value||'');tcRenderSavedDetails()}
 function copyStyle(src,dst){dst.style=JSON.parse(JSON.stringify(src.style||{}));dst.numFmt=src.numFmt;dst.alignment=JSON.parse(JSON.stringify(src.alignment||{}));dst.border=JSON.parse(JSON.stringify(src.border||{}));dst.fill=JSON.parse(JSON.stringify(src.fill||{}));dst.font=JSON.parse(JSON.stringify(src.font||{}));dst.protection=JSON.parse(JSON.stringify(src.protection||{}));}
 async function download(){
  const ds=tcDetails();
