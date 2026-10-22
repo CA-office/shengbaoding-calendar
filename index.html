@@ -3366,6 +3366,8 @@ async function tcRefreshQuotesFromSupabase(){
  });
  window.sbdQuoteRowsForTc=fresh;
  window.dispatchEvent(new Event('sbd-quotes-loaded'));
+ // 浤富同步在雲端報價單載入後直接執行，避免事件時序造成漏單。
+ if(typeof poSyncQuotesWithOrderNo==='function')poSyncQuotesWithOrderNo();
  const status=document.getElementById('tcCloudProjectsStatus');
  if(status){const wanted=['2610001','2610005','2610011'];const found=wanted.map(no=>no+':'+(fresh.some(q=>String(q.quote_no).trim()===no||String(q.order_no).trim()===no)?'報價單已讀取':'雲端查無報價單'));status.textContent='報價單同步 '+fresh.length+' 筆｜'+found.join('｜');}
 
@@ -3385,12 +3387,13 @@ function poSyncQuotesWithOrderNo(){
  let changed=false;
  for(const q of quotes){
   const orderNo=String(q.order_no||'').trim();
-  if(!orderNo || !/\d/.test(orderNo) || q.id==null)continue;
+  if(!orderNo)continue;
   const subtotal=Number(q.subtotal);
   if(!Number.isFinite(subtotal))continue;
   const caseName=[String(q.customer_name||'').trim(),String(q.case_name||'').trim()].filter(Boolean).join(' ');
-  const key='quote-order:'+String(q.id);
-  const existing=projects.find(r=>String(r.sourceQuoteId||'')===String(q.id) && String(r.sourceQuoteType||'')==='hongfu')
+  const sourceId=String(q.id??q.quote_no??orderNo);
+  const key='quote-order:'+sourceId;
+  const existing=projects.find(r=>String(r.sourceQuoteId||'')===sourceId && String(r.sourceQuoteType||'')==='hongfu')
     ||projects.find(r=>String(r.key)===key)
     ||projects.find(r=>String(r.no||'').trim()===orderNo);
   if(existing){
@@ -3398,19 +3401,21 @@ function poSyncQuotesWithOrderNo(){
    // 包含舊版同步的案件與手動修改的案件，重新整理後均保留原值。
    // 既有案件只補充來源識別（不更動單號、案名、金額、分類、請款區間）。
    if(!existing.sourceQuoteId && String(existing.no||'').trim()===orderNo){
-    existing.sourceQuoteId=String(q.id);
+    existing.sourceQuoteId=sourceId;
     existing.sourceQuoteType='hongfu';
     changed=true;
    }
 
   }else{
-   projects.unshift({key,no:orderNo,caseName,caseAmount:subtotal,category:'',quoteSyncLocked:false,sourceQuoteId:String(q.id),sourceQuoteType:'hongfu',updatedAt:new Date().toISOString()});
+   projects.unshift({key,no:orderNo,caseName,caseAmount:subtotal,category:'',quoteSyncLocked:false,sourceQuoteId:sourceId,sourceQuoteType:'hongfu',updatedAt:new Date().toISOString()});
    changed=true;
   }
  }
  if(changed){poSaveProjects(projects);poRenderProjects();poRenderGroups();}
 }
 window.addEventListener('sbd-quotes-loaded',poSyncQuotesWithOrderNo);
+// 跨分頁更新案件清單時即時重畫。
+window.addEventListener('storage',e=>{if(e.key==='sbd_purchase_projects'){poRenderProjects();poRenderGroups();}});
 
 function tcRenderAssignmentOptions(){
  const sel=$t('tcAssignmentSelect');if(!sel)return;const keep=sel.value;
