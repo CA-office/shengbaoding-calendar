@@ -3282,9 +3282,9 @@ function tcSaveProjects(a){
  });
 }
 
-function tcProjectClear(){tcProjectEditKey=null;$t('tcNoPrefix').value='G5DE';$t('tcProjectNo').value='';$t('tcProjectCase').value='';$t('tcProjectAmount').value='';}
-function tcFullNo(){const x=$t('tcProjectNo')?.value.trim()||'';return x?(($t('tcNoPrefix')?.value||'')+x):''}
-function tcProjectSave(){const no=tcFullNo(),caseName=$t('tcProjectCase').value.trim(),caseAmount=$t('tcProjectAmount').value.trim();if(!no&&!caseName)return alert('請輸入單號或案名');const a=tcProjects(),key=tcProjectEditKey||Date.now().toString();const i=a.findIndex(x=>String(x.key)===String(key));const rec={...(i>=0?a[i]:{}),key,no,caseName,caseAmount,quoteSyncLocked:true,tcManuallyEdited:true,updatedAt:new Date().toISOString(),...(i>=0?{}:{sortAddedAt:Date.now()})};if(i>=0){a[i]=rec;}else a.unshift(rec);tcSaveProjects(a);tcProjectEditKey=null;tcRenderProjects();tcProjectClear();}
+function tcProjectClear(){tcProjectEditKey=null;$t('tcNoPrefix').dataset.rawNumber='0';$t('tcNoPrefix').value='G5DE';$t('tcProjectNo').value='';$t('tcProjectCase').value='';$t('tcProjectAmount').value='';}
+function tcFullNo(){const x=$t('tcProjectNo')?.value.trim()||'';return x?(/^(?:G5DD|G5DE)/.test(x)?x:(/^\d+$/.test(x)&&$t('tcNoPrefix')?.dataset.rawNumber==='1'?x:(($t('tcNoPrefix')?.value||'')+x))):''}
+function tcProjectSave(){const no=tcFullNo(),caseName=$t('tcProjectCase').value.trim(),caseAmount=$t('tcProjectAmount').value.trim();if(!no&&!caseName)return alert('請輸入單號或案名');const a=tcProjects(),key=tcProjectEditKey||Date.now().toString();const i=a.findIndex(x=>String(x.key)===String(key));const duplicate=a.findIndex((x,j)=>j!==i&&String(x.no||'').trim()===no&&!!no);if(duplicate>=0){alert('此單號已存在，請直接修改原案件，避免產生兩筆。');return;}const rec={...(i>=0?a[i]:{}),key,no,caseName,caseAmount,quoteSyncLocked:true,tcManuallyEdited:true,updatedAt:new Date().toISOString(),...(i>=0?{}:{sortAddedAt:Date.now()})};if(i>=0){a[i]=rec;}else a.unshift(rec);tcSaveProjects(a);tcProjectEditKey=null;tcRenderProjects();tcProjectClear();}
 // 報價單只帶入「客戶名稱」與「未稅合計 subtotal」；以報價單 ID 固定識別，避免重複。
 // 原本手動草屯資料優先保留；已有相同報價單的資料不覆蓋修改內容。
 function tcSyncQuotes(){
@@ -3299,7 +3299,7 @@ function tcSyncQuotes(){
   // 報價單的「訂單編號」與系統報價單編號是不同欄位；草屯只收數字案件編號。
   const candidates=[normalized(q.order_no),normalized(q.quote_no)].filter(v=>/^\d{6,}$/.test(v));
   if(!candidates.length)continue;
-  const existing=a.find(r=>candidates.includes(normalized(r.no)))||a.find(r=>normalized(r.sourceQuoteId)===normalized(q.id));
+  const existing=a.find(r=>normalized(r.sourceQuoteId)===normalized(q.id))||a.find(r=>candidates.includes(normalized(r.no)));
   const amount=Number(q.subtotal);
   if(existing){
    // 舊版只帶入客戶名稱的案件：僅當案名完全等於報價單客戶名稱、
@@ -3423,6 +3423,15 @@ function poSyncQuotesWithOrderNo(){
  if(status && quotes.length)status.textContent=`已檢查 ${quotes.length} 筆報價單；有訂單編號 ${quotes.filter(q=>String(q.order_no||" ").trim()).length} 筆；本次新增或補來源 ${changed?"有":"無"}。若仍缺單請確認篩選條件。`;
 }
 window.addEventListener('sbd-quotes-loaded',poSyncQuotesWithOrderNo);
+// 浤富頁籤開啟後強制從雲端重新取得報價單，不需先開草屯。
+window.sbdRefreshHongfuQuoteProjects=async function(){
+ try { await tcRefreshQuotesFromSupabase(); poSyncQuotesWithOrderNo(); poRenderProjects(); }
+ catch(e){ const st=document.getElementById('poStatus');if(st)st.textContent='浤富報價單同步失敗：'+(e.message||e);console.error(e); }
+};
+document.addEventListener('click',function(e){
+ const btn=e.target.closest('button');
+ if(btn && (btn.id==='purchaseTabBtn'||btn.id==='purchaseTab'))setTimeout(()=>window.sbdRefreshHongfuQuoteProjects(),0);
+},true);
 // 跨分頁更新案件清單時即時重畫。
 window.addEventListener('storage',e=>{if(e.key==='sbd_purchase_projects'){poRenderProjects();poRenderGroups();}});
 
@@ -3471,7 +3480,7 @@ b.innerHTML=a.map(r=>`<tr><td><button data-a="edit" data-k="${r.key}">修改</bu
    }else{value=name;}
  }
  r.claimPeriod=value;tcSaveProjects(all);tcRenderProjects();
-});b.querySelectorAll('.tcAgencyCategory').forEach(el=>el.onchange=()=>{const a=tcProjects(),r=a.find(x=>String(x.key)===el.dataset.k);if(r){r.category=el.value;tcSaveProjects(a);tcRenderProjects();}});b.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{const all=tcProjects(),r=all.find(x=>x.key===btn.dataset.k);if(!r)return;if(btn.dataset.a==='edit'){tcProjectEditKey=r.key;const m=String(r.no||'').match(/^(G5DD|G5DE)(.*)$/);$t('tcNoPrefix').value=m?m[1]:'G5DE';$t('tcProjectNo').value=m?m[2]:r.no||'';$t('tcProjectCase').value=r.caseName||'';$t('tcProjectAmount').value=r.caseAmount||'';requestAnimationFrame(()=>{const target=$t('tcProjectNewBtn');if(target){target.scrollIntoView({behavior:'smooth',block:'start'});setTimeout(()=>$t('tcProjectNo')?.focus({preventScroll:true}),400);}})}if(btn.dataset.a==='del'){if(tcCloudProjects.some(z=>String(z.key)===String(r.key))){alert('此案件存在公司雲端備份，為保護原始資料，暫不允許在這裡刪除。');return;}if(!confirm('確定刪除這筆？'))return;tcSaveProjects(all.filter(x=>x.key!==r.key));const ds=tcDetails();delete ds[r.key];tcSaveDetails(ds);tcRenderProjects();tcRenderSavedDetails()}});tcRenderAssignmentOptions();tcRenderSavedDetails();window.tcRenderAgency?.()}
+});b.querySelectorAll('.tcAgencyCategory').forEach(el=>el.onchange=()=>{const a=tcProjects(),r=a.find(x=>String(x.key)===el.dataset.k);if(r){r.category=el.value;tcSaveProjects(a);tcRenderProjects();}});b.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{const all=tcProjects(),r=all.find(x=>x.key===btn.dataset.k);if(!r)return;if(btn.dataset.a==='edit'){tcProjectEditKey=r.key;const m=String(r.no||'').match(/^(G5DD|G5DE)(.*)$/);$t('tcNoPrefix').value=m?m[1]:'G5DE';$t('tcProjectNo').value=m?m[2]:r.no||'';$t('tcNoPrefix').dataset.rawNumber=(!m&&/^\d+$/.test(String(r.no||'')))?'1':'0';$t('tcProjectCase').value=r.caseName||'';$t('tcProjectAmount').value=r.caseAmount||'';requestAnimationFrame(()=>{const target=$t('tcProjectNewBtn');if(target){target.scrollIntoView({behavior:'instant',block:'start'});window.scrollTo({top:Math.max(0,window.scrollY-170),behavior:'instant'});setTimeout(()=>$t('tcProjectNo')?.focus({preventScroll:true}),80);}})}if(btn.dataset.a==='del'){if(tcCloudProjects.some(z=>String(z.key)===String(r.key))){alert('此案件存在公司雲端備份，為保護原始資料，暫不允許在這裡刪除。');return;}if(!confirm('確定刪除這筆？'))return;tcSaveProjects(all.filter(x=>x.key!==r.key));const ds=tcDetails();delete ds[r.key];tcSaveDetails(ds);tcRenderProjects();tcRenderSavedDetails()}});tcRenderAssignmentOptions();tcRenderSavedDetails();window.tcRenderAgency?.()}
 function tcCurrentProject(){const key=$t('tcAssignmentSelect')?.value||'';return tcProjects().find(x=>x.key===key)||null}
 const TC_DETAIL_KEY='sbd_taichung_purchase_details_v1';
 function tcDetails(){let local={};try{local=JSON.parse(localStorage.getItem(TC_DETAIL_KEY)||'{}')||{}}catch(e){}return {...tcCloudDetails,...local}}
