@@ -2556,7 +2556,7 @@ function poRenderProjects(){
   }
   const periodFilter=periodSelect?.value??"";
   const numPart=v=>{const m=String(v||"").match(/^(?:G5DD|G5DE)(\d+)/);return m?BigInt(m[1]):0n};
-  const a=records.filter(r=>(!filter || String(r.no||"").startsWith(filter)) && (!caseFilter || String(r.caseName||"").includes(caseFilter)) && (!periodFilter || (periodFilter==="__none__" ? !String(r.claimPeriod||"").trim() : String(r.claimPeriod||"").trim()===periodFilter))); // 保留儲存順序：新增 unshift 置頂，修改原位置不變
+  const a=records.filter(r=>(!filter || String(r.no||"").startsWith(filter) || (filter==="G5DE" && /^\d+$/.test(String(r.no||"").trim()))) && (!caseFilter || String(r.caseName||"").includes(caseFilter)) && (!periodFilter || (periodFilter==="__none__" ? !String(r.claimPeriod||"").trim() : String(r.claimPeriod||"").trim()===periodFilter))); // 保留儲存順序：新增 unshift 置頂，修改原位置不變
   const total=a.reduce((sum,r)=>sum+(Number(String(r.caseAmount??0).replace(/,/g,""))||0),0);
   const totalEl=$("poProjectGrandTotal");
   if(totalEl)totalEl.textContent=poFmt(total);
