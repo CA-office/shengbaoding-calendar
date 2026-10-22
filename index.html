@@ -3317,7 +3317,8 @@ function tcSyncQuotes(){
      existing.updatedAt=new Date().toISOString();
      changed=true;
    }
-   // 已建立案件的金額完全獨立，禁止報價單同步覆蓋。
+   // 報價單修改金額後，同步更新連結案件金額，保留其他欄位。
+   if(Number.isFinite(amount) && Number(String(existing.caseAmount??'').replace(/,/g,''))!==amount){existing.caseAmount=String(amount);existing.updatedAt=new Date().toISOString();changed=true;}
    continue;
   }
   const no=candidates[0];
@@ -3405,6 +3406,8 @@ function poSyncQuotesWithOrderNo(){
     ||projects.find(r=>String(r.no||'').trim()===orderNo);
   if(existing){
    // 浤富與報價單為兩份獨立資料：只首次匯入，不覆寫已建立案件。
+   // 金額例外：每次報價單儲存後依未稅小計更新。
+   if(Number.isFinite(subtotal) && Number(String(existing.caseAmount??'').replace(/,/g,''))!==subtotal){existing.caseAmount=subtotal;existing.updatedAt=new Date().toISOString();changed=true;}
    // 包含舊版同步的案件與手動修改的案件，重新整理後均保留原值。
    // 既有案件只補充來源識別（不更動單號、案名、金額、分類、請款區間）。
    if(!existing.sourceQuoteId && String(existing.no||'').trim()===orderNo){
