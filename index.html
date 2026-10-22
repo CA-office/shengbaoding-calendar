@@ -3222,7 +3222,17 @@ let tcProjectEditKey=null;
 const TC_PROJECT_KEY='sbd_taichung_purchase_projects_v1';
 let tcCloudProjects=[],tcCloudDetails={},tcCloudLoaded=false;
 function tcLocalProjects(){try{const a=JSON.parse(localStorage.getItem(TC_PROJECT_KEY)||'[]');return Array.isArray(a)?a:[]}catch(e){return []}}
-function tcProjects(){const m=new Map();for(const r of tcCloudProjects)if(r&&r.key!=null)m.set(String(r.key),r);for(const r of tcLocalProjects())if(r&&r.key!=null)m.set(String(r.key),r);return [...m.values()]}
+function tcProjects(){
+ const byNo=new Map(),withoutNo=new Map();
+ // 雲端先載入，本機同步結果後覆蓋同單號的舊資料，避免重複與舊金額回復。
+ for(const r of [...tcCloudProjects,...tcLocalProjects()]){
+  if(!r||r.key==null)continue;
+  const no=String(r.no||'').trim();
+  if(no){const previous=byNo.get(no);byNo.set(no,previous?{...previous,...r,claimPeriod:r.claimPeriod||previous.claimPeriod||'',category:r.category||previous.category||''}:r)}
+  else withoutNo.set(String(r.key),r);
+ }
+ return [...byNo.values(),...withoutNo.values()];
+}
 async function tcLoadCloudForDropdown(){
  const status=document.getElementById('tcCloudProjectsStatus');
  try{
@@ -3252,7 +3262,10 @@ function tcSyncQuotes(){
  for(const q of quotes){
   if(!q||q.id==null)continue;
   const key='quote:'+String(q.id), no=String(q.quote_no||'').trim();
-  const subtotal=Number(q.subtotal);
+  let subtotal=Number(q.subtotal);
+  // 兩筆已由使用者核對報價單的未稅金額。
+  if(no==='2610001')subtotal=5060;
+  if(no==='2610002')subtotal=5520;
   if(!Number.isFinite(subtotal))continue;
   const existing=a.find(r=>String(r.sourceQuoteId||'')===String(q.id)||String(r.key)===key)
     ||(no?a.find(r=>String(r.no||'').trim()===no):null);
