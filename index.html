@@ -3299,6 +3299,26 @@ function tcRenderQuoteAudit(){
   tcSaveProjects(a);tcRenderProjects();tcRenderQuoteAudit();
  });
 }
+// 草屯開啟時直接查詢 Supabase 報價單，不依賴報價單頁面先載入。
+async function tcRefreshQuotesFromSupabase(){
+ if(typeof sb==='undefined')return;
+ const {data,error}=await sb.from('sbd_quotes').select('id,quote_no,customer_name,contact_name,subtotal,note').order('quote_no',{ascending:false});
+ if(error)throw error;
+ const fresh=(data||[]).map(q=>{
+  let meta={};
+  try{const raw=JSON.parse(q.note||'{}');if(raw&&typeof raw==='object')meta=raw;}catch(e){}
+  return {id:q.id,quote_no:q.quote_no,customer_name:q.customer_name,
+   case_name:meta.case_name||q.contact_name||'',order_no:meta.order_no||'',subtotal:q.subtotal};
+ });
+ // 保留原本已載入的報價單，避免短暫查詢結果影響既有資料。
+ const merged=new Map();
+ for(const q of (Array.isArray(window.sbdQuoteRowsForTc)?window.sbdQuoteRowsForTc:[]))if(q?.id!=null)merged.set(String(q.id),q);
+ for(const q of fresh)if(q.id!=null)merged.set(String(q.id),q);
+ window.sbdQuoteRowsForTc=[...merged.values()];
+ tcSyncQuotes();
+ tcRenderProjects();
+ tcRenderAssignmentOptions();
+}
 window.addEventListener('sbd-quotes-loaded',tcSyncQuotes);
 
 // 浤富：僅同步有填「訂單編號」的報價單，金額採未稅小計。
@@ -3523,7 +3543,7 @@ function tcPeriodSelect(){
  tcRenderSavedDetails();
 }
 function clear(){$t('tcItemsBody').innerHTML='';add()}
-function open(){if(typeof isAdminAccount==='function'&&!isAdminAccount())return;if(typeof loadQuotes==='function'){Promise.resolve(loadQuotes()).catch(e=>console.warn('草屯報價單同步讀取失敗',e));}if(typeof renderQNameDatalist==='function')renderQNameDatalist();['calendarView','quoteView','purchaseView','installStatsView','overtimeView','invoiceCustomerView'].forEach(id=>$t(id)?.classList.add('hidden'));$t('taichungPurchaseView').classList.remove('hidden');$t('calendarControls')?.classList.add('hidden');document.querySelectorAll('.featureTabs button').forEach(b=>b.classList.remove('active'));$t('taichungPurchaseTabBtn').classList.add('active');tcPeriodRender($t('tcPeriodHistory')?.value||'');tcRenderSavedDetails()}
+function open(){if(typeof isAdminAccount==='function'&&!isAdminAccount())return;Promise.resolve(tcRefreshQuotesFromSupabase()).catch(e=>console.warn('草屯直接讀取報價單失敗',e));if(typeof renderQNameDatalist==='function')renderQNameDatalist();['calendarView','quoteView','purchaseView','installStatsView','overtimeView','invoiceCustomerView'].forEach(id=>$t(id)?.classList.add('hidden'));$t('taichungPurchaseView').classList.remove('hidden');$t('calendarControls')?.classList.add('hidden');document.querySelectorAll('.featureTabs button').forEach(b=>b.classList.remove('active'));$t('taichungPurchaseTabBtn').classList.add('active');tcPeriodRender($t('tcPeriodHistory')?.value||'');tcRenderSavedDetails()}
 function copyStyle(src,dst){dst.style=JSON.parse(JSON.stringify(src.style||{}));dst.numFmt=src.numFmt;dst.alignment=JSON.parse(JSON.stringify(src.alignment||{}));dst.border=JSON.parse(JSON.stringify(src.border||{}));dst.fill=JSON.parse(JSON.stringify(src.fill||{}));dst.font=JSON.parse(JSON.stringify(src.font||{}));dst.protection=JSON.parse(JSON.stringify(src.protection||{}));}
 async function download(){
  const ds=tcDetails();
@@ -3619,7 +3639,7 @@ async function download(){
    a.href=u;a.download=`草屯採購單_${start}-${end}.xlsx`;a.click();setTimeout(()=>URL.revokeObjectURL(u),1200);
  }catch(e){console.error(e);alert('草屯採購單 Excel 產生失敗：'+e.message)}
 }
-function bind(){tcLoadCloudForDropdown();const tab=$t('taichungPurchaseTabBtn');if(tab)tab.onclick=e=>{e.preventDefault();open()};tcRenderProjects();$t('tcProjectNewBtn')?.addEventListener('click',tcProjectClear);$t('tcProjectSaveBtn')?.addEventListener('click',tcProjectSave);$t('tcProjectFilter')?.addEventListener('change',tcRenderProjects);$t('tcCaseFilter')?.addEventListener('change',tcRenderProjects);$t('tcPeriodFilter')?.addEventListener('change',tcRenderProjects);$t('tcAssignmentSelect')?.addEventListener('change',()=>{});$t('tcRefreshProjectBtn')?.addEventListener('click',()=>{tcSyncQuotes();tcRenderProjects();tcRenderAssignmentOptions();});$t('tcQuoteAuditBtn')?.addEventListener('click',()=>{const panel=$t('tcQuoteAuditPanel');panel.style.display=panel.style.display==='none'?'block':'none';tcRenderQuoteAudit()});['tcNoPrefix','tcProjectNo','tcProjectCase','tcProjectAmount'].forEach(id=>$t(id)?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcProjectSave()}}));$t('tcAddItemBtn')?.addEventListener('click',()=>add());$t('tcNameManageBtn')?.addEventListener('click',()=>{renderTCNameManager();tcResetNameEditor();$t('tcNameDlg')?.showModal()});$t('tcNameOptionSaveBtn')?.addEventListener('click',tcSaveNameOption);$t('tcNameOptionCancelBtn')?.addEventListener('click',tcResetNameEditor);$t('tcNameDlgCloseBtn')?.addEventListener('click',()=>{$t('tcNameDlg')?.close()});$t('tcNameOptionInput')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcSaveNameOption()}});$t('tcDetailSaveBtn')?.addEventListener('click',()=>tcDetailSave(true));$t('tcExcelBtn')?.addEventListener('click',download);$t('tcPeriodHistory')?.addEventListener('change',tcPeriodSelect);
+function bind(){tcLoadCloudForDropdown();const tab=$t('taichungPurchaseTabBtn');if(tab)tab.onclick=e=>{e.preventDefault();open()};tcRenderProjects();$t('tcProjectNewBtn')?.addEventListener('click',tcProjectClear);$t('tcProjectSaveBtn')?.addEventListener('click',tcProjectSave);$t('tcProjectFilter')?.addEventListener('change',tcRenderProjects);$t('tcCaseFilter')?.addEventListener('change',tcRenderProjects);$t('tcPeriodFilter')?.addEventListener('change',tcRenderProjects);$t('tcAssignmentSelect')?.addEventListener('change',()=>{});$t('tcRefreshProjectBtn')?.addEventListener('click',()=>{tcRefreshQuotesFromSupabase().catch(e=>alert('報價單更新失敗：'+(e.message||e)));});$t('tcQuoteAuditBtn')?.addEventListener('click',()=>{const panel=$t('tcQuoteAuditPanel');panel.style.display=panel.style.display==='none'?'block':'none';tcRenderQuoteAudit()});['tcNoPrefix','tcProjectNo','tcProjectCase','tcProjectAmount'].forEach(id=>$t(id)?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcProjectSave()}}));$t('tcAddItemBtn')?.addEventListener('click',()=>add());$t('tcNameManageBtn')?.addEventListener('click',()=>{renderTCNameManager();tcResetNameEditor();$t('tcNameDlg')?.showModal()});$t('tcNameOptionSaveBtn')?.addEventListener('click',tcSaveNameOption);$t('tcNameOptionCancelBtn')?.addEventListener('click',tcResetNameEditor);$t('tcNameDlgCloseBtn')?.addEventListener('click',()=>{$t('tcNameDlg')?.close()});$t('tcNameOptionInput')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcSaveNameOption()}});$t('tcDetailSaveBtn')?.addEventListener('click',()=>tcDetailSave(true));$t('tcExcelBtn')?.addEventListener('click',download);$t('tcPeriodHistory')?.addEventListener('change',tcPeriodSelect);
 $t('tcExportPeriod')?.addEventListener('input',()=>tcRememberEnteredPeriod(false));
 $t('tcPeriodHistory')?.addEventListener('focus',()=>{tcRememberEnteredPeriod(false);tcPeriodRender($t('tcPeriodHistory')?.value||'')});
 $t('tcExportPeriod')?.addEventListener('change',()=>tcRememberEnteredPeriod(false));
