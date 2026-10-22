@@ -3224,14 +3224,21 @@ function today(){const d=new Date();return `${d.getFullYear()}/${String(d.getMon
 function roc(v){const m=String(v||'').match(/(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);return m?`${Number(m[1])-1911}年${String(m[2]).padStart(2,'0')}月${String(m[3]).padStart(2,'0')}日`:String(v||'')}
 let tcProjectEditKey=null;
 const TC_PROJECT_KEY='sbd_taichung_purchase_projects_v1';
+// 草屯刪除保護：本機永久排除清單，避免舊雲端快照重新帶回已刪案件。
+const TC_DELETED_KEY='sbd_tc_deleted_project_numbers_v2';
+function tcDeletedNumbers(){try{return new Set(JSON.parse(localStorage.getItem(TC_DELETED_KEY)||'[]').map(x=>String(x).trim()))}catch(_){return new Set()}}
+function tcMarkDeleted(no){const n=String(no||'').trim();if(!n)return;const a=tcDeletedNumbers();a.add(n);localStorage.setItem(TC_DELETED_KEY,JSON.stringify([...a]));}
+
 let tcCloudProjects=[],tcCloudDetails={},tcCloudLoaded=false;
 function tcLocalProjects(){try{const a=JSON.parse(localStorage.getItem(TC_PROJECT_KEY)||'[]');return Array.isArray(a)?a:[]}catch(e){return []}}
 function tcProjects(){
  const byNo=new Map(),withoutNo=new Map();
+ const deletedNos=new Set([...tcDeletedNumbers(),...[...tcCloudProjects,...tcLocalProjects()].filter(r=>r&&r.deleted===true).map(r=>String(r.no||"" ).trim())]);
  // 同單號資料以最近修改時間為準；本機修改不應被舊雲端紀錄覆蓋。
  for(const r of [...tcCloudProjects,...tcLocalProjects()]){
-  if(!r||r.key==null)continue;
+  if(!r||r.key==null||r.deleted===true)continue;
   const no=String(r.no||'').trim();
+  if(deletedNos.has(no))continue;
   const target=no?byNo:withoutNo, id=no||String(r.key);
   const previous=target.get(id);
   if(!previous){target.set(id,r);continue;}
@@ -3284,7 +3291,7 @@ function tcSaveProjects(a){
 
 function tcProjectClear(){tcProjectEditKey=null;$t('tcNoPrefix').dataset.rawNumber='0';$t('tcNoPrefix').value='G5DE';$t('tcProjectNo').value='';$t('tcProjectCase').value='';$t('tcProjectAmount').value='';}
 function tcFullNo(){const x=$t('tcProjectNo')?.value.trim()||'';return x?(/^(?:G5DD|G5DE)/.test(x)?x:(/^\d+$/.test(x)&&$t('tcNoPrefix')?.dataset.rawNumber==='1'?x:(($t('tcNoPrefix')?.value||'')+x))):''}
-function tcProjectSave(){const oldRec=tcProjectEditKey?tcProjects().find(r=>String(r.key)===String(tcProjectEditKey)):null;const proposed=tcFullNo();const oldNo=String(oldRec?.no||"");const no=(oldRec && /^(G5DD|G5DE)/.test(oldNo) && /^\d+$/.test(String($t("tcProjectNo").value||"").trim()) && !/^(G5DD|G5DE)/.test(proposed))?oldNo.match(/^(G5DD|G5DE)/)[1]+String($t("tcProjectNo").value).trim():proposed,caseName=$t('tcProjectCase').value.trim(),caseAmount=$t('tcProjectAmount').value.trim();if(!no&&!caseName)return alert('請輸入單號或案名');const a=tcProjects(),key=tcProjectEditKey||Date.now().toString();const i=a.findIndex(x=>String(x.key)===String(key));const duplicate=a.findIndex((x,j)=>j!==i&&String(x.no||'').trim()===no&&!!no);if(duplicate>=0){alert('此單號已存在，請直接修改原案件，避免產生兩筆。');return;}const rec={...(i>=0?a[i]:{}),key,no,caseName,caseAmount,quoteSyncLocked:true,tcManuallyEdited:true,updatedAt:new Date().toISOString(),...(i>=0?{}:{sortAddedAt:Date.now()})};if(i>=0){a[i]=rec;}else a.unshift(rec);tcSaveProjects(a);tcProjectEditKey=null;tcRenderProjects();tcProjectClear();}
+function tcProjectSave(){const oldRec=tcProjectEditKey?tcProjects().find(r=>String(r.key)===String(tcProjectEditKey)):null;const proposed=tcFullNo();const oldNo=String(oldRec?.no||"");const no=(oldRec && /^(G5DD|G5DE)/.test(oldNo) && /^\d+$/.test(String($t("tcProjectNo").value||"").trim()) && !/^(G5DD|G5DE)/.test(proposed))?oldNo.match(/^(G5DD|G5DE)/)[1]+String($t("tcProjectNo").value).trim():proposed,caseName=$t('tcProjectCase').value.trim(),caseAmount=$t('tcProjectAmount').value.trim();if(!no&&!caseName)return alert('請輸入單號或案名');const a=tcProjects(),key=tcProjectEditKey||Date.now().toString();const i=a.findIndex(x=>String(x.key)===String(key));const duplicate=a.findIndex((x,j)=>j!==i&&String(x.no||'').trim()===no&&!!no);if(duplicate>=0){alert('此單號已存在，請直接修改原案件，避免產生兩筆。');return;}const rec={...(i>=0?a[i]:{}),key,no,caseName,caseAmount,quoteSyncLocked:true,tcManuallyEdited:true,updatedAt:new Date().toISOString(),...(i>=0?{}:{sortAddedAt:Date.now()})};if(i>=0){a[i]=rec;}else a.unshift(rec);tcSaveProjects([...a,...tcLocalProjects().filter(x=>x.deleted===true&&String(x.no||"")!==no)]);tcProjectEditKey=null;tcRenderProjects();tcProjectClear();}
 // 報價單只帶入「客戶名稱」與「未稅合計 subtotal」；以報價單 ID 固定識別，避免重複。
 // 原本手動草屯資料優先保留；已有相同報價單的資料不覆蓋修改內容。
 function tcSyncQuotes(){
@@ -3292,13 +3299,14 @@ function tcSyncQuotes(){
  const quotes=Array.isArray(window.sbdQuoteRowsForTc)?window.sbdQuoteRowsForTc:[];
  if(!quotes.length||!tcCloudLoaded)return;
  const a=tcProjects();let changed=false;
+ const deletedNos=new Set([...tcCloudProjects,...tcLocalProjects()].filter(r=>r&&r.deleted===true).map(r=>String(r.no||"").trim()));
  const normalized=v=>String(v??'').trim();
  for(const q of quotes){
   if(!q||q.id==null)continue;
   if(normalized(q.order_no))continue; // 有訂單編號的報價單僅同步浤富
   // 報價單的「訂單編號」與系統報價單編號是不同欄位；草屯只收數字案件編號。
   const candidates=[normalized(q.order_no),normalized(q.quote_no)].filter(v=>/^\d{6,}$/.test(v));
-  if(!candidates.length)continue;
+  if(!candidates.length||candidates.some(no=>deletedNos.has(no)))continue;
   const existing=a.find(r=>normalized(r.sourceQuoteId)===normalized(q.id))||a.find(r=>candidates.includes(normalized(r.no)));
   const amount=Number(q.subtotal);
   if(existing){
@@ -3483,7 +3491,7 @@ b.innerHTML=a.map(r=>`<tr><td><button data-a="edit" data-k="${r.key}">修改</bu
    }else{value=name;}
  }
  r.claimPeriod=value;tcSaveProjects(all);tcRenderProjects();
-});b.querySelectorAll('.tcAgencyCategory').forEach(el=>el.onchange=()=>{const a=tcProjects(),r=a.find(x=>String(x.key)===el.dataset.k);if(r){r.category=el.value;tcSaveProjects(a);tcRenderProjects();}});b.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{const all=tcProjects(),r=all.find(x=>x.key===btn.dataset.k);if(!r)return;if(btn.dataset.a==='edit'){tcProjectEditKey=r.key;const m=String(r.no||'').match(/^(G5DD|G5DE)(.*)$/);$t('tcNoPrefix').value=m?m[1]:'G5DE';$t('tcProjectNo').value=m?m[2]:r.no||'';$t('tcNoPrefix').dataset.rawNumber=(!m&&/^\d+$/.test(String(r.no||'')))?'1':'0';$t('tcProjectCase').value=r.caseName||'';$t('tcProjectAmount').value=r.caseAmount||'';requestAnimationFrame(()=>{const target=$t('tcProjectNewBtn');if(target){target.scrollIntoView({behavior:'instant',block:'start'});window.scrollTo({top:Math.max(0,window.scrollY-170),behavior:'instant'});setTimeout(()=>$t('tcProjectNo')?.focus({preventScroll:true}),80);}})}if(btn.dataset.a==='del'){if(tcCloudProjects.some(z=>String(z.key)===String(r.key))){alert('此案件存在公司雲端備份，為保護原始資料，暫不允許在這裡刪除。');return;}if(!confirm('確定刪除這筆？'))return;tcSaveProjects(all.filter(x=>x.key!==r.key));const ds=tcDetails();delete ds[r.key];tcSaveDetails(ds);tcRenderProjects();tcRenderSavedDetails()}});tcRenderAssignmentOptions();tcRenderSavedDetails();window.tcRenderAgency?.()}
+});b.querySelectorAll('.tcAgencyCategory').forEach(el=>el.onchange=()=>{const a=tcProjects(),r=a.find(x=>String(x.key)===el.dataset.k);if(r){r.category=el.value;tcSaveProjects(a);tcRenderProjects();}});b.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{const all=tcProjects(),r=all.find(x=>x.key===btn.dataset.k);if(!r)return;if(btn.dataset.a==='edit'){tcProjectEditKey=r.key;const m=String(r.no||'').match(/^(G5DD|G5DE)(.*)$/);$t('tcNoPrefix').value=m?m[1]:'G5DE';$t('tcProjectNo').value=m?m[2]:r.no||'';$t('tcNoPrefix').dataset.rawNumber=(!m&&/^\d+$/.test(String(r.no||'')))?'1':'0';$t('tcProjectCase').value=r.caseName||'';$t('tcProjectAmount').value=r.caseAmount||'';requestAnimationFrame(()=>{const target=$t('tcProjectNewBtn');if(target){target.scrollIntoView({behavior:'instant',block:'start'});window.scrollTo({top:Math.max(0,window.scrollY-170),behavior:'instant'});setTimeout(()=>$t('tcProjectNo')?.focus({preventScroll:true}),80);}})}if(btn.dataset.a==='del'){if(!confirm('確定刪除這筆？'))return;tcMarkDeleted(r.no);const tombstone={key:'deleted:'+String(r.no||r.key),no:String(r.no||''),deleted:true,updatedAt:new Date().toISOString()};tcSaveProjects([...all.filter(x=>String(x.key)!==String(r.key)&&String(x.no||'')!==String(r.no||'')),...tcLocalProjects().filter(x=>x.deleted===true&&String(x.no||'')!==String(r.no||'')),tombstone]);const ds=tcDetails();delete ds[r.key];tcSaveDetails(ds);tcRenderProjects();tcRenderSavedDetails()}});tcRenderAssignmentOptions();tcRenderSavedDetails();window.tcRenderAgency?.()}
 function tcCurrentProject(){const key=$t('tcAssignmentSelect')?.value||'';return tcProjects().find(x=>x.key===key)||null}
 const TC_DETAIL_KEY='sbd_taichung_purchase_details_v1';
 function tcDetails(){let local={};try{local=JSON.parse(localStorage.getItem(TC_DETAIL_KEY)||'{}')||{}}catch(e){}return {...tcCloudDetails,...local}}
