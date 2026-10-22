@@ -2523,7 +2523,7 @@ function poProjectSave(){
   const no=noSuffix ? (($("poNoPrefix")?.value||"")+noSuffix) : "", caseName=$("poCase").value.trim(), caseAmount=Number(String($("poCaseAmount").value).replace(/,/g,"")||0);
   if(!no&&!caseName)return alert("請輸入單號或案名");
   const a=poProjects(), key=poProjectEditKey||Date.now().toString();
-  const previous=a.find(x=>x.key===key);const rec={...previous,key,no,caseName,caseAmount,updatedAt:new Date().toISOString()};
+  const previous=a.find(x=>x.key===key);const rec={...previous,key,no,caseName,caseAmount,quoteSyncLocked:true,updatedAt:new Date().toISOString()};
   const i=a.findIndex(x=>x.key===key); if(i>=0)a[i]=rec; else a.unshift(rec);
   poSaveProjects(a);poProjectEditKey=null;poRenderProjects();poRenderGroups();
   // 儲存後直接進入下一筆新增狀態：保留目前前綴，其餘欄位清空，游標回到單號數字欄
@@ -3224,12 +3224,16 @@ let tcCloudProjects=[],tcCloudDetails={},tcCloudLoaded=false;
 function tcLocalProjects(){try{const a=JSON.parse(localStorage.getItem(TC_PROJECT_KEY)||'[]');return Array.isArray(a)?a:[]}catch(e){return []}}
 function tcProjects(){
  const byNo=new Map(),withoutNo=new Map();
- // 雲端先載入，本機同步結果後覆蓋同單號的舊資料，避免重複與舊金額回復。
+ // 同單號資料以最近修改時間為準；本機修改不應被舊雲端紀錄覆蓋。
  for(const r of [...tcCloudProjects,...tcLocalProjects()]){
   if(!r||r.key==null)continue;
   const no=String(r.no||'').trim();
-  if(no){const previous=byNo.get(no);byNo.set(no,previous?{...previous,...r,claimPeriod:r.claimPeriod||previous.claimPeriod||'',category:r.category||previous.category||''}:r)}
-  else withoutNo.set(String(r.key),r);
+  const target=no?byNo:withoutNo, id=no||String(r.key);
+  const previous=target.get(id);
+  if(!previous){target.set(id,r);continue;}
+  const newer=Date.parse(r.updatedAt||'')||0,older=Date.parse(previous.updatedAt||'')||0;
+  const chosen=newer>=older?r:previous,other=chosen===r?previous:r;
+  target.set(id,{...other,...chosen,claimPeriod:chosen.claimPeriod??other.claimPeriod??'',category:chosen.category??other.category??''});
  }
  return [...byNo.values(),...withoutNo.values()];
 }
@@ -3276,34 +3280,22 @@ function tcSaveProjects(a){
 
 function tcProjectClear(){tcProjectEditKey=null;$t('tcNoPrefix').value='G5DE';$t('tcProjectNo').value='';$t('tcProjectCase').value='';$t('tcProjectAmount').value='';}
 function tcFullNo(){const x=$t('tcProjectNo')?.value.trim()||'';return x?(($t('tcNoPrefix')?.value||'')+x):''}
-function tcProjectSave(){const no=tcFullNo(),caseName=$t('tcProjectCase').value.trim(),caseAmount=$t('tcProjectAmount').value.trim();if(!no&&!caseName)return alert('請輸入單號或案名');const a=tcProjects(),key=tcProjectEditKey||Date.now().toString();const i=a.findIndex(x=>String(x.key)===String(key));const rec={...(i>=0?a[i]:{}),key,no,caseName,caseAmount,updatedAt:new Date().toISOString(),...(i>=0?{}:{sortAddedAt:Date.now()})};if(i>=0){a[i]=rec;}else a.unshift(rec);tcSaveProjects(a);tcProjectEditKey=null;tcRenderProjects();tcProjectClear();}
+function tcProjectSave(){const no=tcFullNo(),caseName=$t('tcProjectCase').value.trim(),caseAmount=$t('tcProjectAmount').value.trim();if(!no&&!caseName)return alert('請輸入單號或案名');const a=tcProjects(),key=tcProjectEditKey||Date.now().toString();const i=a.findIndex(x=>String(x.key)===String(key));const rec={...(i>=0?a[i]:{}),key,no,caseName,caseAmount,quoteSyncLocked:true,updatedAt:new Date().toISOString(),...(i>=0?{}:{sortAddedAt:Date.now()})};if(i>=0){a[i]=rec;}else a.unshift(rec);tcSaveProjects(a);tcProjectEditKey=null;tcRenderProjects();tcProjectClear();}
 // 報價單只帶入「客戶名稱」與「未稅合計 subtotal」；以報價單 ID 固定識別，避免重複。
 // 原本手動草屯資料優先保留；已有相同報價單的資料不覆蓋修改內容。
 function tcSyncQuotes(){
  const quotes=Array.isArray(window.sbdQuoteRowsForTc)?window.sbdQuoteRowsForTc:[];
  if(!quotes.length)return;
- const a=tcProjects();if(!Array.isArray(a))return;
- let changed=false;
+ const a=tcProjects();let changed=false;
  for(const q of quotes){
   if(!q||q.id==null)continue;
-  const key='quote:'+String(q.id), no=String(q.quote_no||'').trim();
-  let subtotal=Number(q.subtotal);
-  if(!Number.isFinite(subtotal))continue;
-  const existing=a.find(r=>String(r.sourceQuoteId||'')===String(q.id)||String(r.key)===key)
-    ||(no?a.find(r=>String(r.no||'').trim()===no):null);
-  if(existing){
-   const old=Number(String(existing.caseAmount??'').replace(/,/g,''));
-   // 報價單為金額來源：已連結或同單號案件一律使用最新未稅小計。
-   // 保留草屯原有案名、請款區間、分類及其他欄位。
-   if(old!==subtotal || String(existing.sourceQuoteId||'')!==String(q.id)){
-    existing.caseAmount=String(subtotal);
-    existing.sourceQuoteId=String(q.id);
-    existing.updatedAt=new Date().toISOString();
-    changed=true;
-   }
-   continue;
-  }
-  a.unshift({key,no,caseName:String(q.customer_name||'').trim(),caseAmount:String(subtotal),category:'',sourceQuoteId:String(q.id),updatedAt:new Date().toISOString(),sortAddedAt:Date.now()});changed=true;
+  const no=String(q.quote_no||'').trim();if(!no)continue;
+  const existing=a.find(r=>String(r.sourceQuoteId||'')===String(q.id))||a.find(r=>String(r.no||'').trim()===no);
+  // 報價單僅負責首次建立案件；既有案件所有欄位均由草屯獨立維護。
+  if(existing)continue;
+  const subtotal=Number(q.subtotal);
+  a.unshift({key:'quote:'+String(q.id),no,caseName:String(q.customer_name||'').trim(),caseAmount:Number.isFinite(subtotal)?String(subtotal):'',category:'',sourceQuoteId:String(q.id),quoteSyncLocked:true,updatedAt:new Date().toISOString(),sortAddedAt:Date.now()});
+  changed=true;
  }
  if(changed){tcSaveProjects(a);tcRenderProjects();}
  else tcRenderAssignmentOptions();
@@ -3322,7 +3314,7 @@ function tcRenderQuoteAudit(){
   const good=Number.isFinite(amount)&&amount>0;
   return `<tr><td>${esc(p.no)}</td><td>${esc(p.caseName)}</td><td>${good?amount.toLocaleString('zh-TW'):(match?'報價單未稅金額也是 0':'找不到同單號的報價單')}</td><td>${good?`<button type="button" data-quote-fix="${esc(p.key)}">補入未稅金額</button>`:'需人工核對報價單編號'}</td></tr>`;
  });
- panel.innerHTML=`<b>草屯 0 元案件檢查：${zeros.length} 筆</b><p style="margin:6px 0">僅以報價單 ID 或完全相同的單號比對；不會以相似案名猜測金額。下方補入只更新本機草屯案件，不修改報價單或雲端。</p><div style="overflow-x:auto"><table class="purchaseRecords" style="width:100%"><thead><tr><th>單號</th><th>案名</th><th>報價單未稅金額</th><th>操作</th></tr></thead><tbody>${rows.join('')||'<tr><td colspan="4">沒有 0 元案件</td></tr>'}</tbody></table></div>`;
+ panel.innerHTML=`<b>草屯 0 元案件檢查：${zeros.length} 筆</b><p style="margin:6px 0">僅以報價單 ID 或完全相同的單號比對；不會以相似案名猜測金額。已同步案件的金額由草屯獨立管理；此處只供核對，不會自動覆蓋人工修改。</p><div style="overflow-x:auto"><table class="purchaseRecords" style="width:100%"><thead><tr><th>單號</th><th>案名</th><th>報價單未稅金額</th><th>操作</th></tr></thead><tbody>${rows.join('')||'<tr><td colspan="4">沒有 0 元案件</td></tr>'}</tbody></table></div>`;
  panel.querySelectorAll('[data-quote-fix]').forEach(btn=>btn.onclick=()=>{
   const key=btn.getAttribute('data-quote-fix');
   const a=tcProjects(),p=a.find(x=>String(x.key)===key);if(!p)return;
@@ -3376,13 +3368,17 @@ function poSyncQuotesWithOrderNo(){
     ||projects.find(r=>String(r.key)===key)
     ||projects.find(r=>String(r.no||'').trim()===orderNo);
   if(existing){
-   // 相同單號既有案件僅更新對應資料，不覆蓋請款區間及分類。
-   if(existing.no!==orderNo || (existing.sourceQuoteType==='hongfu' && existing.caseName!==caseName) || Number(existing.caseAmount)!==subtotal || String(existing.sourceQuoteId||'')!==String(q.id)){
-    Object.assign(existing,{no:orderNo,caseName:existing.sourceQuoteType==='hongfu'?caseName:(existing.caseName||caseName),caseAmount:subtotal,sourceQuoteId:String(q.id),sourceQuoteType:'hongfu',updatedAt:new Date().toISOString()});
+   // 浤富與報價單為兩份獨立資料：只首次匯入，不覆寫已建立案件。
+   // 包含舊版同步的案件與手動修改的案件，重新整理後均保留原值。
+   // 既有案件只補充來源識別（不更動單號、案名、金額、分類、請款區間）。
+   if(!existing.sourceQuoteId && String(existing.no||'').trim()===orderNo){
+    existing.sourceQuoteId=String(q.id);
+    existing.sourceQuoteType='hongfu';
     changed=true;
    }
+
   }else{
-   projects.unshift({key,no:orderNo,caseName,caseAmount:subtotal,category:'',sourceQuoteId:String(q.id),sourceQuoteType:'hongfu',updatedAt:new Date().toISOString()});
+   projects.unshift({key,no:orderNo,caseName,caseAmount:subtotal,category:'',quoteSyncLocked:false,sourceQuoteId:String(q.id),sourceQuoteType:'hongfu',updatedAt:new Date().toISOString()});
    changed=true;
   }
  }
