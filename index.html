@@ -3299,7 +3299,7 @@ function tcSyncQuotes(){
   // 報價單的「訂單編號」與系統報價單編號是不同欄位；草屯只收數字案件編號。
   const candidates=[normalized(q.order_no),normalized(q.quote_no)].filter(v=>/^\d{6,}$/.test(v));
   if(!candidates.length)continue;
-  const existing=a.find(r=>normalized(r.sourceQuoteId)===normalized(q.id))||a.find(r=>candidates.includes(normalized(r.no)));
+  const existing=a.find(r=>candidates.includes(normalized(r.no)))||a.find(r=>normalized(r.sourceQuoteId)===normalized(q.id));
   const amount=Number(q.subtotal);
   if(existing){
    // 舊版只帶入客戶名稱的案件：僅當案名完全等於報價單客戶名稱、
@@ -3307,8 +3307,11 @@ function tcSyncQuotes(){
    const customer=normalized(q.customer_name);
    const quoteCase=normalized(q.case_name);
    const fullCase=[customer,quoteCase].filter(Boolean).join(' ');
-   if(!existing.tcManuallyEdited && customer && quoteCase &&
-      normalized(existing.caseName)===customer && fullCase!==customer){
+   // 即使舊版曾誤設人工編輯標記，只要案名仍完全等於原客戶名稱，
+   // 就表示案名尚未加上報價單案名；只改此欄，不碰金額、分類或請款區間。
+   // 真正自訂過的案名不等於原客戶名稱，因此絕不覆蓋。
+   if(customer && quoteCase &&
+      normalized(existing.caseName).replace(/\s+/g,' ')===customer.replace(/\s+/g,' ') && fullCase!==customer){
      existing.caseName=fullCase;
      existing.tcQuoteCaseNameFilled=true;
      existing.updatedAt=new Date().toISOString();
