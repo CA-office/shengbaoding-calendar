@@ -2523,8 +2523,8 @@ function poProjectSave(){
   const no=noSuffix ? (/^(?:G5DD|G5DE)/i.test(noSuffix)?noSuffix:((poProjectEditKey && poProjects().find(x=>String(x.key)===String(poProjectEditKey)) && /^\d+$/.test(String(poProjects().find(x=>String(x.key)===String(poProjectEditKey)).no||"")))?noSuffix:(($("poNoPrefix")?.value||"")+noSuffix))) : "", caseName=$("poCase").value.trim(), caseAmount=Number(String($("poCaseAmount").value).replace(/,/g,"")||0);
   if(!no&&!caseName)return alert("請輸入單號或案名");
   const a=poProjects(), key=poProjectEditKey||Date.now().toString();
-  const previous=a.find(x=>x.key===key);const rec={...previous,key,no,caseName,caseAmount,quoteSyncLocked:true,updatedAt:new Date().toISOString()};
-  const i=a.findIndex(x=>x.key===key); if(i>=0)a[i]=rec; else a.unshift(rec);
+  const previous=a.find(x=>String(x.key)===String(key));const rec={...previous,key,no,caseName,caseAmount,quoteSyncLocked:true,updatedAt:new Date().toISOString()};
+  const i=a.findIndex(x=>String(x.key)===String(key)); if(i>=0)a[i]=rec; else {if(a.some(x=>String(x.no||"").trim()===no)){alert("此單號已存在，請修改原案件");return;}a.unshift(rec);}
   poSaveProjects(a);poProjectEditKey=null;poRenderProjects();poRenderGroups();
   // 儲存後直接進入下一筆新增狀態：保留目前前綴，其餘欄位清空，游標回到單號數字欄
   $("poNo").value="";$("poCase").value="";$("poCaseAmount").value="";
@@ -2597,7 +2597,7 @@ b.innerHTML=a.map(r=>`<tr><td><button data-a="edit" data-k="${r.key}">修改</bu
   });
   b.querySelectorAll("button").forEach(btn=>btn.onclick=()=>{
     const a=poProjects(),r=a.find(x=>x.key===btn.dataset.k);
-    if(btn.dataset.a==="edit"&&r){poProjectEditKey=r.key;const savedNo=String(r.no||"");const m=savedNo.match(/^(G5DD|G5DE)(.*)$/);if($("poNoPrefix"))$("poNoPrefix").value=m?m[1]:"G5DE";$("poNo").value=m?m[2]:savedNo;$("poCase").value=r.caseName||"";$("poCaseAmount").value=r.caseAmount||""}
+    if(btn.dataset.a==="edit"&&r){poProjectEditKey=r.key;const savedNo=String(r.no||"");const m=savedNo.match(/^(G5DD|G5DE)(.*)$/);if($("poNoPrefix"))$("poNoPrefix").value=m?m[1]:"G5DE";$("poNo").value=m?m[2]:savedNo;$("poCase").value=r.caseName||"";$("poCaseAmount").value=r.caseAmount??"";requestAnimationFrame(()=>{const el=$("poNo");el?.scrollIntoView({behavior:"smooth",block:"center"});setTimeout(()=>el?.focus({preventScroll:true}),200)})}
     if(btn.dataset.a==="del"){if(!confirm("確定刪除這個單號／案名？"))return;poSaveProjects(poProjects().filter(x=>x.key!==btn.dataset.k));poRenderProjects();poRenderGroups()}
   });
 }
