@@ -3312,7 +3312,7 @@ function tcSyncQuotes(){
    continue;
   }
   const no=candidates[0];
-  a.unshift({key:'quote:'+String(q.id),no,caseName:normalized(q.customer_name),caseAmount:Number.isFinite(amount)?String(amount):'',category:'',sourceQuoteId:String(q.id),quoteSyncLocked:true,updatedAt:new Date().toISOString(),sortAddedAt:Date.now()});
+  a.unshift({key:'quote:'+String(q.id),no,caseName:[normalized(q.customer_name),normalized(q.case_name)].filter(Boolean).join(' '),caseAmount:Number.isFinite(amount)?String(amount):'',category:'',sourceQuoteId:String(q.id),quoteSyncLocked:true,updatedAt:new Date().toISOString(),sortAddedAt:Date.now()});
   changed=true;
  }
  if(changed){tcSaveProjects(a);tcRenderProjects();tcRenderAssignmentOptions();}
