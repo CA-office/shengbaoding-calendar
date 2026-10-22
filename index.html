@@ -931,6 +931,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
       <button type="button" id="tcProjectSaveBtn" class="primary">儲存</button>
       <select id="tcProjectFilter" aria-label="單號篩選"><option value="">全部單號</option><option value="G5DD">G5DD</option><option value="G5DE">G5DE</option></select>
       <select id="tcCaseFilter" aria-label="案名關鍵字篩選" title="依案名篩選"><option value="">全部案名</option></select>
+      <select id="tcPeriodFilter" aria-label="請款區間篩選" title="依請款區間篩選案件"><option value="">全部區間</option></select>
       <span id="tcCaseFilterCount" style="align-self:center;font-weight:800;white-space:nowrap;color:#18324d">共 0 筆</span>
     </div>
     <div class="purchaseMeta">
@@ -3305,7 +3306,15 @@ if(caseSelect){
   caseSelect.value=names.includes(previous)?previous:'';
 }
 const caseFilter=caseSelect?.value||'';
-const a=records.filter(r=>(!filter||String(r.no||'').startsWith(filter))&&(!caseFilter||String(r.caseName||'').includes(caseFilter))).sort((x,y)=>(Number(y.sortAddedAt)||0)-(Number(x.sortAddedAt)||0));  const total=a.reduce((sum,r)=>sum+(Number(String(r.caseAmount??0).replace(/,/g,""))||0),0);
+const periodSelect=$t('tcPeriodFilter');
+if(periodSelect){
+ const previous=periodSelect.value;
+ const periods=[...new Set([...records.map(r=>String(r.claimPeriod||'').trim()),...(typeof tcPeriodList==='function'?tcPeriodList():[])].filter(Boolean))].sort().reverse();
+ periodSelect.replaceChildren(new Option('全部區間',''),new Option('未設定區間','__none__'),...periods.map(v=>new Option(v,v)));
+ periodSelect.value=(previous==='__none__'||periods.includes(previous))?previous:'';
+}
+const periodFilter=periodSelect?.value||'';
+const a=records.filter(r=>(!filter||String(r.no||'').startsWith(filter))&&(!caseFilter||String(r.caseName||'').includes(caseFilter))&&(!periodFilter||(periodFilter==='__none__'?!String(r.claimPeriod||'').trim():String(r.claimPeriod||'').trim()===periodFilter))).sort((x,y)=>(Number(y.sortAddedAt)||0)-(Number(x.sortAddedAt)||0));  const total=a.reduce((sum,r)=>sum+(Number(String(r.caseAmount??0).replace(/,/g,""))||0),0);
 const countEl=$t('tcProjectCount');if(countEl)countEl.textContent=String(a.length);
 const caseCount=$t('tcCaseFilterCount');if(caseCount)caseCount.textContent=`共 ${a.length} 筆`;
 const totalEl=$t('tcProjectGrandTotal');if(totalEl)totalEl.textContent=total.toLocaleString('en-US',{maximumFractionDigits:2});
@@ -3470,7 +3479,7 @@ function tcPeriodSelect(){
  tcRenderSavedDetails();
 }
 function clear(){$t('tcItemsBody').innerHTML='';add()}
-function open(){if(typeof isAdminAccount==='function'&&!isAdminAccount())return;if(typeof renderQNameDatalist==='function')renderQNameDatalist();['calendarView','quoteView','purchaseView','installStatsView','overtimeView','invoiceCustomerView'].forEach(id=>$t(id)?.classList.add('hidden'));$t('taichungPurchaseView').classList.remove('hidden');$t('calendarControls')?.classList.add('hidden');document.querySelectorAll('.featureTabs button').forEach(b=>b.classList.remove('active'));$t('taichungPurchaseTabBtn').classList.add('active');tcPeriodRender($t('tcPeriodHistory')?.value||'');tcRenderSavedDetails()}
+function open(){if(typeof isAdminAccount==='function'&&!isAdminAccount())return;if(typeof loadQuotes==='function'){Promise.resolve(loadQuotes()).catch(e=>console.warn('草屯報價單同步讀取失敗',e));}if(typeof renderQNameDatalist==='function')renderQNameDatalist();['calendarView','quoteView','purchaseView','installStatsView','overtimeView','invoiceCustomerView'].forEach(id=>$t(id)?.classList.add('hidden'));$t('taichungPurchaseView').classList.remove('hidden');$t('calendarControls')?.classList.add('hidden');document.querySelectorAll('.featureTabs button').forEach(b=>b.classList.remove('active'));$t('taichungPurchaseTabBtn').classList.add('active');tcPeriodRender($t('tcPeriodHistory')?.value||'');tcRenderSavedDetails()}
 function copyStyle(src,dst){dst.style=JSON.parse(JSON.stringify(src.style||{}));dst.numFmt=src.numFmt;dst.alignment=JSON.parse(JSON.stringify(src.alignment||{}));dst.border=JSON.parse(JSON.stringify(src.border||{}));dst.fill=JSON.parse(JSON.stringify(src.fill||{}));dst.font=JSON.parse(JSON.stringify(src.font||{}));dst.protection=JSON.parse(JSON.stringify(src.protection||{}));}
 async function download(){
  const ds=tcDetails();
@@ -3566,7 +3575,7 @@ async function download(){
    a.href=u;a.download=`草屯採購單_${start}-${end}.xlsx`;a.click();setTimeout(()=>URL.revokeObjectURL(u),1200);
  }catch(e){console.error(e);alert('草屯採購單 Excel 產生失敗：'+e.message)}
 }
-function bind(){tcLoadCloudForDropdown();const tab=$t('taichungPurchaseTabBtn');if(tab)tab.onclick=e=>{e.preventDefault();open()};tcRenderProjects();$t('tcProjectNewBtn')?.addEventListener('click',tcProjectClear);$t('tcProjectSaveBtn')?.addEventListener('click',tcProjectSave);$t('tcProjectFilter')?.addEventListener('change',tcRenderProjects);$t('tcCaseFilter')?.addEventListener('change',tcRenderProjects);$t('tcAssignmentSelect')?.addEventListener('change',()=>{});$t('tcRefreshProjectBtn')?.addEventListener('click',()=>{tcSyncQuotes();tcRenderProjects();tcRenderAssignmentOptions();});$t('tcQuoteAuditBtn')?.addEventListener('click',()=>{const panel=$t('tcQuoteAuditPanel');panel.style.display=panel.style.display==='none'?'block':'none';tcRenderQuoteAudit()});['tcNoPrefix','tcProjectNo','tcProjectCase','tcProjectAmount'].forEach(id=>$t(id)?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcProjectSave()}}));$t('tcAddItemBtn')?.addEventListener('click',()=>add());$t('tcNameManageBtn')?.addEventListener('click',()=>{renderTCNameManager();tcResetNameEditor();$t('tcNameDlg')?.showModal()});$t('tcNameOptionSaveBtn')?.addEventListener('click',tcSaveNameOption);$t('tcNameOptionCancelBtn')?.addEventListener('click',tcResetNameEditor);$t('tcNameDlgCloseBtn')?.addEventListener('click',()=>{$t('tcNameDlg')?.close()});$t('tcNameOptionInput')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcSaveNameOption()}});$t('tcDetailSaveBtn')?.addEventListener('click',()=>tcDetailSave(true));$t('tcExcelBtn')?.addEventListener('click',download);$t('tcPeriodHistory')?.addEventListener('change',tcPeriodSelect);
+function bind(){tcLoadCloudForDropdown();const tab=$t('taichungPurchaseTabBtn');if(tab)tab.onclick=e=>{e.preventDefault();open()};tcRenderProjects();$t('tcProjectNewBtn')?.addEventListener('click',tcProjectClear);$t('tcProjectSaveBtn')?.addEventListener('click',tcProjectSave);$t('tcProjectFilter')?.addEventListener('change',tcRenderProjects);$t('tcCaseFilter')?.addEventListener('change',tcRenderProjects);$t('tcPeriodFilter')?.addEventListener('change',tcRenderProjects);$t('tcAssignmentSelect')?.addEventListener('change',()=>{});$t('tcRefreshProjectBtn')?.addEventListener('click',()=>{tcSyncQuotes();tcRenderProjects();tcRenderAssignmentOptions();});$t('tcQuoteAuditBtn')?.addEventListener('click',()=>{const panel=$t('tcQuoteAuditPanel');panel.style.display=panel.style.display==='none'?'block':'none';tcRenderQuoteAudit()});['tcNoPrefix','tcProjectNo','tcProjectCase','tcProjectAmount'].forEach(id=>$t(id)?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcProjectSave()}}));$t('tcAddItemBtn')?.addEventListener('click',()=>add());$t('tcNameManageBtn')?.addEventListener('click',()=>{renderTCNameManager();tcResetNameEditor();$t('tcNameDlg')?.showModal()});$t('tcNameOptionSaveBtn')?.addEventListener('click',tcSaveNameOption);$t('tcNameOptionCancelBtn')?.addEventListener('click',tcResetNameEditor);$t('tcNameDlgCloseBtn')?.addEventListener('click',()=>{$t('tcNameDlg')?.close()});$t('tcNameOptionInput')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tcSaveNameOption()}});$t('tcDetailSaveBtn')?.addEventListener('click',()=>tcDetailSave(true));$t('tcExcelBtn')?.addEventListener('click',download);$t('tcPeriodHistory')?.addEventListener('change',tcPeriodSelect);
 $t('tcExportPeriod')?.addEventListener('input',()=>tcRememberEnteredPeriod(false));
 $t('tcPeriodHistory')?.addEventListener('focus',()=>{tcRememberEnteredPeriod(false);tcPeriodRender($t('tcPeriodHistory')?.value||'')});
 $t('tcExportPeriod')?.addEventListener('change',()=>tcRememberEnteredPeriod(false));
