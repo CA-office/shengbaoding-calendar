@@ -3291,10 +3291,8 @@ function tcSyncQuotes(){
  const normalized=v=>String(v??'').trim();
  for(const q of quotes){
   if(!q||q.id==null)continue;
-  // 有填「訂單編號」的報價單專屬浤富，絕不新增或更新草屯案件。
-  if(normalized(q.order_no))continue;
-  // 草屯僅使用報價單本身的數字編號，不使用訂單編號。
-  const candidates=[normalized(q.quote_no)].filter(v=>/^\d{6,}$/.test(v));
+  // 報價單的「訂單編號」與系統報價單編號是不同欄位；草屯只收數字案件編號。
+  const candidates=[normalized(q.order_no),normalized(q.quote_no)].filter(v=>/^\d{6,}$/.test(v));
   if(!candidates.length)continue;
   const existing=a.find(r=>normalized(r.sourceQuoteId)===normalized(q.id))||a.find(r=>candidates.includes(normalized(r.no)));
   const amount=Number(q.subtotal);
