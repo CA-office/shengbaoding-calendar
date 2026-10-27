@@ -2643,7 +2643,7 @@ function poLines(items){
   // 不依 OCR 任意換行編號分組：以實際文字中心的 Y 座標歸併同一橫列。
   const rows=[];
   for(const item of [...items].sort((a,b)=>b.y-a.y)){
-    let row=rows.find(r=>Math.abs(r.y-item.y)<=5.5);
+    let row=rows.find(r=>Math.abs(r.y-item.y)<=8.5);
     if(!row){row={y:item.y,a:[]};rows.push(row)}
     row.a.push(item);
   }
@@ -2697,10 +2697,10 @@ async function poReadPdf(file){
         }
         if(!current)continue;
         // 採用紙本固定欄位：貨品名稱、數量、單位、單價；不把其他欄位文字湊成品名。
-        const name=poCol(r,280,480,pg.width).replace(/\s+/g,'').trim();
-        const qty=poCleanNum(poCol(r,480,558,pg.width));
-        let unit=poCol(r,558,615,pg.width).replace(/\s+/g,'');
-        const price=poCleanNum(poCol(r,615,692,pg.width));
+        const name=poCol(r,270,480,pg.width).replace(/\s+/g,'').trim();
+        const qty=poCleanNum(poCol(r,475,558,pg.width));
+        let unit=poCol(r,550,622,pg.width).replace(/\s+/g,'');
+        const price=poCleanNum(poCol(r,610,695,pg.width));
         if(!name||!Number.isFinite(qty)||!Number.isFinite(price))continue;
         if(!/^(?:公分|cm|式|個|支|組|片|才|米|尺|台|樘|件|套|座|包|顆|層)$/i.test(unit))continue;
         if(/客戶對帳單|貨品名稱|銷貨|貨單|本期|營業稅/.test(name))continue;
