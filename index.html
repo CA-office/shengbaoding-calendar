@@ -2667,9 +2667,21 @@ function poCol(row,lo,hi,w){
 }
 function poCleanNum(v){const s=String(v||'').replace(/[，,\s]/g,'').replace(/[OoＯ]/g,'0').replace(/[Il|]/g,'1');return /^-?\d+(?:\.\d+)?$/.test(s)?Number(s):NaN}
 function poSalesNo(row){
-  const left=row.a.filter(z=>z.x<240).map(z=>z.t).join('').replace(/[\s:：]/g,'').replace(/[ＯOo]/g,'0').replace(/[Il|]/g,'1');
-  const m=left.match(/(?:銷貨|銷售|銷售單|銷貨單)[^0-9]{0,3}(1\d{6})(?!\d)/) || left.match(/(?:^|[^0-9])(115\d{4})(?!\d)/);
-  return m?m[1]:null;
+  const left=row.a.filter(z=>z.x<260).map(z=>z.t).join('').replace(/[\s:：]/g,'').replace(/[ＯOo]/g,'0').replace(/[Il|]/g,'1');
+  const m=left.match(/(?:銷貨|銷售|銷售單|銷貨單)[^0-9]{0,5}(1\d{6})([^0-9]{0,6})/) || left.match(/(?:^|[^0-9])(115\d{4})([^0-9]{0,6})/);
+  if(!m)return null;
+  // 修單與原銷貨單是兩張不同單據；不可僅用七碼數字作唯一鍵。
+  const suffix=String(m[2]||'').match(/修(?:正|改|訂)?/);
+  return m[1]+(suffix?'修':'');
+}
+function poRowAmount(row,pg){
+  // 金額欄常被 OCR 切成多個文字框，先以右側欄位取值，再嘗試逐一數字片段。
+  const txt=poCol(row,690,768,pg.width);
+  const direct=poCleanNum(txt);
+  if(Number.isFinite(direct))return direct;
+  const right=row.a.filter(z=>z.x>=690*pg.width/768).map(z=>z.t).join(' ');
+  const nums=[...right.matchAll(/-?\d[\d,，]*(?:\.\d+)?/g)].map(m=>poCleanNum(m[0])).filter(Number.isFinite);
+  return nums.length===1?nums[0]:NaN;
 }
 function poPrintedPage(rows){
   const top=rows.filter(r=>r.y>700).map(r=>r.a.map(x=>x.t).join(' ')).join(' ');
@@ -2726,12 +2738,11 @@ async function poImportParsedPages(pages,sourceFile){
         const no=poSalesNo(r);
         if(no){
           count++;
-          const amountText=poCol(r,690,768,pg.width);
-          const amt=poCleanNum(amountText);
+          const amt=poRowAmount(r,pg);
           if(byNo.has(no)){
             // 同一張銷貨單跨頁時延續原分組，不重複建立。
             current=byNo.get(no);
-            if(Number.isFinite(amt)&&amt>0)current.pdfTotal=amt;
+            if(Number.isFinite(amt)&&amt>0 && (!Number.isFinite(current.pdfTotal)||current.pdfTotal===amt))current.pdfTotal=amt;
           }else{
             current={salesNo:no,rows:[],projectKey:'',pdfTotal:Number.isFinite(amt)&&amt>0?amt:null};
             groups.push(current);byNo.set(no,current);
@@ -2754,8 +2765,10 @@ async function poImportParsedPages(pages,sourceFile){
       for(const r of pg.rows){
         const left=poCol(r,0,190,pg.width).replace(/\s/g,'');
         if(!/本期合計/.test(left))continue;
-        const amount=poCleanNum(poCol(r,175,280,pg.width));
-        if(Number.isFinite(amount)&&amount>0)finalCost=amount;
+        const candidates=[poCleanNum(poCol(r,175,280,pg.width)),poRowAmount(r,pg)];
+        // 部分 PDF 會將「本期合計」和金額排在不同位置；優先採用可辨識的正數。
+        const amount=candidates.find(v=>Number.isFinite(v)&&v>0);
+        if(Number.isFinite(amount))finalCost=amount;
       }
       audits.push(`紙本第${pg.printed||'?'}頁：${count}張單、${detailCount}行明細、${skipped}行待檢查`);
     }
