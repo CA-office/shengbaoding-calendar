@@ -742,6 +742,14 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
     <div class="purchaseActions">
       <button type="button" id="poPdfBtn" class="primary">匯入浤富 PDF</button>
       <input type="file" id="poPdfInput" accept=".pdf,application/pdf" class="hidden">
+      <span style="display:inline-flex;gap:6px;flex-wrap:wrap;align-items:center" id="poJpgControls">
+        <button type="button" id="poJpgBtn1">第 1 頁 JPG</button><input type="file" id="poJpgInput1" accept="image/jpeg,image/png,.jpg,.jpeg,.png" class="hidden">
+        <button type="button" id="poJpgBtn2">第 2 頁 JPG</button><input type="file" id="poJpgInput2" accept="image/jpeg,image/png,.jpg,.jpeg,.png" class="hidden">
+        <button type="button" id="poJpgBtn3">第 3 頁 JPG</button><input type="file" id="poJpgInput3" accept="image/jpeg,image/png,.jpg,.jpeg,.png" class="hidden">
+        <button type="button" id="poJpgAddBtn">＋新增頁數</button>
+        <button type="button" id="poJpgImportBtn" class="primary">辨識已選 JPG</button>
+        <span id="poJpgSelection" style="font-size:12px;color:#46607a">尚未選取 JPG</span>
+      </span>
       <button type="button" id="poClearBtn">清空 PDF 明細</button>
       <button type="button" id="poSaveAllBtn" class="primary">儲存全部配對／明細</button>
       <button type="button" id="poExcelBtn">套用模板下載 Excel</button><button type="button" id="poCostBtn" class="primary">產出成本</button>
@@ -2660,19 +2668,47 @@ function poPrintedPage(rows){
   const top=rows.filter(r=>r.y>700).map(r=>r.a.map(x=>x.t).join(' ')).join(' ');
   const m=top.match(/([123])\s*[\/／]\s*3/);return m?Number(m[1]):null;
 }
-async function poReadPdf(file){
-  if(!isAdminAccount())return;
-  $('poStatus').textContent='正在逐頁辨識浤富 PDF（不會覆寫舊資料直到完整檢核通過）…';
-  try{
-    const pdfjsLib=await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs');
-    pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';
-    const pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;
-    const pages=[];
-    for(let p=1;p<=pdf.numPages;p++){
-      const page=await pdf.getPage(p),items=await poGetPageItems(page),rows=poLines(items);
-      pages.push({source:p,printed:poPrintedPage(rows),rows,width:page.view[2]-page.view[0]});
-    }
-    if(pages.every(x=>x.printed!==null)&&new Set(pages.map(x=>x.printed)).size===pages.length)pages.sort((a,b)=>a.printed-b.printed);
+// JPG 分頁上傳：保留每頁原圖，辨識前不修改任何已儲存資料。
+const poJpgFiles=new Map();
+async function poEnsureOcr(){
+  if(!window.Tesseract)await new Promise((resolve,reject)=>{
+    const sc=document.createElement('script');sc.src='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+    sc.onload=resolve;sc.onerror=()=>reject(new Error('OCR 元件載入失敗，請檢查網路'));document.head.appendChild(sc);
+  });
+  if(!poOcrWorker)poOcrWorker=await Tesseract.createWorker('chi_tra+eng',1,{
+    logger:m=>{if(m.status==='recognizing text')$('poStatus').textContent='JPG 辨識中：'+Math.round((m.progress||0)*100)+'%';}
+  });
+  await poOcrWorker.setParameters({tessedit_pageseg_mode:'3',preserve_interword_spaces:'1'});
+}
+function poJpgSelectionStatus(){
+  const el=$('poJpgSelection');if(el)el.textContent=poJpgFiles.size?'已選：'+[...poJpgFiles.entries()].sort((a,b)=>a[0]-b[0]).map(([n,f])=>'第'+n+'頁 '+f.name).join('；'):'尚未選取 JPG';
+}
+function poWireJpgPage(n){
+  const b=$('poJpgBtn'+n),input=$('poJpgInput'+n);
+  b?.addEventListener('click',()=>input.click());
+  input?.addEventListener('change',e=>{
+    const f=e.target.files?.[0];if(!f)return;
+    if(!/^image\/(?:jpeg|png)$/.test(f.type)&&!/\.(?:jpe?g|png)$/i.test(f.name)){alert('請選 JPG 或 PNG 圖片');return}
+    poJpgFiles.set(n,f);b.textContent='第 '+n+' 頁 ✓';poJpgSelectionStatus();
+  });
+}
+async function poJpgPage(file,n){
+  await poEnsureOcr();
+  const bitmap=await createImageBitmap(file);
+  const scale=Math.max(1,Math.min(3,2400/bitmap.width));
+  const canvas=document.createElement('canvas');canvas.width=Math.round(bitmap.width*scale);canvas.height=Math.round(bitmap.height*scale);
+  const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
+  bitmap.close?.();
+  const result=await poOcrWorker.recognize(canvas);
+  const words=(result.data.words||[]).filter(w=>w.text&&w.bbox);
+  // JPG 使用與 PDF 解析器相同的 768 x 792 虛擬紙張座標。
+  const items=words.map(w=>({t:String(w.text).trim(),x:(w.bbox.x0+w.bbox.x1)/2/canvas.width*768,
+    y:792-(w.bbox.y0+w.bbox.y1)/2/canvas.height*792,
+    line:[w.block_num,w.par_num,w.line_num].join('-')})).filter(w=>w.t);
+  return {source:n,printed:n,rows:poLines(items),width:768};
+}
+async function poImportParsedPages(pages,sourceFile){
+  if(pages.every(x=>x.printed!==null)&&new Set(pages.map(x=>x.printed)).size===pages.length)pages.sort((a,b)=>a.printed-b.printed);
     const groups=[],byNo=new Map(),audits=[];let current=null,month='',finalCost=null;
     for(const pg of pages){
       let count=0,detailCount=0;
@@ -2723,12 +2759,42 @@ async function poReadPdf(file){
     const orderSum=groups.reduce((s,g)=>s+g.pdfTotal,0);
     if(Math.abs(orderSum-finalCost)>1)throw Error(`辨識 ${groups.length} 張銷貨單，銷貨小計 ${orderSum.toLocaleString()} 與本期合計 ${finalCost.toLocaleString()} 不符。${audits.join('；')}。未覆寫舊資料。`);
     // 僅在所有單號與總額通過後才取代工作資料。
-    poGroups=groups;poPdfPageCount=pdf.numPages;poPdfMonth=month;window.poLastPdfCost=finalCost;
+    poGroups=groups;poPdfPageCount=pages.length;poPdfMonth=month;window.poLastPdfCost=finalCost;
     poRenderGroups();poSaveAllWork(false);
     $('poStatus').textContent=`已匯入 ${groups.length} 張銷貨單、${groups.reduce((n,g)=>n+g.rows.length,0)} 行明細；本期合計 ${poFmt(finalCost)}。請核對明細後再儲存。`;
-    poArchivePdf(file,finalCost).catch(err=>console.warn('PDF 原檔儲存失敗',err));
+  if(sourceFile)poArchivePdf(sourceFile,window.poLastPdfCost).catch(err=>console.warn('PDF 原檔儲存失敗',err));
+}
+async function poReadJpgFiles(){
+  if(!isAdminAccount())return;
+  const entries=[...poJpgFiles.entries()].sort((a,b)=>a[0]-b[0]);
+  if(!entries.length)return alert('請先選取 JPG 圖片');
+  const last=entries[entries.length-1][0];
+  if(entries.length!==last||entries[0][0]!==1)return alert('JPG 頁碼不連續，請由第 1 頁開始逐頁上傳');
+  $('poJpgImportBtn').disabled=true;
+  try{
+    const pages=[];
+    for(const [n,file] of entries){$('poStatus').textContent='正在辨識 JPG 第 '+n+' / '+last+' 頁…';pages.push(await poJpgPage(file,n));}
+    await poImportParsedPages(pages,null);
+    $('poStatus').textContent+='（來源：'+last+' 張 JPG）';
+  }catch(e){console.error(e);$('poStatus').textContent='JPG 讀取失敗：'+e.message}
+  finally{$('poJpgImportBtn').disabled=false}
+}
+async function poReadPdf(file){
+  if(!isAdminAccount())return;
+  $('poStatus').textContent='正在逐頁辨識浤富 PDF（不會覆寫舊資料直到完整檢核通過）…';
+  try{
+    const pdfjsLib=await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs');
+    pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';
+    const pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;
+    const pages=[];
+    for(let p=1;p<=pdf.numPages;p++){
+      const page=await pdf.getPage(p),items=await poGetPageItems(page),rows=poLines(items);
+      pages.push({source:p,printed:poPrintedPage(rows),rows,width:page.view[2]-page.view[0]});
+    }
+    await poImportParsedPages(pages,file);
   }catch(e){console.error(e);$('poStatus').textContent='PDF 讀取失敗：'+e.message}
 }
+
 function poIsDiscountRow(r){
   return /現金扣/i.test(String(r?.name||""));
 }
@@ -2885,6 +2951,14 @@ $("poSaveAllBtn")?.addEventListener("click",()=>poSaveAllWork(true));
   },true);
 });
 
+for(let n=1;n<=3;n++)poWireJpgPage(n);
+$('poJpgAddBtn')?.addEventListener('click',()=>{
+  const n=document.querySelectorAll('[id^="poJpgBtn"]').length+1;
+  const btn=document.createElement('button');btn.type='button';btn.id='poJpgBtn'+n;btn.textContent='第 '+n+' 頁 JPG';
+  const input=document.createElement('input');input.type='file';input.id='poJpgInput'+n;input.accept='image/jpeg,image/png,.jpg,.jpeg,.png';input.className='hidden';
+  $('poJpgAddBtn').before(btn,input);poWireJpgPage(n);
+});
+$('poJpgImportBtn')?.addEventListener('click',poReadJpgFiles);
 $("poPdfBtn")?.addEventListener("click",()=>$("poPdfInput").click());
 $("poPdfInput")?.addEventListener("change",e=>{const f=e.target.files?.[0];if(f)poReadPdf(f);e.target.value=""});
 $("poClearBtn")?.addEventListener("click",poClearPdf);
