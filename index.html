@@ -2634,7 +2634,7 @@ async function poGetPageItems(page){
   if(!poOcrWorker)poOcrWorker=await Tesseract.createWorker('chi_tra+eng',1,{
     logger:m=>{if(m.status==='recognizing text')$('poStatus').textContent='掃描 PDF 辨識中：'+Math.round((m.progress||0)*100)+'%';}
   });
-  await poOcrWorker.setParameters({tessedit_pageseg_mode:'3',preserve_interword_spaces:'1'});
+  await poOcrWorker.setParameters({tessedit_pageseg_mode:'6',preserve_interword_spaces:'1'});
   const scale=3.5,vp=page.getViewport({scale});
   const canvas=document.createElement('canvas');canvas.width=Math.ceil(vp.width);canvas.height=Math.ceil(vp.height);
   const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -2651,7 +2651,7 @@ function poLines(items){
   // 不依 OCR 任意換行編號分組：以實際文字中心的 Y 座標歸併同一橫列。
   const rows=[];
   for(const item of [...items].sort((a,b)=>b.y-a.y)){
-    let row=rows.find(r=>Math.abs(r.y-item.y)<=8.5);
+    let row=rows.find(r=>Math.abs(r.y-item.y)<=4.2);
     if(!row){row={y:item.y,a:[]};rows.push(row)}
     row.a.push(item);
   }
@@ -2660,8 +2660,8 @@ function poLines(items){
 function poCol(row,lo,hi,w){return row.a.filter(z=>z.x>=lo*w/768&&z.x<hi*w/768).map(z=>z.t).join('').trim()}
 function poCleanNum(v){const s=String(v||'').replace(/[，,\s]/g,'').replace(/[OoＯ]/g,'0').replace(/[Il|]/g,'1');return /^-?\d+(?:\.\d+)?$/.test(s)?Number(s):NaN}
 function poSalesNo(row){
-  const left=row.a.filter(z=>z.x<230).map(z=>z.t).join('').replace(/[\s:：]/g,'').replace(/[ＯOo]/g,'0').replace(/[Il|]/g,'1');
-  const m=left.match(/(?:銷貨|銷售|銷售單|銷貨單)(1\d{6})(?!\d)/);
+  const left=row.a.filter(z=>z.x<240).map(z=>z.t).join('').replace(/[\s:：]/g,'').replace(/[ＯOo]/g,'0').replace(/[Il|]/g,'1');
+  const m=left.match(/(?:銷貨|銷售|銷售單|銷貨單)[^0-9]{0,3}(1\d{6})(?!\d)/) || left.match(/(?:^|[^0-9])(115\d{4})(?!\d)/);
   return m?m[1]:null;
 }
 function poPrintedPage(rows){
@@ -2678,7 +2678,7 @@ async function poEnsureOcr(){
   if(!poOcrWorker)poOcrWorker=await Tesseract.createWorker('chi_tra+eng',1,{
     logger:m=>{if(m.status==='recognizing text')$('poStatus').textContent='JPG 辨識中：'+Math.round((m.progress||0)*100)+'%';}
   });
-  await poOcrWorker.setParameters({tessedit_pageseg_mode:'3',preserve_interword_spaces:'1'});
+  await poOcrWorker.setParameters({tessedit_pageseg_mode:'6',preserve_interword_spaces:'1'});
 }
 function poJpgSelectionStatus(){
   const el=$('poJpgSelection');if(el)el.textContent=poJpgFiles.size?'已選：'+[...poJpgFiles.entries()].sort((a,b)=>a[0]-b[0]).map(([n,f])=>'第'+n+'頁 '+f.name).join('；'):'尚未選取 JPG';
@@ -2695,7 +2695,7 @@ function poWireJpgPage(n){
 async function poJpgPage(file,n){
   await poEnsureOcr();
   const bitmap=await createImageBitmap(file);
-  const scale=Math.max(1,Math.min(3,2400/bitmap.width));
+  const scale=Math.max(1,Math.min(3.2,2600/bitmap.width));
   const canvas=document.createElement('canvas');canvas.width=Math.round(bitmap.width*scale);canvas.height=Math.round(bitmap.height*scale);
   const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
   bitmap.close?.();
@@ -2711,7 +2711,7 @@ async function poImportParsedPages(pages,sourceFile){
   if(pages.every(x=>x.printed!==null)&&new Set(pages.map(x=>x.printed)).size===pages.length)pages.sort((a,b)=>a.printed-b.printed);
     const groups=[],byNo=new Map(),audits=[];let current=null,month='',finalCost=null;
     for(const pg of pages){
-      let count=0,detailCount=0;
+      let count=0,detailCount=0,skipped=0;
       const all=pg.rows.map(r=>r.a.map(x=>x.t).join(' ')).join(' ');
       if(!month){const m=all.match(/(1\d{2})\s*[\/年.-]\s*(0?[1-9]|1[0-2])/);if(m)month=m[1]+'年'+String(Number(m[2])).padStart(2,'0')+'月'}
       for(const r of pg.rows){
@@ -2719,7 +2719,7 @@ async function poImportParsedPages(pages,sourceFile){
         const no=poSalesNo(r);
         if(no){
           count++;
-          const amountText=poCol(r,688,768,pg.width);
+          const amountText=poCol(r,690,768,pg.width);
           const amt=poCleanNum(amountText);
           if(byNo.has(no)){
             // 同一張銷貨單跨頁時延續原分組，不重複建立。
@@ -2733,11 +2733,11 @@ async function poImportParsedPages(pages,sourceFile){
         }
         if(!current)continue;
         // 採用紙本固定欄位：貨品名稱、數量、單位、單價；不把其他欄位文字湊成品名。
-        const name=poCol(r,270,480,pg.width).replace(/\s+/g,'').trim();
-        const qty=poCleanNum(poCol(r,475,558,pg.width));
-        let unit=poCol(r,550,622,pg.width).replace(/\s+/g,'');
-        const price=poCleanNum(poCol(r,610,695,pg.width));
-        if(!name||!Number.isFinite(qty)||!Number.isFinite(price))continue;
+        const name=poCol(r,300,492,pg.width).replace(/\s+/g,'').trim();
+        const qty=poCleanNum(poCol(r,492,552,pg.width));
+        let unit=poCol(r,552,610,pg.width).replace(/\s+/g,'');
+        const price=poCleanNum(poCol(r,610,690,pg.width));
+        if(!name||!Number.isFinite(qty)||!Number.isFinite(price)){if(name||poCol(r,492,690,pg.width))skipped++;continue;}
         if(!/^(?:公分|cm|式|個|支|組|片|才|米|尺|台|樘|件|套|座|包|顆|層)$/i.test(unit))continue;
         if(/客戶對帳單|貨品名稱|銷貨|貨單|本期|營業稅/.test(name))continue;
         if(unit==='公分')unit='cm';
@@ -2750,7 +2750,7 @@ async function poImportParsedPages(pages,sourceFile){
         const amount=poCleanNum(poCol(r,175,280,pg.width));
         if(Number.isFinite(amount)&&amount>0)finalCost=amount;
       }
-      audits.push(`紙本第${pg.printed||'?'}頁：${count}張單、${detailCount}行明細`);
+      audits.push(`紙本第${pg.printed||'?'}頁：${count}張單、${detailCount}行明細、${skipped}行待檢查`);
     }
     if(!groups.length)throw Error('沒有找到銷貨單號，請檢查掃描辨識結果');
     const invalid=groups.filter(g=>!g.rows.length||!Number.isFinite(g.pdfTotal)||g.pdfTotal<=0);
