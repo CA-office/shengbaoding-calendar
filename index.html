@@ -2685,14 +2685,19 @@ async function poReadPdf(file){
           const right=a.filter(z=>z.x>=515).map(z=>z.t).join("").replace(/,/g,"");
           const amounts=right.match(/-?\d+(?:\.\d+)?/g)||[];
           const pdfTotal=amounts.length?Number(amounts[amounts.length-1]):null;
-          current={salesNo:parsedSalesNo,rows:[],projectKey:"",pdfPage:p,pdfTotal:parsedSalesNo==='1154977'?15834:(Number.isFinite(pdfTotal)?pdfTotal:null)};groups.push(current);
+          current={salesNo:parsedSalesNo,rows:[],projectKey:"",pdfPage:p,pdfTotal:Number.isFinite(pdfTotal)?pdfTotal:null};groups.push(current);
         }
+        // 單號表頭同一行包含日期、案名、金額，絕不能當作貨品明細。
+        if(sm)continue;
         const name=a.filter(z=>z.x>=235&&z.x<382).map(z=>z.t).join("").trim();
         const q=a.filter(z=>z.x>=382&&z.x<428).map(z=>z.t).join("");
         let unit=a.filter(z=>z.x>=428&&z.x<458).map(z=>z.t).join("").trim();
         const pr=a.filter(z=>z.x>=458&&z.x<516).map(z=>z.t).join("");
         const qty=num(q),price=num(pr);
         if(!name||!unit||!Number.isFinite(qty)||!Number.isFinite(price))continue;
+        // OCR 文字橫向串欄或縱向混行時，拒絕模糊項目，不將其混入銷貨單。
+        if(!/^(?:公分|cm|式|個|支|組|片|才|米|尺|台|樘|件|套|座|包|顆|層)$/i.test(unit))continue;
+        if(/^(?:[:：;；]|[A-Z]{2,5}|\d{2,})$/.test(name))continue;
         if(/貨品名稱|數量|單位|單價|日期/.test(name+unit))continue;
         if(unit==="公分")unit="cm";
         if(!current){continue;} // 無銷貨單號時不建立錯誤的「第1組」
