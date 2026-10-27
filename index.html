@@ -2634,7 +2634,7 @@ async function poGetPageItems(page){
   if(!poOcrWorker)poOcrWorker=await Tesseract.createWorker('chi_tra+eng',1,{
     logger:m=>{if(m.status==='recognizing text')$('poStatus').textContent='掃描 PDF 辨識中：'+Math.round((m.progress||0)*100)+'%';}
   });
-  await poOcrWorker.setParameters({tessedit_pageseg_mode:'6',preserve_interword_spaces:'1'});
+  await poOcrWorker.setParameters({tessedit_pageseg_mode:'11',preserve_interword_spaces:'1'});
   const scale=3.5,vp=page.getViewport({scale});
   const canvas=document.createElement('canvas');canvas.width=Math.ceil(vp.width);canvas.height=Math.ceil(vp.height);
   const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -2642,7 +2642,7 @@ async function poGetPageItems(page){
   const result=await poOcrWorker.recognize(canvas);
   const words=result.data.words||[];
   return words.filter(w=>w.text&&w.bbox).map(w=>({
-    t:String(w.text).trim(),x:(w.bbox.x0+w.bbox.x1)/(2*scale),
+    t:String(w.text).trim(),x:(w.bbox.x0+w.bbox.x1)/(2*scale),x0:w.bbox.x0/scale,x1:w.bbox.x1/scale,
     y:page.view[3]-(w.bbox.y0+w.bbox.y1)/(2*scale),
     line:[w.block_num,w.par_num,w.line_num].join('-')
   })).filter(w=>w.t);
@@ -2657,7 +2657,14 @@ function poLines(items){
   }
   return rows.sort((a,b)=>b.y-a.y).map(r=>({...r,a:r.a.sort((a,b)=>a.x-b.x)}));
 }
-function poCol(row,lo,hi,w){return row.a.filter(z=>z.x>=lo*w/768&&z.x<hi*w/768).map(z=>z.t).join('').trim()}
+function poCol(row,lo,hi,w){
+  const left=lo*w/768,right=hi*w/768;
+  return row.a.filter(z=>{
+    const a=Number.isFinite(z.x0)?z.x0:z.x,b=Number.isFinite(z.x1)?z.x1:z.x;
+    const overlap=Math.max(0,Math.min(right,b)-Math.max(left,a));
+    return overlap>0 ? overlap>=Math.min(b-a,right-left)*0.52 : z.x>=left&&z.x<right;
+  }).map(z=>z.t).join('').trim();
+}
 function poCleanNum(v){const s=String(v||'').replace(/[，,\s]/g,'').replace(/[OoＯ]/g,'0').replace(/[Il|]/g,'1');return /^-?\d+(?:\.\d+)?$/.test(s)?Number(s):NaN}
 function poSalesNo(row){
   const left=row.a.filter(z=>z.x<240).map(z=>z.t).join('').replace(/[\s:：]/g,'').replace(/[ＯOo]/g,'0').replace(/[Il|]/g,'1');
@@ -2678,7 +2685,7 @@ async function poEnsureOcr(){
   if(!poOcrWorker)poOcrWorker=await Tesseract.createWorker('chi_tra+eng',1,{
     logger:m=>{if(m.status==='recognizing text')$('poStatus').textContent='JPG 辨識中：'+Math.round((m.progress||0)*100)+'%';}
   });
-  await poOcrWorker.setParameters({tessedit_pageseg_mode:'6',preserve_interword_spaces:'1'});
+  await poOcrWorker.setParameters({tessedit_pageseg_mode:'11',preserve_interword_spaces:'1'});
 }
 function poJpgSelectionStatus(){
   const el=$('poJpgSelection');if(el)el.textContent=poJpgFiles.size?'已選：'+[...poJpgFiles.entries()].sort((a,b)=>a[0]-b[0]).map(([n,f])=>'第'+n+'頁 '+f.name).join('；'):'尚未選取 JPG';
@@ -2702,7 +2709,7 @@ async function poJpgPage(file,n){
   const result=await poOcrWorker.recognize(canvas);
   const words=(result.data.words||[]).filter(w=>w.text&&w.bbox);
   // JPG 使用與 PDF 解析器相同的 768 x 792 虛擬紙張座標。
-  const items=words.map(w=>({t:String(w.text).trim(),x:(w.bbox.x0+w.bbox.x1)/2/canvas.width*768,
+  const items=words.map(w=>({t:String(w.text).trim(),x:(w.bbox.x0+w.bbox.x1)/2/canvas.width*768,x0:w.bbox.x0/canvas.width*768,x1:w.bbox.x1/canvas.width*768,
     y:792-(w.bbox.y0+w.bbox.y1)/2/canvas.height*792,
     line:[w.block_num,w.par_num,w.line_num].join('-')})).filter(w=>w.t);
   return {source:n,printed:n,rows:poLines(items),width:768};
