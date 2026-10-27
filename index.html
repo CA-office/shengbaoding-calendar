@@ -2677,13 +2677,15 @@ async function poReadPdf(file){
         const whole=a.map(z=>z.t).join(" ");
         // New sales-order header in Hong-Fu statement.
         const normalized=whole.replace(/[　\s:：]/g,"").replace(/[ＯO]/g,"0").replace(/[ＩIl|]/g,"1");
-        const sm=normalized.match(/(?:銷[貨售]|銷\s*貨|銷\s*售)(?:單號)?([0-9]{5,})/);
+        // 浤富銷貨單固定為 7 碼（例：銷貨1155176）。OCR 常把相鄰數字黏在後方，禁止整串當單號。
+        const sm=normalized.match(/(?:銷[貨售]|銷\s*貨|銷\s*售)(?:單號)?(1[0-9]{6})/);
+        const parsedSalesNo=sm?sm[1]:null;
         if(sm){
           // 以 PDF 銷貨單表頭最右側「小計」為準，保留原始整數金額，避免 0.95 折扣重算差 1 元。
           const right=a.filter(z=>z.x>=515).map(z=>z.t).join("").replace(/,/g,"");
           const amounts=right.match(/-?\d+(?:\.\d+)?/g)||[];
           const pdfTotal=amounts.length?Number(amounts[amounts.length-1]):null;
-          current={salesNo:sm[1],rows:[],projectKey:"",pdfPage:p,pdfTotal:sm[1]==='1154977'?15834:(Number.isFinite(pdfTotal)?pdfTotal:null)};groups.push(current);
+          current={salesNo:parsedSalesNo,rows:[],projectKey:"",pdfPage:p,pdfTotal:parsedSalesNo==='1154977'?15834:(Number.isFinite(pdfTotal)?pdfTotal:null)};groups.push(current);
         }
         const name=a.filter(z=>z.x>=235&&z.x<382).map(z=>z.t).join("").trim();
         const q=a.filter(z=>z.x>=382&&z.x<428).map(z=>z.t).join("");
@@ -2712,7 +2714,7 @@ async function poReadPdf(file){
     }
     if(pdfFinalCost===null)throw new Error("掃描辨識後仍找不到最後一頁『本期合計』，請使用清晰 PDF 或手動核對；不會以明細金額冒充成本");
     window.poLastPdfCost=pdfFinalCost;
-    poGroups=groups.filter(g=>g.rows.length && /^\d{5,}$/.test(g.salesNo));
+    poGroups=groups.filter(g=>g.rows.length && /^1\d{6}$/.test(g.salesNo));
     if(!poGroups.length)throw new Error("掃描 PDF 無法可靠辨識銷貨單號與明細，已停止匯入，避免不同銷貨單混成第1組。請使用清晰原始 PDF。");
     poRenderGroups();
     $("poStatus").textContent=`PDF 匯入完成：${poGroups.length} 個銷貨單分組、${poGroups.reduce((n,g)=>n+g.rows.length,0)} 筆貨品。請為每組選擇已建立的「單號／案名」。`;
