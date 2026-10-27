@@ -2651,7 +2651,7 @@ async function poGetPageItems(page){
   await page.render({canvasContext:canvas.getContext('2d',{willReadFrequently:true}),viewport}).promise;
   const result=await poOcrWorker.recognize(canvas);
   const words=result.data.words||[];
-  return words.filter(w=>w.text&&w.bbox).map(w=>({t:w.text.trim(),x:w.bbox.x0/2.5,y:(canvas.height-w.bbox.y1)/2.5})).filter(w=>w.t);
+  return words.filter(w=>w.text&&w.bbox).map(w=>({t:w.text.trim(),x:w.bbox.x0/2.5,y:(canvas.height-(w.bbox.y0+w.bbox.y1)/2)/2.5})).filter(w=>w.t);
 }
 async function poReadPdf(file){
   if(!isAdminAccount())return;
@@ -2669,14 +2669,15 @@ async function poReadPdf(file){
       const items=await poGetPageItems(page);
       if(!poPdfMonth){const allText=items.map(x=>x.t).join(" ");const mm=allText.match(/(1\d{2})\s*[\/年.-]\s*(0?[1-9]|1[0-2])\s*(?:月)?/);if(mm)poPdfMonth=`${mm[1]}年${String(Number(mm[2])).padStart(2,"0")}月`;}
       const rows=[];
-      for(const it of items){let r=rows.find(z=>Math.abs(z.y-it.y)<2.2);if(!r)rows.push(r={y:it.y,a:[]});r.a.push(it)}
+      for(const it of items){let r=rows.find(z=>Math.abs(z.y-it.y)<5.5);if(!r)rows.push(r={y:it.y,a:[]});r.a.push(it)}
       rows.sort((a,b)=>b.y-a.y);
       for(const rr of rows){
         if(rr.y<115||rr.y>690)continue;
         const a=rr.a.sort((u,v)=>u.x-v.x);
         const whole=a.map(z=>z.t).join(" ");
         // New sales-order header in Hong-Fu statement.
-        const sm=whole.match(/銷貨\s*([0-9]{5,})/);
+        const normalized=whole.replace(/[　\s:：]/g,"").replace(/[ＯO]/g,"0").replace(/[ＩIl|]/g,"1");
+        const sm=normalized.match(/(?:銷[貨售]|銷\s*貨|銷\s*售)(?:單號)?([0-9]{5,})/);
         if(sm){
           // 以 PDF 銷貨單表頭最右側「小計」為準，保留原始整數金額，避免 0.95 折扣重算差 1 元。
           const right=a.filter(z=>z.x>=515).map(z=>z.t).join("").replace(/,/g,"");
@@ -2692,7 +2693,7 @@ async function poReadPdf(file){
         if(!name||!unit||!Number.isFinite(qty)||!Number.isFinite(price))continue;
         if(/貨品名稱|數量|單位|單價|日期/.test(name+unit))continue;
         if(unit==="公分")unit="cm";
-        if(!current){current={salesNo:"",rows:[],projectKey:"",pdfPage:p};groups.push(current)}
+        if(!current){continue;} // 無銷貨單號時不建立錯誤的「第1組」
         current.rows.push({name,qty,unit,price});
       }
     }
@@ -2711,8 +2712,8 @@ async function poReadPdf(file){
     }
     if(pdfFinalCost===null)throw new Error("掃描辨識後仍找不到最後一頁『本期合計』，請使用清晰 PDF 或手動核對；不會以明細金額冒充成本");
     window.poLastPdfCost=pdfFinalCost;
-    poGroups=groups.filter(g=>g.rows.length);
-    if(!poGroups.length)throw new Error("沒有辨識到採購明細");
+    poGroups=groups.filter(g=>g.rows.length && /^\d{5,}$/.test(g.salesNo));
+    if(!poGroups.length)throw new Error("掃描 PDF 無法可靠辨識銷貨單號與明細，已停止匯入，避免不同銷貨單混成第1組。請使用清晰原始 PDF。");
     poRenderGroups();
     $("poStatus").textContent=`PDF 匯入完成：${poGroups.length} 個銷貨單分組、${poGroups.reduce((n,g)=>n+g.rows.length,0)} 筆貨品。請為每組選擇已建立的「單號／案名」。`;
     poSaveAllWork(false);
