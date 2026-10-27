@@ -2481,7 +2481,7 @@ function poLoadAllWork(){
   try{
     const raw=localStorage.getItem(PO_WORK_KEY);if(!raw)return false;
     const d=JSON.parse(raw);if(!d||!Array.isArray(d.groups))return false;
-    window.poLastPdfCost=null;poGroups=d.groups;poGroups.forEach(g=>{if(String(g.salesNo)==='1154977')g.pdfTotal=15834;});poPdfPageCount=Number(d.pdfPageCount||0);poPdfMonth=String(d.pdfMonth||"");
+    window.poLastPdfCost=null;poGroups=d.groups;poPdfPageCount=Number(d.pdfPageCount||0);poPdfMonth=String(d.pdfMonth||"");
     poRenderGroups();
     const rows=poGroups.reduce((a,g)=>a+(g.rows?.length||0),0);
     $("poStatus").textContent=`已載入上次完整存檔：${poGroups.length} 個銷貨單分組、${rows} 筆貨品；單號／案名配對已自動帶回。`;
@@ -2613,119 +2613,121 @@ function poRenderGroups(){
 }
 function poClearPdf(){poGroups=[];poPdfPageCount=0;poPdfMonth="";localStorage.removeItem(PO_WORK_KEY);poRenderGroups();$("poStatus").textContent="PDF 明細與完整存檔已清空；已建立的單號／案名仍保留。";}
 
-// 掃描式 PDF：使用 OCR 擷取文字與座標；一般文字 PDF 保持原流程。
+// 浤富掃描式 PDF：依實際欄位及 OCR 行座標擷取，依紙本頁碼排序。
 let poOcrWorker=null;
 async function poGetPageItems(page){
   const tc=await page.getTextContent();
-  const original=tc.items.map(it=>({t:String(it.str||'').trim(),x:it.transform[4],y:it.transform[5]})).filter(x=>x.t);
-  if(original.map(x=>x.t).join('').length>45)return original;
-  if(!window.Tesseract){
-    await new Promise((resolve,reject)=>{const sc=document.createElement('script');sc.src='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';sc.onload=resolve;sc.onerror=()=>reject(new Error('OCR 元件載入失敗，請檢查網路'));document.head.appendChild(sc)});
-  }
-  if(!poOcrWorker){poOcrWorker=await Tesseract.createWorker('chi_tra+eng',1,{logger:m=>{if(m.status==='recognizing text')$('poStatus').textContent='掃描 PDF 文字辨識中：'+Math.round((m.progress||0)*100)+'%';}})}
-  const viewport=page.getViewport({scale:3});
-  const canvas=document.createElement('canvas');canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);
-  await page.render({canvasContext:canvas.getContext('2d',{willReadFrequently:true}),viewport}).promise;
+  const native=tc.items.map(it=>({t:String(it.str||'').trim(),x:it.transform[4],y:it.transform[5],line:0})).filter(it=>it.t);
+  if(native.map(x=>x.t).join('').length>80)return native;
+  if(!window.Tesseract)await new Promise((resolve,reject)=>{
+    const sc=document.createElement('script');sc.src='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+    sc.onload=resolve;sc.onerror=()=>reject(new Error('OCR 元件載入失敗，請檢查網路'));document.head.appendChild(sc);
+  });
+  if(!poOcrWorker)poOcrWorker=await Tesseract.createWorker('chi_tra+eng',1,{
+    logger:m=>{if(m.status==='recognizing text')$('poStatus').textContent='掃描 PDF 辨識中：'+Math.round((m.progress||0)*100)+'%';}
+  });
+  await poOcrWorker.setParameters({tessedit_pageseg_mode:'3',preserve_interword_spaces:'1'});
+  const scale=3.5,vp=page.getViewport({scale});
+  const canvas=document.createElement('canvas');canvas.width=Math.ceil(vp.width);canvas.height=Math.ceil(vp.height);
+  const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
+  await page.render({canvasContext:ctx,viewport:vp}).promise;
   const result=await poOcrWorker.recognize(canvas);
   const words=result.data.words||[];
-  return words.filter(w=>w.text&&w.bbox).map(w=>({t:w.text.trim(),x:w.bbox.x0/3,y:(canvas.height-(w.bbox.y0+w.bbox.y1)/2)/3})).filter(w=>w.t);
+  return words.filter(w=>w.text&&w.bbox).map(w=>({
+    t:String(w.text).trim(),x:(w.bbox.x0+w.bbox.x1)/(2*scale),
+    y:page.view[3]-(w.bbox.y0+w.bbox.y1)/(2*scale),
+    line:[w.block_num,w.par_num,w.line_num].join('-')
+  })).filter(w=>w.t);
+}
+function poLines(items){
+  // 不依 OCR 任意換行編號分組：以實際文字中心的 Y 座標歸併同一橫列。
+  const rows=[];
+  for(const item of [...items].sort((a,b)=>b.y-a.y)){
+    let row=rows.find(r=>Math.abs(r.y-item.y)<=5.5);
+    if(!row){row={y:item.y,a:[]};rows.push(row)}
+    row.a.push(item);
+  }
+  return rows.sort((a,b)=>b.y-a.y).map(r=>({...r,a:r.a.sort((a,b)=>a.x-b.x)}));
+}
+function poCol(row,lo,hi,w){return row.a.filter(z=>z.x>=lo*w/768&&z.x<hi*w/768).map(z=>z.t).join('').trim()}
+function poCleanNum(v){const s=String(v||'').replace(/[，,\s]/g,'').replace(/[OoＯ]/g,'0').replace(/[Il|]/g,'1');return /^-?\d+(?:\.\d+)?$/.test(s)?Number(s):NaN}
+function poSalesNo(row){
+  const left=row.a.filter(z=>z.x<230).map(z=>z.t).join('').replace(/[\s:：]/g,'').replace(/[ＯOo]/g,'0').replace(/[Il|]/g,'1');
+  const m=left.match(/(?:銷貨|銷售|銷售單|銷貨單)(1\d{6})(?!\d)/);
+  return m?m[1]:null;
+}
+function poPrintedPage(rows){
+  const top=rows.filter(r=>r.y>700).map(r=>r.a.map(x=>x.t).join(' ')).join(' ');
+  const m=top.match(/([123])\s*[\/／]\s*3/);return m?Number(m[1]):null;
 }
 async function poReadPdf(file){
   if(!isAdminAccount())return;
-  $("poStatus").textContent="正在讀取浤富 PDF 並依銷貨單號分組…";
+  $('poStatus').textContent='正在逐頁辨識浤富 PDF（不會覆寫舊資料直到完整檢核通過）…';
   try{
-    const pdfjsLib=await import("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs");
-    pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs";
+    const pdfjsLib=await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs');
+    pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';
     const pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;
-    const groups=[]; let current=null; let detectedHeaders=0; const pageAudit=[];
-    poPdfPageCount=pdf.numPages;
-    poPdfMonth="";
-    const num=v=>Number(String(v||"").replace(/,/g,""));
+    const pages=[];
     for(let p=1;p<=pdf.numPages;p++){
-      const page=await pdf.getPage(p);
-      const items=await poGetPageItems(page);
-      if(!poPdfMonth){const allText=items.map(x=>x.t).join(" ");const mm=allText.match(/(1\d{2})\s*[\/年.-]\s*(0?[1-9]|1[0-2])\s*(?:月)?/);if(mm)poPdfMonth=`${mm[1]}年${String(Number(mm[2])).padStart(2,"0")}月`;}
-      const rows=[]; let pageHeaders=0;
-      for(const it of items){let r=rows.find(z=>Math.abs(z.y-it.y)<3.8);if(!r)rows.push(r={y:it.y,a:[]});r.a.push(it)}
-      rows.sort((a,b)=>b.y-a.y);
-      for(const rr of rows){
-        if(rr.y<105||rr.y>835)continue;
-        const a=rr.a.sort((u,v)=>u.x-v.x);
-        const whole=a.map(z=>z.t).join(" ");
-        // New sales-order header in Hong-Fu statement.
-        const normalized=whole.replace(/[　\s:：]/g,"").replace(/[ＯO]/g,"0").replace(/[ＩIl|]/g,"1");
-        // 浤富銷貨單固定為 7 碼（例：銷貨1155176）。OCR 常把相鄰數字黏在後方，禁止整串當單號。
-        const sm=normalized.match(/(?:銷[貨售]|銷\s*貨|銷\s*售)(?:單號)?(1[0-9]{6})/);
-        const parsedSalesNo=sm?sm[1]:null;
-        if(sm){
-          pageHeaders++;detectedHeaders++;
-          // 以 PDF 銷貨單表頭最右側「小計」為準，保留原始整數金額，避免 0.95 折扣重算差 1 元。
-          const right=a.filter(z=>z.x>=690*(page.view[2]-page.view[0])/768).map(z=>z.t).join("").replace(/,/g,"");
-          const amounts=right.match(/-?\d+(?:\.\d+)?/g)||[];
-          const pdfTotal=amounts.length?Number(amounts[amounts.length-1]):null;
-          current={salesNo:parsedSalesNo,rows:[],projectKey:"",pdfPage:p,pdfTotal:Number.isFinite(pdfTotal)?pdfTotal:null};groups.push(current);
+      const page=await pdf.getPage(p),items=await poGetPageItems(page),rows=poLines(items);
+      pages.push({source:p,printed:poPrintedPage(rows),rows,width:page.view[2]-page.view[0]});
+    }
+    if(pages.every(x=>x.printed!==null)&&new Set(pages.map(x=>x.printed)).size===pages.length)pages.sort((a,b)=>a.printed-b.printed);
+    const groups=[],byNo=new Map(),audits=[];let current=null,month='',finalCost=null;
+    for(const pg of pages){
+      let count=0,detailCount=0;
+      const all=pg.rows.map(r=>r.a.map(x=>x.t).join(' ')).join(' ');
+      if(!month){const m=all.match(/(1\d{2})\s*[\/年.-]\s*(0?[1-9]|1[0-2])/);if(m)month=m[1]+'年'+String(Number(m[2])).padStart(2,'0')+'月'}
+      for(const r of pg.rows){
+        if(r.y<75||r.y>715)continue;
+        const no=poSalesNo(r);
+        if(no){
+          count++;
+          const amountText=poCol(r,688,768,pg.width);
+          const amt=poCleanNum(amountText);
+          if(byNo.has(no)){
+            // 同一張銷貨單跨頁時延續原分組，不重複建立。
+            current=byNo.get(no);
+            if(Number.isFinite(amt)&&amt>0)current.pdfTotal=amt;
+          }else{
+            current={salesNo:no,rows:[],projectKey:'',pdfTotal:Number.isFinite(amt)&&amt>0?amt:null};
+            groups.push(current);byNo.set(no,current);
+          }
+          continue;
         }
-        // 單號表頭同一行包含日期、案名、金額，絕不能當作貨品明細。
-        if(sm)continue;
-        // 依原始對帳單的固定欄位座標讀取；舊版將「品名」與「數量」分界設在 382，
-        // 導致樂天 BW010 等品項漏掉、相鄰列錯置。先合併同欄 OCR 碎字，再檢查欄位。
-        const column=(lo,hi)=>a.filter(z=>z.x>=lo&&z.x<hi).map(z=>z.t).join("").trim();
-        // PDF 原始頁寬約 768pt，欄位依表格直線：品名 285–480、數量 480–560、單位 560–610、單價 610–690。
-        // 兼容不同頁寬，並依 OCR 文字中心點分欄。
-        const pageWidth=page.view[2]-page.view[0];
-        const k=pageWidth/768;
-        const col=(lo,hi)=>a.filter(z=>z.x>=lo*k&&z.x<hi*k).map(z=>z.t).join('').trim();
-        const name=col(282,480);
-        const q=col(480,560);
-        let unit=col(560,610);
-        const pr=col(610,690);
-        const qty=num(q),price=num(pr);
-        if(!current||!name||!unit||!q||!pr||!Number.isFinite(qty)||!Number.isFinite(price))continue;
+        if(!current)continue;
+        // 採用紙本固定欄位：貨品名稱、數量、單位、單價；不把其他欄位文字湊成品名。
+        const name=poCol(r,280,480,pg.width).replace(/\s+/g,'').trim();
+        const qty=poCleanNum(poCol(r,480,558,pg.width));
+        let unit=poCol(r,558,615,pg.width).replace(/\s+/g,'');
+        const price=poCleanNum(poCol(r,615,692,pg.width));
+        if(!name||!Number.isFinite(qty)||!Number.isFinite(price))continue;
         if(!/^(?:公分|cm|式|個|支|組|片|才|米|尺|台|樘|件|套|座|包|顆|層)$/i.test(unit))continue;
-        if(/貨品名稱|數量|單位|單價|日期|客戶對帳單|銷貨/.test(name))continue;
-        if(!/^-?[\d,.]+$/.test(q)||!/^-?[\d,.]+$/.test(pr))continue;
-        if(unit==="公分")unit="cm";
-        current.rows.push({name,qty,unit,price});
+        if(/客戶對帳單|貨品名稱|銷貨|貨單|本期|營業稅/.test(name))continue;
+        if(unit==='公分')unit='cm';
+        current.rows.push({name,qty,unit,price});detailCount++;
       }
-      pageAudit.push({page:p,headers:pageHeaders});
+      // 紙本最後一頁的左側第一欄「本期合計」：金額位於其右側，不取其他欄的本期數字。
+      for(const r of pg.rows){
+        const left=poCol(r,0,190,pg.width).replace(/\s/g,'');
+        if(!/本期合計/.test(left))continue;
+        const amount=poCleanNum(poCol(r,175,280,pg.width));
+        if(Number.isFinite(amount)&&amount>0)finalCost=amount;
+      }
+      audits.push(`紙本第${pg.printed||'?'}頁：${count}張單、${detailCount}行明細`);
     }
-    // 最後一頁「本期合計」是整份浤富 PDF 的成本，不使用逐項合計取代。
-    const lastPage=await pdf.getPage(pdf.numPages);
-    const lastItems=await poGetPageItems(lastPage);
-    const lastRows=[];
-    lastItems.forEach(it=>{let row=lastRows.find(r=>Math.abs(r.y-it.y)<3);if(!row)lastRows.push(row={y:it.y,items:[]});row.items.push(it)});
-    const totalRows=lastRows.filter(r=>/本\s*期\s*合\s*計/.test(r.items.sort((a,b)=>a.x-b.x).map(y=>y.t).join("")));
-    let pdfFinalCost=null;
-    for(const r of totalRows){
-      const sorted=r.items.sort((a,b)=>a.x-b.x),joined=sorted.map(x=>x.t).join(" ");
-      const after=joined.split(/本\s*期\s*合\s*計/).slice(1).join(" ");
-      const nums=[...after.matchAll(/-?\d[\d,]*(?:\.\d+)?/g)].map(x=>Number(x[0].replace(/,/g,"")));
-      if(nums.length)pdfFinalCost=nums[0];
-    }
-    if(pdfFinalCost===null)throw new Error("掃描辨識後仍找不到最後一頁『本期合計』，請使用清晰 PDF 或手動核對；不會以明細金額冒充成本");
-    // 不允許將漏讀的銷貨單靜默濾掉，也不允許把部分結果覆寫既有工作資料。
-    const invalid=groups.filter(g=>!/^1\d{6}$/.test(g.salesNo)||!g.rows.length);
-    const duplicates=groups.map(g=>g.salesNo).filter((no,i,a)=>a.indexOf(no)!==i);
-    if(invalid.length||duplicates.length||!groups.length||groups.length!==detectedHeaders){
-      throw new Error(`辨識不完整：找到 ${detectedHeaders} 張銷貨單表頭，只有 ${groups.length-invalid.length} 張具有有效明細；`+
-        (duplicates.length?`重複單號 ${[...new Set(duplicates)].join('、')}；`:'')+
-        `各頁辨識數 ${pageAudit.map(x=>'PDF第'+x.page+'頁 '+x.headers+'張').join('、')}。已停止匯入，原有資料未覆寫。`);
-    }
-    // 掃描檔常把頁面打亂，若明細跨頁，先停止而不是猜測歸屬。
-    // 本期合計為整份 PDF 金額，不可用來證明逐張銷貨單已完整辨識。
-    const groupTotals=groups.map(g=>Number(g.pdfTotal));
-    if(groupTotals.some(x=>!Number.isFinite(x)||x<=0))throw new Error('部分銷貨單的小計未辨識成功，已停止匯入，原有資料未覆寫。');
-    const sumOfOrders=groupTotals.reduce((a,b)=>a+b,0);
-    if(Math.abs(sumOfOrders-pdfFinalCost)>1){
-      throw new Error(`銷貨單總計 ${sumOfOrders.toLocaleString()} 與 PDF 本期合計 ${pdfFinalCost.toLocaleString()} 不符（差 ${Math.round(sumOfOrders-pdfFinalCost).toLocaleString()}）。可能漏讀頁面或銷貨單，已停止匯入且不覆寫原有資料。`);
-    }
-    window.poLastPdfCost=pdfFinalCost;
-    poGroups=groups;
-    poRenderGroups();
-    $("poStatus").textContent=`PDF 匯入完成：${poGroups.length} 個銷貨單分組、${poGroups.reduce((n,g)=>n+g.rows.length,0)} 筆貨品。請為每組選擇已建立的「單號／案名」。`;
-    poSaveAllWork(false);
-    poArchivePdf(file,window.poLastPdfCost).catch(err=>{console.warn(err);$("poStatus").textContent+="（PDF 原檔儲存失敗："+err.message+"）"});
-  }catch(e){console.error(e);$("poStatus").textContent="PDF 讀取失敗："+e.message}
+    if(!groups.length)throw Error('沒有找到銷貨單號，請檢查掃描辨識結果');
+    const invalid=groups.filter(g=>!g.rows.length||!Number.isFinite(g.pdfTotal)||g.pdfTotal<=0);
+    if(invalid.length)throw Error(`找到 ${groups.length} 張銷貨單，但 ${invalid.length} 張缺少明細或小計（${invalid.map(x=>x.salesNo).join('、')}）。${audits.join('；')}。已保留原資料。`);
+    if(!Number.isFinite(finalCost))throw Error('未可靠辨識紙本最後一頁「本期合計」，已保留原資料。');
+    const orderSum=groups.reduce((s,g)=>s+g.pdfTotal,0);
+    if(Math.abs(orderSum-finalCost)>1)throw Error(`辨識 ${groups.length} 張銷貨單，銷貨小計 ${orderSum.toLocaleString()} 與本期合計 ${finalCost.toLocaleString()} 不符。${audits.join('；')}。未覆寫舊資料。`);
+    // 僅在所有單號與總額通過後才取代工作資料。
+    poGroups=groups;poPdfPageCount=pdf.numPages;poPdfMonth=month;window.poLastPdfCost=finalCost;
+    poRenderGroups();poSaveAllWork(false);
+    $('poStatus').textContent=`已匯入 ${groups.length} 張銷貨單、${groups.reduce((n,g)=>n+g.rows.length,0)} 行明細；本期合計 ${poFmt(finalCost)}。請核對明細後再儲存。`;
+    poArchivePdf(file,finalCost).catch(err=>console.warn('PDF 原檔儲存失敗',err));
+  }catch(e){console.error(e);$('poStatus').textContent='PDF 讀取失敗：'+e.message}
 }
 function poIsDiscountRow(r){
   return /現金扣/i.test(String(r?.name||""));
