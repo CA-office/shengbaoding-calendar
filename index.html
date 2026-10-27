@@ -2636,6 +2636,23 @@ function poRenderGroups(){
 }
 function poClearPdf(){poGroups=[];poPdfPageCount=0;poPdfMonth="";localStorage.removeItem(PO_WORK_KEY);poRenderGroups();$("poStatus").textContent="PDF 明細與完整存檔已清空；已建立的單號／案名仍保留。";}
 
+// 掃描式 PDF：使用 OCR 擷取文字與座標；一般文字 PDF 保持原流程。
+let poOcrWorker=null;
+async function poGetPageItems(page){
+  const tc=await page.getTextContent();
+  const original=tc.items.map(it=>({t:String(it.str||'').trim(),x:it.transform[4],y:it.transform[5]})).filter(x=>x.t);
+  if(original.map(x=>x.t).join('').length>45)return original;
+  if(!window.Tesseract){
+    await new Promise((resolve,reject)=>{const sc=document.createElement('script');sc.src='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';sc.onload=resolve;sc.onerror=()=>reject(new Error('OCR 元件載入失敗，請檢查網路'));document.head.appendChild(sc)});
+  }
+  if(!poOcrWorker){poOcrWorker=await Tesseract.createWorker('chi_tra+eng',1,{logger:m=>{if(m.status==='recognizing text')$('poStatus').textContent='掃描 PDF 文字辨識中：'+Math.round((m.progress||0)*100)+'%';}})}
+  const viewport=page.getViewport({scale:2.5});
+  const canvas=document.createElement('canvas');canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);
+  await page.render({canvasContext:canvas.getContext('2d',{willReadFrequently:true}),viewport}).promise;
+  const result=await poOcrWorker.recognize(canvas);
+  const words=result.data.words||[];
+  return words.filter(w=>w.text&&w.bbox).map(w=>({t:w.text.trim(),x:w.bbox.x0/2.5,y:(canvas.height-w.bbox.y1)/2.5})).filter(w=>w.t);
+}
 async function poReadPdf(file){
   if(!isAdminAccount())return;
   $("poStatus").textContent="正在讀取浤富 PDF 並依銷貨單號分組…";
@@ -2648,8 +2665,8 @@ async function poReadPdf(file){
     poPdfMonth="";
     const num=v=>Number(String(v||"").replace(/,/g,""));
     for(let p=1;p<=pdf.numPages;p++){
-      const page=await pdf.getPage(p),tc=await page.getTextContent();
-      const items=tc.items.map(it=>({t:String(it.str||"").trim(),x:it.transform[4],y:it.transform[5]})).filter(x=>x.t);
+      const page=await pdf.getPage(p);
+      const items=await poGetPageItems(page);
       if(!poPdfMonth){const allText=items.map(x=>x.t).join(" ");const mm=allText.match(/(1\d{2})\s*[\/年.-]\s*(0?[1-9]|1[0-2])\s*(?:月)?/);if(mm)poPdfMonth=`${mm[1]}年${String(Number(mm[2])).padStart(2,"0")}月`;}
       const rows=[];
       for(const it of items){let r=rows.find(z=>Math.abs(z.y-it.y)<2.2);if(!r)rows.push(r={y:it.y,a:[]});r.a.push(it)}
@@ -2681,19 +2698,18 @@ async function poReadPdf(file){
     }
     // 最後一頁「本期合計」是整份浤富 PDF 的成本，不使用逐項合計取代。
     const lastPage=await pdf.getPage(pdf.numPages);
-    const lastContent=await lastPage.getTextContent();
-    const lastItems=lastContent.items.map(x=>({t:String(x.str||"").trim(),y:x.transform[5],x:x.transform[4]})).filter(x=>x.t);
+    const lastItems=await poGetPageItems(lastPage);
     const lastRows=[];
     lastItems.forEach(it=>{let row=lastRows.find(r=>Math.abs(r.y-it.y)<3);if(!row)lastRows.push(row={y:it.y,items:[]});row.items.push(it)});
-    const totalRows=lastRows.filter(r=>r.items.some(x=>/本期\s*合計/.test(x.t)||/本期合計/.test(r.items.map(y=>y.t).join(""))));
+    const totalRows=lastRows.filter(r=>/本\s*期\s*合\s*計/.test(r.items.sort((a,b)=>a.x-b.x).map(y=>y.t).join("")));
     let pdfFinalCost=null;
     for(const r of totalRows){
       const sorted=r.items.sort((a,b)=>a.x-b.x),joined=sorted.map(x=>x.t).join(" ");
-      const after=joined.split(/本期\s*合計/).slice(1).join(" ");
+      const after=joined.split(/本\s*期\s*合\s*計/).slice(1).join(" ");
       const nums=[...after.matchAll(/-?\d[\d,]*(?:\.\d+)?/g)].map(x=>Number(x[0].replace(/,/g,"")));
       if(nums.length)pdfFinalCost=nums[0];
     }
-    if(pdfFinalCost===null)throw new Error("最後一頁找不到「本期合計」金額，請確認 PDF 格式；不會以明細金額冒充成本");
+    if(pdfFinalCost===null)throw new Error("掃描辨識後仍找不到最後一頁『本期合計』，請使用清晰 PDF 或手動核對；不會以明細金額冒充成本");
     window.poLastPdfCost=pdfFinalCost;
     poGroups=groups.filter(g=>g.rows.length);
     if(!poGroups.length)throw new Error("沒有辨識到採購明細");
