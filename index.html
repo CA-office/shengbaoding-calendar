@@ -2637,7 +2637,7 @@ async function poReadPdf(file){
     const pdfjsLib=await import("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs");
     pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs";
     const pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;
-    const groups=[]; let current=null;
+    const groups=[]; let current=null; let detectedHeaders=0; const pageAudit=[];
     poPdfPageCount=pdf.numPages;
     poPdfMonth="";
     const num=v=>Number(String(v||"").replace(/,/g,""));
@@ -2645,7 +2645,7 @@ async function poReadPdf(file){
       const page=await pdf.getPage(p);
       const items=await poGetPageItems(page);
       if(!poPdfMonth){const allText=items.map(x=>x.t).join(" ");const mm=allText.match(/(1\d{2})\s*[\/年.-]\s*(0?[1-9]|1[0-2])\s*(?:月)?/);if(mm)poPdfMonth=`${mm[1]}年${String(Number(mm[2])).padStart(2,"0")}月`;}
-      const rows=[];
+      const rows=[]; let pageHeaders=0;
       for(const it of items){let r=rows.find(z=>Math.abs(z.y-it.y)<3.8);if(!r)rows.push(r={y:it.y,a:[]});r.a.push(it)}
       rows.sort((a,b)=>b.y-a.y);
       for(const rr of rows){
@@ -2658,6 +2658,7 @@ async function poReadPdf(file){
         const sm=normalized.match(/(?:銷[貨售]|銷\s*貨|銷\s*售)(?:單號)?(1[0-9]{6})/);
         const parsedSalesNo=sm?sm[1]:null;
         if(sm){
+          pageHeaders++;detectedHeaders++;
           // 以 PDF 銷貨單表頭最右側「小計」為準，保留原始整數金額，避免 0.95 折扣重算差 1 元。
           const right=a.filter(z=>z.x>=690*(page.view[2]-page.view[0])/768).map(z=>z.t).join("").replace(/,/g,"");
           const amounts=right.match(/-?\d+(?:\.\d+)?/g)||[];
@@ -2686,6 +2687,7 @@ async function poReadPdf(file){
         if(unit==="公分")unit="cm";
         current.rows.push({name,qty,unit,price});
       }
+      pageAudit.push({page:p,headers:pageHeaders});
     }
     // 最後一頁「本期合計」是整份浤富 PDF 的成本，不使用逐項合計取代。
     const lastPage=await pdf.getPage(pdf.numPages);
@@ -2701,10 +2703,24 @@ async function poReadPdf(file){
       if(nums.length)pdfFinalCost=nums[0];
     }
     if(pdfFinalCost===null)throw new Error("掃描辨識後仍找不到最後一頁『本期合計』，請使用清晰 PDF 或手動核對；不會以明細金額冒充成本");
+    // 不允許將漏讀的銷貨單靜默濾掉，也不允許把部分結果覆寫既有工作資料。
+    const invalid=groups.filter(g=>!/^1\d{6}$/.test(g.salesNo)||!g.rows.length);
+    const duplicates=groups.map(g=>g.salesNo).filter((no,i,a)=>a.indexOf(no)!==i);
+    if(invalid.length||duplicates.length||!groups.length||groups.length!==detectedHeaders){
+      throw new Error(`辨識不完整：找到 ${detectedHeaders} 張銷貨單表頭，只有 ${groups.length-invalid.length} 張具有有效明細；`+
+        (duplicates.length?`重複單號 ${[...new Set(duplicates)].join('、')}；`:'')+
+        `各頁辨識數 ${pageAudit.map(x=>'PDF第'+x.page+'頁 '+x.headers+'張').join('、')}。已停止匯入，原有資料未覆寫。`);
+    }
+    // 掃描檔常把頁面打亂，若明細跨頁，先停止而不是猜測歸屬。
+    // 本期合計為整份 PDF 金額，不可用來證明逐張銷貨單已完整辨識。
+    const groupTotals=groups.map(g=>Number(g.pdfTotal));
+    if(groupTotals.some(x=>!Number.isFinite(x)||x<=0))throw new Error('部分銷貨單的小計未辨識成功，已停止匯入，原有資料未覆寫。');
+    const sumOfOrders=groupTotals.reduce((a,b)=>a+b,0);
+    if(Math.abs(sumOfOrders-pdfFinalCost)>1){
+      throw new Error(`銷貨單總計 ${sumOfOrders.toLocaleString()} 與 PDF 本期合計 ${pdfFinalCost.toLocaleString()} 不符（差 ${Math.round(sumOfOrders-pdfFinalCost).toLocaleString()}）。可能漏讀頁面或銷貨單，已停止匯入且不覆寫原有資料。`);
+    }
     window.poLastPdfCost=pdfFinalCost;
-    poGroups=groups.filter(g=>g.rows.length && /^1\d{6}$/.test(g.salesNo));
-    if(!poGroups.length)throw new Error("無法辨識銷貨單號與品項欄位；已停止匯入，避免混單。請勿儲存錯誤資料。");
-    if(poGroups.some(g=>!g.rows.length))throw new Error('有銷貨單未辨識到品項，已停止匯入');
+    poGroups=groups;
     poRenderGroups();
     $("poStatus").textContent=`PDF 匯入完成：${poGroups.length} 個銷貨單分組、${poGroups.reduce((n,g)=>n+g.rows.length,0)} 筆貨品。請為每組選擇已建立的「單號／案名」。`;
     poSaveAllWork(false);
