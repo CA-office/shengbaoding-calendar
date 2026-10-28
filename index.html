@@ -4191,6 +4191,15 @@ function source(tcData){
   const period=String(p.claimPeriod||'').trim();
   result.push({group:'代安裝',no,name:p.caseName||'',sale:amount(p.caseAmount),cost:null,period,detailKey:String(p.key)});
  }
+ // 新增的一般案件即使尚未建立採購明細，也必須計入銷售額與件數。
+ // 僅以案件主檔補入缺少明細的案件；已有明細的案件仍沿用原有計算，避免重複加總。
+ for(const p of projectByKey.values()){
+  if(String(p.category||'').trim()==='代安裝')continue;
+  if(details && Object.prototype.hasOwnProperty.call(details,String(p.key)) && Array.isArray(details[String(p.key)]?.items))continue;
+  const no=String(p.no||'').trim();if(!no)continue;
+  const period=String(p.claimPeriod||'').trim();
+  result.push({group:'草屯',no,name:p.caseName||'',sale:amount(p.caseAmount),cost:null,period,detailKey:String(p.key)});
+ }
  for(const [key,d] of Object.entries(details||{})){
   if(!d||typeof d!=='object'||!Array.isArray(d.items))continue;
   const p=projectByKey.get(String(key));
