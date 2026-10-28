@@ -609,7 +609,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
 <body>
 <div id="pullRefreshIndicator" aria-hidden="true"><div class="pull-spinner"></div></div>
 <section id="loginPage" class="loginWrap"><div class="loginCard"><h1>勝寶鼎/新弘股公司</h1><label class="field">Email<input id="loginEmail" type="email" autocomplete="username"></label><label class="field">密碼<input id="loginPassword" type="password" autocomplete="current-password"></label><button id="loginBtn" class="loginBtn">登入</button><button id="passkeyBtn" class="loginBtn" type="button" style="margin-top:10px;background:#fff;border:1px solid #81D8D0">使用 Face ID／裝置解鎖登入</button><div id="loginErr" class="err"></div></div></section>
-<section id="appPage" class="hidden"><header><div class="toprow"><div class="brand">勝寶鼎/新弘股公司｜行事曆</div><button id="logoutBtn" class="userBtn">登出</button></div><div id="roleLine" class="roleLine"></div><div class="featureTabs"><button id="calendarTabBtn" class="active">行事曆</button><button id="quoteTabBtn" class="hidden">報價單</button><button id="quoteQuickNoteHeaderBtn" class="hidden">記事本／複製</button><button id="installStatsTabBtn" class="hidden">安裝統計表</button><button id="taichungPurchaseTabBtn" class="hidden">草屯</button><button id="costReportTabBtn" class="hidden">成本銷售報表</button><button id="otherExpensesTabBtn" class="hidden">其他支出</button><button id="invoiceCustomerTabBtn" class="hidden">客戶發票</button><button id="overtimeTabBtn" class="hidden">超時打卡紀錄</button></div><div class="controls" id="calendarControls"><button id="prevBtn">‹</button><div id="monthTitle" class="month"></div><button id="nextBtn">›</button><button id="todayBtn">本月</button><button id="noteBtn" class="hidden">備註</button></div><div class="legend"><span class="lg"><i class="dot" style="background:#20aa5a"></i>綠－石英石</span><span class="lg"><i class="dot" style="background:#2196f3"></i>藍－人造石</span><span class="lg"><i class="dot" style="background:#e52424"></i>紅－維修</span><span class="lg"><i class="dot" style="background:#ff851b"></i>橘－草屯接單</span><span class="lg"><i class="dot" style="background:#8c35d5"></i>紫－浤富代裝石英</span><span class="lg"><i class="dot" style="background:#e5b800"></i>黃－自安送料</span><span class="lg"><i class="dot" style="background:#8b5a2b"></i>咖啡－我司單草屯代裝</span><span class="lg symbolLegend">☑</span><span class="lg symbolLegend">☒</span><span class="lg symbolLegend">➜</span><span class="lg symbolLegend">●</span><span class="lg symbolLegend">▲</span><span class="lg symbolLegend">✔</span><span class="lg symbolLegend">✘</span></div></header><main>
+<section id="appPage" class="hidden"><header><div class="toprow"><div class="brand">勝寶鼎/新弘股公司｜行事曆</div><button id="logoutBtn" class="userBtn">登出</button></div><div id="roleLine" class="roleLine"></div><div class="featureTabs"><button id="calendarTabBtn" class="active">行事曆</button><button id="quoteTabBtn" class="hidden">報價單</button><button id="quoteQuickNoteHeaderBtn" class="hidden">記事本／複製</button><button id="installStatsTabBtn" class="hidden">安裝統計表</button><button id="taichungPurchaseTabBtn" class="hidden">草屯</button><button id="hfSimpleTabBtn" class="hidden">浤富</button><button id="costReportTabBtn" class="hidden">成本銷售報表</button><button id="otherExpensesTabBtn" class="hidden">其他支出</button><button id="invoiceCustomerTabBtn" class="hidden">客戶發票</button><button id="overtimeTabBtn" class="hidden">超時打卡紀錄</button></div><div class="controls" id="calendarControls"><button id="prevBtn">‹</button><div id="monthTitle" class="month"></div><button id="nextBtn">›</button><button id="todayBtn">本月</button><button id="noteBtn" class="hidden">備註</button></div><div class="legend"><span class="lg"><i class="dot" style="background:#20aa5a"></i>綠－石英石</span><span class="lg"><i class="dot" style="background:#2196f3"></i>藍－人造石</span><span class="lg"><i class="dot" style="background:#e52424"></i>紅－維修</span><span class="lg"><i class="dot" style="background:#ff851b"></i>橘－草屯接單</span><span class="lg"><i class="dot" style="background:#8c35d5"></i>紫－浤富代裝石英</span><span class="lg"><i class="dot" style="background:#e5b800"></i>黃－自安送料</span><span class="lg"><i class="dot" style="background:#8b5a2b"></i>咖啡－我司單草屯代裝</span><span class="lg symbolLegend">☑</span><span class="lg symbolLegend">☒</span><span class="lg symbolLegend">➜</span><span class="lg symbolLegend">●</span><span class="lg symbolLegend">▲</span><span class="lg symbolLegend">✔</span><span class="lg symbolLegend">✘</span></div></header><main>
 <div id="calendarView"><section class="calendar"><div class="weekhead"><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div class="weekend">六</div><div class="weekend">日</div></div><div id="weeks"></div></section><section class="outing-card" id="outingRecords" style="display:none!important">
 <h3>外出紀錄</h3>
 <table class="outing-table"><colgroup><col><col><col><col><col></colgroup><thead><tr>
@@ -956,6 +956,15 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
     <div id="tcSavedDetailEmpty" class="quoteEmpty">目前沒有已儲存的草屯採購單明細</div><div style="margin-top:18px"><h3>草屯已儲存明細｜依請款區間統計</h3><table class="purchaseRecords" style="width:100%"><thead><tr><th>區間日期</th><th>儲存筆數</th><th>總金額</th><th>操作</th></tr></thead><tbody id="tcSavedPeriodSummaryRows"><tr><td colspan="4">尚無資料</td></tr></tbody></table></div>
   </div>
 </section>
+<section id="hfSimpleView" class="hidden" style="max-width:950px;margin:22px auto;padding:20px;background:#fff;border:1px solid #dce5ee;border-radius:12px">
+<h2>浤富｜區間銷售與成本</h2><p style="color:#64748b">只輸入經核對的總額，不匯入 PDF/JPG；已儲存區間不得直接覆蓋。</p>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:12px">
+<label>請款區間<select id="hfSimplePeriod" style="width:100%;padding:9px"><option value="">選擇區間</option></select></label>
+<label>銷售額<input id="hfSimpleSales" type="number" min="0" step="1" placeholder="輸入銷售總額" style="width:100%;padding:9px"></label>
+<label>填寫欄／備註<input id="hfSimpleNote" placeholder="例如：已核對 Excel" style="width:100%;padding:9px"></label>
+<label>成本<input id="hfSimpleCost" type="number" min="0" step="1" placeholder="輸入成本總額" style="width:100%;padding:9px"></label>
+</div><div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button type="button" id="hfSimpleSave" class="primary">儲存並同步成本銷售</button><span id="hfSimpleStatus" style="color:#52687c"></span></div>
+<div id="hfSimpleHistory" style="margin-top:15px"></div></section>
 <section id="costReportView" class="hidden" style="max-width:1250px;margin:22px auto;padding:0 15px;font-family:system-ui,'Noto Sans TC',sans-serif;color:#172b45"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px"><div><h2 style="font-size:25px;margin:0">成本・銷售・件數分析</h2><p style="color:#718096">統計資料來源：本機及雲端已保存的採購案件；不覆蓋任何原始資料</p></div><select id="crMonth" style="display:none;padding:10px;border-radius:8px;border:1px solid #cbd5e1"><option value="all">全部月份</option></select> <select id="crPeriod" style="padding:10px;border-radius:8px;border:1px solid #cbd5e1"><option value="all">全部請款區間</option></select></div><div id="crPdfCostControl" style="margin:16px 0;padding:12px 16px;border:1px solid #dce5ee;border-radius:10px;background:#fff">
 <strong>浤富 PDF 成本（115年09月）</strong>：已核對本期合計 <strong>302,994</strong> 元。
 <button type="button" id="crSaveVerifiedCost" style="margin-left:12px;padding:7px 12px;border:1px solid #b5c6d7;border-radius:7px;background:#f4f8fc;cursor:pointer">儲存至所選請款區間</button>
@@ -4001,6 +4010,67 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 document.querySelectorAll('.featureTabs button').forEach(b=>{if(b.id!=='taichungPurchaseTabBtn')b.addEventListener('click',()=>{$t('taichungPurchaseView')?.classList.add('hidden')});});
 })();
 </script>
+<script id="hf-simple-manual-v1">
+(function(){
+const KEY='sbd_hongfu_manual_totals_v1',el=id=>document.getElementById(id);
+const parse=v=>{try{const x=JSON.parse(v||'{}');return x&&typeof x==='object'&&!Array.isArray(x)?x:{}}catch(e){return {}}};
+async function fetchData(){
+ const {data:{user}}=await sb.auth.getUser();if(!user)throw Error('尚未登入');
+ if(isAdminAccount()){
+  const {data,error}=await sb.from('sbd_app_data').select('payload').eq('user_id',user.id).eq('data_key',KEY).maybeSingle();
+  if(error)throw error;return parse(data?.payload?.value);
+ }
+ const {data,error}=await sb.rpc('sbd_read_cost_report_sources');
+ if(error)throw error;
+ if(!Array.isArray(data))throw Error('報表服務格式錯誤');
+ return parse(data.find(x=>x.data_key===KEY)?.payload?.value);
+}
+window.sbdHfManualTotals=fetchData;
+let saved={};
+function show(){
+ const select=el('hfSimplePeriod');if(!select)return;
+ const periods=[...new Set(['260826-260925','260926-261025',...Object.keys(saved)])].sort();
+ const old=select.value;select.innerHTML='<option value="">選擇區間</option>'+periods.map(p=>`<option value="${p}">${p}</option>`).join('');
+ if(periods.includes(old))select.value=old;
+ const current=saved[select.value];
+ el('hfSimpleSales').value=current?.sales??'';
+ el('hfSimpleCost').value=current?.cost??'';
+ el('hfSimpleNote').value=current?.note??'';
+ el('hfSimpleSales').disabled=!!current;el('hfSimpleCost').disabled=!!current;el('hfSimpleNote').disabled=!!current;
+ el('hfSimpleSave').disabled=!!current;
+ el('hfSimpleStatus').textContent=current?'此區間已儲存並鎖定；不能直接覆蓋。':'';
+ el('hfSimpleHistory').innerHTML='<table style="width:100%;border-collapse:collapse"><thead><tr><th>區間日期</th><th>銷售額</th><th>備註</th><th>成本</th></tr></thead><tbody>'+Object.entries(saved).sort().map(([p,v])=>`<tr><td>${p}</td><td>${Number(v.sales).toLocaleString()}</td><td>${String(v.note||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}</td><td>${Number(v.cost).toLocaleString()}</td></tr>`).join('')+'</tbody></table>';
+}
+async function refresh(){try{saved=await fetchData();show()}catch(e){el('hfSimpleStatus').textContent='雲端讀取失敗：'+e.message}}
+async function save(){
+ if(!isAdminAccount())return;
+ const period=el('hfSimplePeriod').value,sales=el('hfSimpleSales').value,cost=el('hfSimpleCost').value,note=el('hfSimpleNote').value.trim();
+ if(!/^\d{6}-\d{6}$/.test(period)||sales===''||cost===''||Number(sales)<0||Number(cost)<0||!Number.isFinite(Number(sales))||!Number.isFinite(Number(cost))){alert('請選擇區間並填寫正確銷售額、成本');return}
+ const b=el('hfSimpleSave');b.disabled=true;
+ try{
+  const {data:{user}}=await sb.auth.getUser();if(!user)throw Error('尚未登入');
+  const {data:found,error}=await sb.from('sbd_app_data').select('payload').eq('user_id',user.id).eq('data_key',KEY).maybeSingle();if(error)throw error;
+  const latest=parse(found?.payload?.value);
+  if(latest[period])throw Error('此區間已儲存並鎖定，未覆蓋原資料');
+  if(!confirm(`確認儲存浤富 ${period}：銷售額 ${Number(sales).toLocaleString()} 元、成本 ${Number(cost).toLocaleString()} 元？儲存後將鎖定。`))return;
+  latest[period]={sales:Number(sales),cost:Number(cost),note,savedAt:new Date().toISOString()};
+  const payload={value:JSON.stringify(latest)};
+  const result=found?await sb.from('sbd_app_data').update({payload,updated_at:new Date().toISOString()}).eq('user_id',user.id).eq('data_key',KEY):await sb.from('sbd_app_data').insert({user_id:user.id,data_key:KEY,payload,updated_at:new Date().toISOString()});
+  if(result.error)throw result.error;
+  saved=latest;show();el('hfSimpleStatus').textContent='雲端儲存成功；成本銷售報表將使用這筆區間總額。';
+ }catch(e){el('hfSimpleStatus').textContent='未儲存：'+e.message}
+ finally{b.disabled=!!saved[period]}
+}
+function bind(){
+ const b=el('hfSimpleTabBtn');if(!b)return;
+ b.classList.toggle('hidden',!isAdminAccount());
+ b.addEventListener('click',()=>{document.querySelectorAll('#appPage main > section,#calendarView').forEach(x=>x.classList.add('hidden'));el('hfSimpleView').classList.remove('hidden');el('calendarControls')?.classList.add('hidden');document.querySelectorAll('.featureTabs button').forEach(x=>x.classList.remove('active'));b.classList.add('active');refresh()});
+ el('hfSimplePeriod').addEventListener('change',show);el('hfSimpleSave').addEventListener('click',save);
+ document.querySelectorAll('.featureTabs button').forEach(x=>{if(x!==b)x.addEventListener('click',()=>el('hfSimpleView').classList.add('hidden'))});
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();
+})();
+</script>
 <script id="cost-report-live">(function(){
 const fmt=n=>Math.round(n).toLocaleString('zh-TW'),esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function read(k,f){try{return JSON.parse(localStorage.getItem(k)||f)}catch(e){return JSON.parse(f)}}
@@ -4168,7 +4238,7 @@ async function render(){
   try {const raw=await costReportKeyValue('sbd_tc_invoice_periods_v1');const v=typeof raw==='string'?JSON.parse(raw):raw;if(Array.isArray(v))saved=v;}catch(e){console.warn('讀取雲端請款區間失敗',e);const st=document.getElementById('crCloudStatus');if(st)st.textContent='請款區間雲端讀取失敗：'+(e.message||e)}
  }
  const hfCosts={...(isAdminAccount()?hfLocal():{}),...(await hfCloud()||{})};
- const periods=[...new Set([...all.map(r=>r.period).filter(Boolean),...(Array.isArray(saved)?saved:[]),...all.map(r=>r.period).filter(Boolean),...Object.keys(hfCosts),(companyHongfuPeriod||(!isAdminAccount()?'':localStorage.getItem('sbd_hongfu_last_period')))].filter(Boolean))].sort();
+ let hfManualPeriods=[];try{hfManualPeriods=Object.keys(await window.sbdHfManualTotals?.()||{})}catch(e){}\n const periods=[...new Set([...hfManualPeriods,...all.map(r=>r.period).filter(Boolean),...(Array.isArray(saved)?saved:[]),...all.map(r=>r.period).filter(Boolean),...Object.keys(hfCosts),(companyHongfuPeriod||(!isAdminAccount()?'':localStorage.getItem('sbd_hongfu_last_period')))].filter(Boolean))].sort();
  period.innerHTML='<option value="all">全部請款區間（含所有日期）</option>'+periods.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');
  // v122: Never silently start with every invoice period combined.
  // Preserve the user's chosen period during rerenders and across page reloads.
@@ -4202,6 +4272,17 @@ async function render(){
  if(period.value!=='all'&&hfCosts[period.value]&&Number.isFinite(Number(hfCosts[period.value].amount))){hongfuCost=Number(hfCosts[period.value].amount)}
  if(period.value==='all'&&Object.keys(hfCosts).length){hongfuCost=Object.values(hfCosts).reduce((n,v)=>n+(Number(v?.amount)||0),0)}
  if(hongfuCost!==null){groups[0].cost=hongfuCost;groups[0].known=true}
+ // 管理員已確認的浤富區間總額優先；不再混用舊 PDF OCR 明細。
+ let manualHf={};
+ try{manualHf=await window.sbdHfManualTotals?.()||{}}catch(e){console.warn('浤富手動總額雲端讀取失敗',e)}
+ const manualPeriods=period.value==='all'?Object.keys(manualHf):[period.value];
+ const selectedManual=manualPeriods.map(p=>manualHf[p]).filter(v=>v&&Number.isFinite(Number(v.sales))&&Number.isFinite(Number(v.cost)));
+ if(selectedManual.length){
+  groups[0].sale=selectedManual.reduce((n,v)=>n+Number(v.sales),0);
+  groups[0].cost=selectedManual.reduce((n,v)=>n+Number(v.cost),0);
+  groups[0].known=true;
+  groups[0].count=0; // 只輸入總額，不捏造件數
+ }
  const expenseCost=expenses.filter(x=>(period.value==='all'||sbdDateInPeriod(x.date,period.value))&&(sel.value==='all'||String(x.date||'').startsWith(sel.value))).reduce((n,x)=>n+amount(x.amount),0);
  // 其他支出不屬於案件：保留成本，件數不列入統計並顯示破折號。
  groups.push({name:'其他支出',sale:0,cost:expenseCost,known:true,count:0});
