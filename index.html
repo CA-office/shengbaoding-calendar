@@ -4267,9 +4267,36 @@ async function renderArchive(){
     const saved=(g.pdfTotal===null||g.pdfTotal===undefined)?calculated:Number(g.pdfTotal);
     return sum+(Number.isFinite(saved)?saved:calculated);
    },0);
-   return `<tr><td>${poEsc(p)}</td><td>${groups.length} 筆${groups.length<19&&p==='260926-261025'?'（資料不完整，請核對）':''}</td><td>${amount.toLocaleString('zh-TW',{maximumFractionDigits:0})}</td><td><button type="button" class="poLoadSavedPeriod" data-period="${poEsc(p)}" style="padding:6px 12px;cursor:pointer">載入／修改</button></td></tr>`;
+   return `<tr><td>${poEsc(p)}</td><td>${groups.length} 筆${groups.length<19&&p==='260926-261025'?'（資料不完整，請核對）':''}</td><td>${amount.toLocaleString('zh-TW',{maximumFractionDigits:0})}</td><td><button type="button" class="poLoadSavedPeriod" data-period="${poEsc(p)}" style="padding:6px 12px;cursor:pointer">載入／修改</button> <button type="button" class="poDeleteSavedPeriod" data-period="${poEsc(p)}" style="padding:6px 12px;cursor:pointer;color:#b42318;border:1px solid #e4a5a0;border-radius:6px;background:white">刪除</button></td></tr>`;
   });
   summary.innerHTML='<h3>浤富本機已儲存明細｜依請款區間統計</h3><table class="purchaseRecords" style="width:100%"><thead><tr><th>區間日期</th><th>儲存筆數（銷貨單分組）</th><th>總金額（PDF 明細）</th><th>操作</th></tr></thead><tbody>'+(rows.join('')||'<tr><td colspan="4">目前尚無依區間儲存的明細</td></tr>')+'</tbody></table>';
+  summary.querySelectorAll('.poDeleteSavedPeriod').forEach(btn=>btn.addEventListener('click',()=>{
+    if(typeof isAdminAccount==='function'&&!isAdminAccount()){alert('只有管理者可以刪除已儲存明細。');return;}
+    const p=btn.dataset.period;
+    if(!/^\d{6}-\d{6}$/.test(p)){alert('未指定區間的資料不能在這裡刪除。');return;}
+    const key='sbd_hongfu_period_work_v1';
+    const saved=read(key,{});
+    const old=saved[p];
+    if(!old){alert('這個區間目前沒有可刪除的本機存檔。');return;}
+    if(!confirm(`確定刪除 ${p} 的本機已儲存明細（${(old.groups||[]).length} 張）？\n只刪除這個區間，不會刪除其他月份、PDF 原檔或人工配對草稿。刪除前會先備份。`))return;
+    const typed=prompt(`為避免誤刪，請輸入要刪除的區間：${p}`,'');
+    if(typed!==p){alert('區間輸入不一致，已取消刪除。');return;}
+    try{
+      const backupKey='sbd_hongfu_period_backup_v1';
+      const backups=read(backupKey,{});
+      if(!Array.isArray(backups[p]))backups[p]=[];
+      backups[p].push({snapshot:JSON.parse(JSON.stringify(old)),backedUpAt:new Date().toISOString(),reason:'管理者刪除本機區間存檔'});
+      localStorage.setItem(backupKey,JSON.stringify(backups));
+      delete saved[p];
+      localStorage.setItem(key,JSON.stringify(saved));
+      // 不清除 PO_WORK_KEY / 人工草稿：保護目前尚未完成的人工配對。
+      if(($('poPdfPeriod')?.value||'').trim()===p){
+        $('poStatus').textContent=`已刪除 ${p} 的本機區間存檔，已留備份；目前畫面及人工配對草稿保留。`;
+      }
+      renderArchive().catch(console.error);
+      alert(`${p} 的本機區間存檔已刪除並備份。其他區間、人工草稿、成本與 PDF 原檔未動。此操作不會刪除雲端資料。`);
+    }catch(e){console.error(e);alert('刪除失敗，資料未確認刪除：'+(e?.message||e));}
+  }));
   summary.querySelectorAll('.poLoadSavedPeriod').forEach(btn=>btn.addEventListener('click',()=>{
     const p=btn.dataset.period;
     if(!/^\d{6}-\d{6}$/.test(p)){alert('這份明細尚未指定區間，請先在上方設定區間並儲存。');return}
