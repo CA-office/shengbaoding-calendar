@@ -3897,8 +3897,8 @@ async function hfSave(){
   const a=await sb.auth.getUser();if(!a.data?.user)throw Error('請先登入');
   const user_id=a.data.user.id;
   const existing=await hfCloud(),local=hfLocal(),base={...local,...(existing&&typeof existing==='object'?existing:{})};
-  if(base[period]&&Number(base[period].amount)!==302994){st.textContent='此區間已有不同成本，為避免覆蓋已停止；請先核對';return}
-  const updated={...base,[period]:{amount:302994,pdfMonth:'115年09月',statementStart:'2026-09-01',statementEnd:'2026-09-30',source:'勝鈔11509(3)(1).pdf',verified:true}};
+  if(base[period]){st.textContent='此區間成本已儲存並鎖定，不可自動覆蓋；原始資料未變動';return}
+  st.textContent='此按鈕原先寫死 302,994 元，已停用以保護帳務；請先透過浤富原始 PDF 核對後再保存成本。';return;
   const {data:found,error:findError}=await sb.from('sbd_app_data').select('data_key').eq('user_id',user_id).eq('data_key',HF_COST_KEY).maybeSingle();
   if(findError)throw findError;
   const payload={value:JSON.stringify(updated)};
@@ -3965,29 +3965,16 @@ async function cloudTc(){
   if(cp!==null&&!Array.isArray(cp))throw Error('雲端草屯案件格式不符');
   if(hp!==null&&!Array.isArray(hp))throw Error('雲端浤富案件格式不符');
   if(cd!==null&&(!cd||typeof cd!=='object'||Array.isArray(cd)))throw Error('雲端草屯明細格式不符');
-  // Viewer accounts must NEVER merge their own browser storage into company reports.
-  // Missing cloud keys are reported visibly rather than silently shown as 0 sales.
-  if(!isAdminAccount()){
-   const missing=['sbd_taichung_purchase_projects_v1','sbd_taichung_purchase_details_v1','sbd_purchase_projects'].filter(k=>!(data||[]).some(x=>x.data_key===k));
-   if(missing.length){
-    status.textContent='雲端報表來源不完整：缺少 '+missing.join('、')+'。請勿將目前金額視為公司總額。';
-   }else{
-    status.textContent='管理員雲端資料：草屯／代安裝 '+cp.length+' 筆，浤富 '+hp.length+' 筆；手機僅讀雲端，不混入本機資料。';
-   }
-   return {projects:cp||[],details:cd||{},hongfu:hp||[]};
-  }
-  // Administrator: preserve existing temporary local/cloud display behavior.
-  const merged=new Map();
-  for(const x of Array.isArray(localProjects)?localProjects:[])if(x?.key)merged.set(String(x.key),x);
-  for(const x of cp||[])if(x?.key)merged.set(String(x.key),x);
-  const details={...(localDetails&&typeof localDetails==='object'?localDetails:{}),...(cd||{})};
-  status.textContent='管理員暫時合併顯示：本機 '+(Array.isArray(localProjects)?localProjects.length:0)+' 筆、雲端 '+(cp?.length||0)+' 筆；不覆蓋原始資料';
-  const hm=new Map();for(const x of read('sbd_purchase_projects','[]'))if(x?.key)hm.set(String(x.key),x);for(const x of hp||[])if(x?.key)hm.set(String(x.key),x);
-  return {projects:[...merged.values()],details,hongfu:[...hm.values()]};
+  // 同一份公司報表：管理者與使用者1、2皆以雲端為唯一來源。
+  // 缺少任何必要資料時明確中止，禁止把空資料誤顯示為 0。
+  const required=['sbd_taichung_purchase_projects_v1','sbd_taichung_purchase_details_v1','sbd_purchase_projects'];
+  const missing=required.filter(k=>!(data||[]).some(x=>x.data_key===k));
+  if(missing.length)throw Error('雲端報表缺少資料：'+missing.join('、')+'；已停止顯示錯誤的零元統計');
+  status.textContent='公司雲端資料：草屯／代安裝 '+cp.length+' 筆，浤富 '+hp.length+' 筆；管理者與使用者1、2使用相同來源（僅管理者可修改）。';
+  return {projects:cp,details:cd,hongfu:hp};
  }catch(e){
-  status.textContent='無法讀取管理員雲端資料（'+(e.message||e)+'）；目前不是完整公司報表。';
-  if(!isAdminAccount())return {projects:[],details:{},hongfu:[]};
-  return {projects:Array.isArray(localProjects)?localProjects:[],details:localDetails&&typeof localDetails==='object'?localDetails:{},hongfu:read('sbd_purchase_projects','[]')};
+  status.textContent='無法讀取完整公司雲端報表（'+(e.message||e)+'）。已停止統計，避免顯示錯誤的 0 元或舊金額。';
+  throw e;
  }
 }
 function source(tcData){
@@ -4018,7 +4005,13 @@ function source(tcData){
  return result.map(r=>{const m=r.no.match(/^(?:G5DD|G5DE)(\d{2})(\d{2})/i);return {...r,month:m?`20${m[1]}-${m[2]}`:'未分類'}})
 }
 async function render(){
- const sourceRows=source(await cloudTc());
+ let companyData;
+ try{companyData=await cloudTc()}catch(e){
+  document.getElementById('crCards').innerHTML='';
+  document.getElementById('crSummary').innerHTML='<p style="color:#a22">雲端資料未完整載入，為避免顯示錯誤金額，已暫停報表。請確認使用者1、2的唯讀報表服務與管理者雲端資料。</p>';
+  return;
+ }
+ const sourceRows=source(companyData);
  // Display-only deduplication: same group, order number, case name, amount and claim period.
  // Never merge merely by order number: legitimate cases may reuse one number.
  const uniqueRows=new Map();
