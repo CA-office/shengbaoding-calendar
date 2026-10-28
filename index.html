@@ -3782,7 +3782,19 @@ b.innerHTML=a.map(r=>`<tr><td><button data-a="edit" data-k="${r.key}">修改</bu
 function tcCurrentProject(){const key=$t('tcAssignmentSelect')?.value||'';return tcProjects().find(x=>x.key===key)||null}
 const TC_DETAIL_KEY='sbd_taichung_purchase_details_v1';
 function tcDetails(){let local={};try{local=JSON.parse(localStorage.getItem(TC_DETAIL_KEY)||'{}')||{}}catch(e){}return {...tcCloudDetails,...local}}
-function tcSaveDetails(o){localStorage.setItem(TC_DETAIL_KEY,JSON.stringify(o))}
+function tcSaveDetails(o){
+ localStorage.setItem(TC_DETAIL_KEY,JSON.stringify(o));
+ if(typeof isAdminAccount==='function'&&!isAdminAccount())return Promise.resolve();
+ const snapshot=JSON.stringify(o);
+ tcCloudWriteQueue=tcCloudWriteQueue.catch(()=>{}).then(async()=>{
+  const {data:auth,error:ae}=await sb.auth.getUser();
+  if(ae||!auth?.user)throw Error('尚未登入雲端');
+  const {error}=await sb.from('sbd_app_data').upsert({user_id:auth.user.id,data_key:TC_DETAIL_KEY,payload:{value:snapshot},updated_at:new Date().toISOString()},{onConflict:'user_id,data_key'});
+  if(error)throw error;
+  tcCloudDetails=JSON.parse(snapshot);
+ }).catch(e=>{console.error('草屯採購成本雲端儲存失敗',e);const st=$t('tcCloudProjectsStatus');if(st)st.textContent='草屯成本雲端儲存失敗：'+(e.message||e)});
+ return tcCloudWriteQueue;
+}
 function tcDetailData(){
  const entered=String($t('tcExportPeriod')?.value||'').trim();
  const selected=String($t('tcPeriodHistory')?.value||'').trim();
@@ -4181,6 +4193,21 @@ async function cloudTc(){
   }else data=(await costReportRows()).filter(x=>['sbd_taichung_purchase_projects_v1','sbd_taichung_purchase_details_v1','sbd_purchase_projects'].includes(x.data_key));
   const get=k=>{const r=(data||[]).find(x=>x.data_key===k);if(!r)return null;const v=r.payload?.value;return typeof v==='string'?JSON.parse(v):v};
   const cp=get('sbd_taichung_purchase_projects_v1'),cd=get('sbd_taichung_purchase_details_v1'),hp=get('sbd_purchase_projects');
+  // 管理者先前儲存的採購成本有些只存在瀏覽器本機，雲端舊版未寫入。
+  // 只補雲端缺少的 key，不覆蓋既有雲端成本；使用者1、2仍讀同一雲端來源。
+  let mergedDetails=cd;
+  if(isAdminAccount()&&cd&&typeof cd==='object'&&!Array.isArray(cd)){
+   const local=read('sbd_taichung_purchase_details_v1','{}');
+   if(local&&typeof local==='object'&&!Array.isArray(local)){
+    const missing=Object.keys(local).filter(k=>!(k in cd)&&local[k]&&Array.isArray(local[k].items));
+    if(missing.length){
+     mergedDetails={...cd};for(const k of missing)mergedDetails[k]=local[k];
+     const {error:syncError}=await sb.from('sbd_app_data').upsert({user_id:auth.user.id,data_key:'sbd_taichung_purchase_details_v1',payload:{value:JSON.stringify(mergedDetails)},updated_at:new Date().toISOString()},{onConflict:'user_id,data_key'});
+     if(syncError)throw Error('草屯本機成本同步雲端失敗：'+syncError.message);
+     tcCloudDetails=mergedDetails;
+    }
+   }
+  }
   if(cp!==null&&!Array.isArray(cp))throw Error('雲端草屯案件格式不符');
   if(hp!==null&&!Array.isArray(hp))throw Error('雲端浤富案件格式不符');
   if(cd!==null&&(!cd||typeof cd!=='object'||Array.isArray(cd)))throw Error('雲端草屯明細格式不符');
@@ -4190,7 +4217,7 @@ async function cloudTc(){
   const missing=required.filter(k=>!(data||[]).some(x=>x.data_key===k));
   if(missing.length)throw Error('雲端報表缺少資料：'+missing.join('、')+'；已停止顯示錯誤的零元統計');
   status.textContent='公司雲端資料：草屯／代安裝 '+cp.length+' 筆，浤富 '+hp.length+' 筆；管理者與使用者1、2使用相同來源（僅管理者可修改）。';
-  return {projects:cp,details:cd,hongfu:hp};
+  return {projects:cp,details:mergedDetails,hongfu:hp};
  }catch(e){
   status.textContent='無法讀取完整公司雲端報表（'+(e.message||e)+'）。已停止統計，避免顯示錯誤的 0 元或舊金額。';
   throw e;
