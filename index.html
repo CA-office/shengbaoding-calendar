@@ -2450,6 +2450,7 @@ function poSaveReviewDraft(showMsg=false){
     const period=poDraftPeriod();
     all[period]={groups:JSON.parse(JSON.stringify(poGroups)),pdfPageCount:poPdfPageCount,pdfMonth:poPdfMonth,savedAt:new Date().toISOString(),review:true};
     localStorage.setItem(PO_REVIEW_DRAFT_KEY,JSON.stringify(all));
+    window.poRefreshPeriodOptions?.();
     if(showMsg)alert(`已儲存 ${period} 的人工配對／明細草稿（${poGroups.length} 張銷貨單）。不會覆寫已結算成本。請勿清除瀏覽器網站資料。`);
     return true;
   }catch(e){if(showMsg)alert("草稿儲存失敗："+(e?.message||e));return false;}
@@ -4251,6 +4252,10 @@ async function renderArchive(){
  const summary=$('poSavedPeriodSummary');
  if(summary){
   const entries=Object.entries(archive).filter(([p,d])=>/^\d{6}-\d{6}$/.test(p)&&Array.isArray(d?.groups));
+  // 人工草稿是獨立儲存來源，必須在統計區顯示，避免使用者誤認資料遺失。
+  const reviewDrafts=read('sbd_hongfu_manual_review_drafts_v2',{});
+  const draftEntries=Object.entries(reviewDrafts).filter(([p,d])=>/^\d{6}-\d{6}$/.test(p)&&Array.isArray(d?.groups)&&d.groups.length);
+
   // 舊版儲存按鈕可在未填請款區間時成功儲存至 PO_WORK_KEY；
   // 此處仍要顯示這份明細，不能誤稱「尚無資料」。
   const current=read('sbd_purchase_pdf_work_v1',null);
@@ -4269,8 +4274,30 @@ async function renderArchive(){
    },0);
    return `<tr><td>${poEsc(p)}</td><td>${groups.length} 筆${groups.length<19&&p==='260926-261025'?'（資料不完整，請核對）':''}</td><td>${amount.toLocaleString('zh-TW',{maximumFractionDigits:0})}</td><td><button type="button" class="poLoadSavedPeriod" data-period="${poEsc(p)}" style="padding:6px 12px;cursor:pointer">載入／修改</button> <button type="button" class="poDeleteSavedPeriod" data-period="${poEsc(p)}" style="padding:6px 12px;cursor:pointer;color:#b42318;border:1px solid #e4a5a0;border-radius:6px;background:white">刪除</button></td></tr>`;
   });
-  summary.innerHTML='<h3>浤富本機已儲存明細｜依請款區間統計</h3><table class="purchaseRecords" style="width:100%"><thead><tr><th>區間日期</th><th>儲存筆數（銷貨單分組）</th><th>總金額（PDF 明細）</th><th>操作</th></tr></thead><tbody>'+(rows.join('')||'<tr><td colspan="4">目前尚無依區間儲存的明細</td></tr>')+'</tbody></table>';
-  summary.querySelectorAll('.poDeleteSavedPeriod').forEach(btn=>btn.addEventListener('click',()=>{
+  const draftRows=draftEntries.map(([p,d])=>{
+    const groups=d.groups||[];
+    const incomplete=groups.filter(g=>!Array.isArray(g.rows)||!g.rows.length||!(Number(g.pdfTotal)>0));
+    const sum=groups.reduce((n,g)=>n+(Number(g.pdfTotal)||0),0);
+    return `<tr style="background:#fff9ed"><td>${poEsc(p)}（人工草稿）</td><td>${groups.length} 張；${incomplete.length} 張待核對</td><td>${sum.toLocaleString('zh-TW')}（暫存小計，未入帳）</td><td><button type="button" class="poRestoreDraftFromSummary" data-period="${poEsc(p)}">還原草稿／繼續修改</button></td></tr>`;
+  });
+    summary.innerHTML='<h3>浤富本機已儲存明細｜依請款區間統計</h3><table class="purchaseRecords" style="width:100%"><thead><tr><th>區間日期</th><th>儲存筆數（銷貨單分組）</th><th>總金額（PDF 明細）</th><th>操作</th></tr></thead><tbody>'+(rows.concat(draftRows).join('')||'<tr><td colspan="4">目前尚無依區間儲存的明細</td></tr>')+'</tbody></table>';
+  summary.querySelectorAll('.poRestoreDraftFromSummary').forEach(btn=>btn.addEventListener('click',()=>{
+    const period=btn.dataset.period;
+    const drafts=read('sbd_hongfu_manual_review_drafts_v2',{});
+    const d=drafts[period];
+    if(!d||!Array.isArray(d.groups)){alert('找不到該區間的人工草稿');return;}
+    const current=($('poPdfPeriod')?.value||'').trim();
+    if(current!==period && typeof poImportReview!=='undefined' && poImportReview && poGroups.length){
+      if(!poSaveReviewDraft(false)){alert('目前草稿備份失敗，已取消切換');return;}
+    }
+    $('poPdfPeriod').value=period;
+    poGroups=JSON.parse(JSON.stringify(d.groups));
+    poPdfPageCount=d.pdfPageCount||0;poPdfMonth=d.pdfMonth||'';poImportReview=true;
+    poRenderGroups();
+    $('poStatus').textContent=`已還原 ${period} 人工草稿 ${poGroups.length} 張；不影響正式帳務。`;
+    $('poSaveAllBtn')?.scrollIntoView({behavior:'smooth',block:'center'});
+  }));
+    summary.querySelectorAll('.poDeleteSavedPeriod').forEach(btn=>btn.addEventListener('click',()=>{
     if(typeof isAdminAccount==='function'&&!isAdminAccount()){alert('只有管理者可以刪除已儲存明細。');return;}
     const p=btn.dataset.period;
     if(!/^\d{6}-\d{6}$/.test(p)){alert('未指定區間的資料不能在這裡刪除。');return;}
