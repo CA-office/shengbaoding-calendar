@@ -2744,18 +2744,14 @@ async function poImportParsedPages(pages,sourceFile){
         if(no){
           count++;
           let amt=poRowAmount(r,pg);
-          // OCR 可能將銷貨單右側小計辨識為相鄰的一行；僅在單號行沒有金額時補抓。
-          if(!Number.isFinite(amt)||amt<=0){
-            const nearby=pg.rows.filter(q=>q!==r&&Math.abs(q.y-r.y)<10&&!poSalesNo(q))
-              .map(q=>poRowAmount(q,pg)).filter(v=>Number.isFinite(v)&&v>0);
-            if(nearby.length===1)amt=nearby[0];
-          }
+          // 不得以相鄰行的小計補到這張銷貨單：這會造成跨單錯位。
+          // 單號行無法可靠辨識時保持空白，待使用者核對紙本。
           if(byNo.has(no)){
             // 同一張銷貨單跨頁時延續原分組，不重複建立。
             current=byNo.get(no);
             if(Number.isFinite(amt)&&amt>0 && (!Number.isFinite(current.pdfTotal)||current.pdfTotal===amt))current.pdfTotal=amt;
           }else{
-            current={salesNo:no,rows:[],projectKey:'',pdfTotal:Number.isFinite(amt)&&amt>0?amt:null};
+            current={salesNo:no,rows:[],projectKey:'',pdfPage:pg.printed||pg.source||1,pdfTotal:Number.isFinite(amt)&&amt>0?amt:null};
             groups.push(current);byNo.set(no,current);
           }
           continue;
@@ -2781,14 +2777,19 @@ async function poImportParsedPages(pages,sourceFile){
       audits.push(`紙本第${pg.printed||'?'}頁：${count}張單、${detailCount}行明細、${skipped}行待檢查`);
     }
     if(!groups.length)throw Error('沒有找到銷貨單號，請檢查掃描辨識結果');
+    // 紙本小計與明細金額不符，可能是 OCR 把相鄰單號的小計錯配；一律停下來人工核對。
+    const mismatched=groups.filter(g=>g.rows.length&&Number.isFinite(g.pdfTotal)&&g.pdfTotal>0&&
+      !g.rows.some(r=>/現金扣/.test(String(r.name||'')))&&
+      Math.abs(g.rows.reduce((n,r)=>n+Number(r.qty||0)*Number(r.price||0),0)-g.pdfTotal)>1);
     const invalid=groups.filter(g=>!g.rows.length||!Number.isFinite(g.pdfTotal)||g.pdfTotal<=0);
     if(invalid.length){poImportReview=true;poGroups=groups;poPdfPageCount=pages.length;poPdfMonth=month;poRenderGroups();throw Error(`找到 ${groups.length} 張銷貨單，但 ${invalid.length} 張缺少明細或小計（${invalid.map(x=>x.salesNo).join('、')}）。${audits.join('；')}。下方顯示未儲存辨識預覽；原資料沒有覆寫。`);}
+    if(mismatched.length){poImportReview=true;poGroups=groups;poPdfPageCount=pages.length;poPdfMonth=month;poRenderGroups();throw Error(`有 ${mismatched.length} 張銷貨單的紙本小計與明細計算不符（${mismatched.map(g=>g.salesNo).join('、')}），可能發生跨單錯配。下方僅為未儲存預覽，請逐筆核對，原資料未覆寫。`);}
     if(!Number.isFinite(finalCost)){poImportReview=true;poGroups=groups;poPdfPageCount=pages.length;poPdfMonth=month;poRenderGroups();throw Error('未可靠辨識本期合計；下方是未儲存預覽，原資料未覆寫。');}
     const orderSum=groups.reduce((s,g)=>s+g.pdfTotal,0);
     if(Math.abs(orderSum-finalCost)>1){poImportReview=true;poGroups=groups;poPdfPageCount=pages.length;poPdfMonth=month;poRenderGroups();throw Error(`辨識 ${groups.length} 張銷貨單，銷貨小計 ${orderSum.toLocaleString()} 與本期合計 ${finalCost.toLocaleString()} 不符。${audits.join('；')}。下方顯示未儲存預覽；原資料沒有覆寫。`);}
     // 僅在所有單號與總額通過後才取代工作資料。
     poImportReview=false;poGroups=groups;poPdfPageCount=pages.length;poPdfMonth=month;window.poLastPdfCost=finalCost;
-    poRenderGroups();poSaveAllWork(false);
+    poRenderGroups();
     $('poStatus').textContent=`已匯入 ${groups.length} 張銷貨單、${groups.reduce((n,g)=>n+g.rows.length,0)} 行明細；本期合計 ${poFmt(finalCost)}。請核對明細後再儲存。`;
   if(sourceFile)poArchivePdf(sourceFile,window.poLastPdfCost).catch(err=>console.warn('PDF 原檔儲存失敗',err));
 }
@@ -2861,6 +2862,7 @@ async function poDownloadExcel(){
     if(typeof ExcelJS==="undefined")throw new Error("Excel 匯出元件尚未載入，請重新整理後再試");
     const projects=poProjects();
     const pageCount=Math.max(1,poPdfPageCount||Math.max(...poGroups.map(g=>g.pdfPage||1)));
+    if(poGroups.some(g=>!g.pdfPage)&&pageCount>1)throw new Error('舊資料沒有記錄每張銷貨單所在頁次，不能將全部明細錯誤匯到第 1 頁。請重新匯入原始三頁 PDF／JPG 後再下載。');
     const bin=atob(PO_TEMPLATE_B64),u8=new Uint8Array(bin.length);
     for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
     const wb=new ExcelJS.Workbook();
@@ -2949,6 +2951,7 @@ async function poDownloadExcel(){
       }
       for(let rr=cursor;rr<=detailEnd;rr++){for(let c=1;c<=9;c++){applyStyle(ws.getCell(rr,c),6);ws.getCell(rr,c).value=null;}try{ws.mergeCells(`B${rr}:C${rr}`)}catch(_e){}}
     }
+    if(wb.worksheets.length!==pageCount)throw new Error('工作頁數量不符，已停止下載');
     const buf=await wb.xlsx.writeBuffer();
     const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`浤富採購單_${pageCount}工作頁.xlsx`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);
@@ -3994,10 +3997,19 @@ function source(tcData){
  // 草屯統計以「已儲存採購明細」為唯一案件母體，與草屯下方的請款區間明細一致。
  // 原先從所有案件主檔計數，且優先採用 p.claimPeriod，會把未儲存明細、不同請款區間案件混進來。
  const projectByKey=new Map((Array.isArray(tc)?tc:[]).filter(p=>p&&p.key).map(p=>[String(p.key),p]));
+ // 代安裝是銷售案件，不需要草屯採購明細。舊版只迴圈 details，導致已有代安裝案件卻顯示 0 元／0 件。
+ // 以雲端／管理員合併後的案件主檔為準；不修改、回寫或重算任何已儲存成本。
+ for(const p of projectByKey.values()){
+  if(String(p.category||'').trim()!=='代安裝')continue;
+  const no=String(p.no||'').trim();if(!no)continue;
+  const period=String(p.claimPeriod||'').trim();
+  result.push({group:'代安裝',no,name:p.caseName||'',sale:amount(p.caseAmount),cost:null,period,detailKey:String(p.key)});
+ }
  for(const [key,d] of Object.entries(details||{})){
   if(!d||typeof d!=='object'||!Array.isArray(d.items))continue;
   const p=projectByKey.get(String(key));
   if(!p)continue; // 不臆測找不到主檔的案件銷售額。
+  if(String(p.category||'').trim()==='代安裝')continue; // 代安裝已依案件主檔獨立統計，避免重複。
   const no=String(p.no||'').trim();
   const period=String(d.claimPeriod||'').trim() || String(p.claimPeriod||'').trim() || (typeof tcResolvedClaimPeriod==='function'?tcResolvedClaimPeriod(d,p):'');
   const cost=d.items.reduce((n,it)=>n+amount(it.qty)*amount(it.price),0);
@@ -4191,7 +4203,7 @@ async function renderArchive(){
     const saved=(g.pdfTotal===null||g.pdfTotal===undefined)?calculated:Number(g.pdfTotal);
     return sum+(Number.isFinite(saved)?saved:calculated);
    },0);
-   return `<tr><td>${poEsc(p)}</td><td>${groups.length} 筆</td><td>${amount.toLocaleString('zh-TW',{maximumFractionDigits:0})}</td><td><button type="button" class="poLoadSavedPeriod" data-period="${poEsc(p)}" style="padding:6px 12px;cursor:pointer">載入／修改</button></td></tr>`;
+   return `<tr><td>${poEsc(p)}</td><td>${groups.length} 筆${groups.length<19&&p==='260926-261025'?'（資料不完整，請核對）':''}</td><td>${amount.toLocaleString('zh-TW',{maximumFractionDigits:0})}</td><td><button type="button" class="poLoadSavedPeriod" data-period="${poEsc(p)}" style="padding:6px 12px;cursor:pointer">載入／修改</button></td></tr>`;
   });
   summary.innerHTML='<h3>浤富已儲存明細｜依請款區間統計</h3><table class="purchaseRecords" style="width:100%"><thead><tr><th>區間日期</th><th>儲存筆數（銷貨單分組）</th><th>總金額（PDF 明細）</th><th>操作</th></tr></thead><tbody>'+(rows.join('')||'<tr><td colspan="4">目前尚無依區間儲存的明細</td></tr>')+'</tbody></table>';
   summary.querySelectorAll('.poLoadSavedPeriod').forEach(btn=>btn.addEventListener('click',()=>{
@@ -4210,7 +4222,7 @@ async function renderArchive(){
  if(picker){const previous=picker.value;picker.innerHTML='<option value="">選擇已儲存區間</option>'+periods.map(x=>`<option value="${x}">${x}</option>`).join('');picker.value=periods.includes(active)?active:(periods.includes(previous)?previous:'');}
  el.replaceChildren();
  if(!files.length){el.textContent='目前尚無已保存的 PDF 原檔';return}
- for(const f of files.filter(f=>!active||f.period===active)){
+ for(const f of files){
   const row=document.createElement('div');row.style='display:flex;gap:12px;align-items:center;border-bottom:1px solid #dbe3ea;padding:9px';
   const a=document.createElement('a');a.href='#';a.textContent=`${f.period}｜${f.name}｜本期合計（浤富成本）：${Number(f.cost||0).toLocaleString("zh-TW")}`;a.onclick=e=>{e.preventDefault();const u=URL.createObjectURL(f.blob);window.open(u,'_blank');setTimeout(()=>URL.revokeObjectURL(u),60000)};
   const del=document.createElement('button');del.textContent='刪除原檔';del.onclick=async()=>{if(!confirm('只刪除這份 PDF 原檔？不影響採購明細。'))return;const d=await db();await store(d,'readwrite',os=>os.delete(f.id));d.close();renderArchive()};
