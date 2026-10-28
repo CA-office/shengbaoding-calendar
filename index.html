@@ -964,7 +964,19 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
 <label>填寫欄／備註<input id="hfSimpleNote" placeholder="例如：已核對 Excel" style="width:100%;padding:9px"></label>
 <label>成本<input id="hfSimpleCost" type="number" min="0" step="1" placeholder="輸入成本總額" style="width:100%;padding:9px"></label>
 </div><div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button type="button" id="hfSimpleSave" class="primary">儲存並同步成本銷售</button><span id="hfSimpleStatus" style="color:#52687c"></span></div>
-<div id="hfSimpleHistory" style="margin-top:15px"></div></section>
+<div id="hfSimpleHistory" style="margin-top:15px"></div>
+<div style="margin-top:25px;border-top:1px solid #d9e2ea;padding-top:16px">
+<h3>浤富｜單號／案名（同步有訂單編號的報價單）</h3>
+<p style="color:#64748b">有填訂單編號的報價單會自動帶入；手動新增案件也可以依請款區間儲存。此表不會自行更改上方已鎖定的成本。</p>
+<div style="display:grid;grid-template-columns:1fr 2fr 1fr 1fr;gap:8px">
+<label>單號<input id="hfCaseNo" placeholder="G5DE..." style="width:100%"></label>
+<label>案名<input id="hfCaseName" placeholder="客戶＋案件備註" style="width:100%"></label>
+<label>案件金額<input id="hfCaseAmount" type="number" min="0" step="1" style="width:100%"></label>
+<label>區間日期<select id="hfCasePeriod" style="width:100%"></select></label>
+</div>
+<div style="margin-top:10px;display:flex;gap:10px;align-items:center"><button type="button" id="hfCaseSave">新增／儲存案件</button><button type="button" id="hfCaseCancel">取消修改</button><span id="hfCaseStatus"></span></div>
+<div style="margin-top:12px;overflow:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th>單號</th><th>案名</th><th>案件金額</th><th>分類</th><th>區間日期</th><th>操作</th></tr></thead><tbody id="hfCaseRows"></tbody></table></div>
+</div></section>
 <section id="costReportView" class="hidden" style="max-width:1250px;margin:22px auto;padding:0 15px;font-family:system-ui,'Noto Sans TC',sans-serif;color:#172b45"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px"><div><h2 style="font-size:25px;margin:0">成本・銷售・件數分析</h2><p style="color:#718096">統計資料來源：本機及雲端已保存的採購案件；不覆蓋任何原始資料</p></div><select id="crMonth" style="display:none;padding:10px;border-radius:8px;border:1px solid #cbd5e1"><option value="all">全部月份</option></select> <select id="crPeriod" style="padding:10px;border-radius:8px;border:1px solid #cbd5e1"><option value="all">全部請款區間</option></select></div><div id="crPdfCostControl" style="margin:16px 0;padding:12px 16px;border:1px solid #dce5ee;border-radius:10px;background:#fff">
 <strong>浤富 PDF 成本（115年09月）</strong>：已核對本期合計 <strong>302,994</strong> 元。
 <button type="button" id="crSaveVerifiedCost" style="margin-left:12px;padding:7px 12px;border:1px solid #b5c6d7;border-radius:7px;background:#f4f8fc;cursor:pointer">儲存至所選請款區間</button>
@@ -4026,12 +4038,56 @@ async function fetchData(){
  return parse(data.find(x=>x.data_key===KEY)?.payload?.value);
 }
 window.sbdHfManualTotals=fetchData;
+
+let editKey=null;
+const safe=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;':'&quot;'}[c]));
+function cases(){return typeof poProjects==='function'?poProjects():[]}
+function renderCases(){
+ const rows=cases(),period=el('hfSimplePeriod')?.value||'';
+ const target=el('hfCaseRows');if(!target)return;
+ target.innerHTML=rows.filter(x=>!x.deleted&&(!period||String(x.period||x.billingPeriod||'')===period)).map(x=>{
+ const key=encodeURIComponent(String(x.key));
+ return `<tr style="border-top:1px solid #dce5ee"><td>${safe(x.no)}</td><td>${safe(x.caseName)}</td><td>${Number(x.caseAmount||0).toLocaleString()}</td><td>${safe(x.category||'一般案件')}</td><td>${safe(x.period||x.billingPeriod||'')}</td><td><button type="button" data-hf-edit="${key}">修改</button></td></tr>`
+ }).join('')||'<tr><td colspan="6">此區間尚無案件</td></tr>';
+ target.querySelectorAll('[data-hf-edit]').forEach(btn=>btn.addEventListener('click',()=>{
+  const item=cases().find(x=>String(x.key)===decodeURIComponent(btn.dataset.hfEdit));if(!item)return;
+  editKey=String(item.key);
+  el('hfCaseNo').value=item.no||'';el('hfCaseName').value=item.caseName||'';
+  el('hfCaseAmount').value=item.caseAmount??'';el('hfCasePeriod').value=item.period||item.billingPeriod||'';
+  el('hfCaseStatus').textContent='修改中：'+(item.no||'');
+  el('hfCaseNo').scrollIntoView({behavior:'smooth',block:'center'});
+ }));
+}
+function refreshCasePeriods(){
+ const target=el('hfCasePeriod');if(!target)return;
+ const old=target.value,opts=[...el('hfSimplePeriod').options].filter(x=>x.value);
+ target.innerHTML=opts.map(x=>`<option value="${safe(x.value)}">${safe(x.textContent)}</option>`).join('');
+ target.value=opts.some(x=>x.value===old)?old:el('hfSimplePeriod').value;
+}
+function clearCase(){
+ editKey=null;for(const id of ['hfCaseNo','hfCaseName','hfCaseAmount'])el(id).value='';
+ el('hfCaseStatus').textContent='';refreshCasePeriods();
+}
+function saveCase(){
+ if(!isAdminAccount())return;
+ const no=el('hfCaseNo').value.trim(),caseName=el('hfCaseName').value.trim(),
+ amount=el('hfCaseAmount').value,period=el('hfCasePeriod').value;
+ if(!no||!caseName||amount===''||!Number.isFinite(Number(amount))||!period){alert('請填寫單號、案名、案件金額、區間日期');return}
+ const rows=cases(),i=rows.findIndex(x=>String(x.key)===editKey);
+ if(rows.some((x,j)=>j!==i&&!x.deleted&&String(x.no||'').trim()===no)){alert('這個單號已存在，請修改原案件，避免重複。');return}
+ const old=i>=0?rows[i]:{};
+ const rec={...old,key:i>=0?old.key:'hf-manual:'+Date.now(),no,caseName,caseAmount:Number(amount),period,billingPeriod:period,category:old.category||'一般案件',quoteSyncLocked:true,updatedAt:new Date().toISOString()};
+ if(i>=0)rows[i]=rec;else rows.unshift(rec);
+ try{poSaveProjects(rows);clearCase();renderCases();el('hfCaseStatus').textContent='已儲存案件；不更動已鎖定成本。'}catch(e){alert('儲存失敗：'+e.message)}
+}
+
 let saved={};
 function show(){
  const select=el('hfSimplePeriod');if(!select)return;
  const periods=[...new Set(['260826-260925','260926-261025',...Object.keys(saved)])].sort();
  const old=select.value;select.innerHTML='<option value="">選擇區間</option>'+periods.map(p=>`<option value="${p}">${p}</option>`).join('');
  if(periods.includes(old))select.value=old;
+ refreshCasePeriods();renderCases();
  const current=saved[select.value];
  el('hfSimpleSales').value=current?.sales??'';
  el('hfSimpleCost').value=current?.cost??'';
@@ -4064,8 +4120,10 @@ async function save(){
 function bind(){
  const b=el('hfSimpleTabBtn');if(!b)return;
  b.classList.toggle('hidden',!isAdminAccount());
- b.addEventListener('click',()=>{document.querySelectorAll('#appPage main > section,#calendarView').forEach(x=>x.classList.add('hidden'));el('hfSimpleView').classList.remove('hidden');el('calendarControls')?.classList.add('hidden');document.querySelectorAll('.featureTabs button').forEach(x=>x.classList.remove('active'));b.classList.add('active');refresh()});
+ b.addEventListener('click',()=>{document.querySelectorAll('#appPage main > section,#calendarView').forEach(x=>x.classList.add('hidden'));el('hfSimpleView').classList.remove('hidden');el('calendarControls')?.classList.add('hidden');document.querySelectorAll('.featureTabs button').forEach(x=>x.classList.remove('active'));b.classList.add('active');try{poSyncQuotesWithOrderNo()}catch(e){console.warn(e)}refresh()});
  el('hfSimplePeriod').addEventListener('change',show);el('hfSimpleSave').addEventListener('click',save);
+ el('hfCaseSave').addEventListener('click',saveCase);el('hfCaseCancel').addEventListener('click',clearCase);
+ window.addEventListener('sbd-quotes-loaded',()=>setTimeout(renderCases,100));
  document.querySelectorAll('.featureTabs button').forEach(x=>{if(x!==b)x.addEventListener('click',()=>el('hfSimpleView').classList.add('hidden'))});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();
