@@ -723,8 +723,8 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
         <span id="poJpgSelection" style="font-size:12px;color:#46607a">尚未選取 JPG</span>
       </span>
       <button type="button" id="poClearBtn">清空 PDF 明細</button>
-      <button type="button" id="poSaveAllBtn" class="primary">儲存全部配對／明細</button><button type="button" id="poCommitReviewedBtn" class="primary" style="background:#26754d">人工核對完成→正式更新該區間</button>
-      <button type="button" id="poExcelBtn">套用模板下載 Excel</button><button type="button" id="poCostBtn" class="primary">產出成本</button>
+      <button type="button" id="poSaveAllBtn" class="primary">儲存全部配對／明細</button><button type="button" id="poPaperTotalsBtn" class="primary" style="background:#6652a4">依三頁紙本核對19張小計</button><button type="button" id="poCommitReviewedBtn" class="primary" style="background:#26754d">儲存目前明細至區間（待核對可存）</button>
+      <button type="button" id="poExcelBtn">套用模板下載 Excel</button><button type="button" id="poCostBtn" class="primary">下載 PDF 成本表（非儲存）</button>
       <label style="display:inline-flex;align-items:center;gap:6px;margin-left:8px">請款區間
         <input id="poPdfPeriod" list="poPdfPeriods" placeholder="260826-260925" style="width:165px">
       </label><datalist id="poPdfPeriods"></datalist>
@@ -2443,12 +2443,21 @@ let poPdfMonth="";
 let poProjectEditKey=null;
 const PO_WORK_KEY="sbd_purchase_pdf_work_v1";
 const PO_REVIEW_DRAFT_KEY="sbd_hongfu_manual_review_drafts_v2";
+// 只修正浤富 OCR 常見的錯字，不動金額、單號、案名及其他模組。
+function poFixStoneName(value){
+  return String(value??'').replace(/石\s*石\s*英/g,'石英石');
+}
+function poFixStoneGroups(groups){
+  if(!Array.isArray(groups))return groups;
+  groups.forEach(g=>(g.rows||[]).forEach(r=>{if(typeof r.name==='string')r.name=poFixStoneName(r.name);}));
+  return groups;
+}
 function poDraftPeriod(){return ($("poPdfPeriod")?.value||"未指定區間").trim()||"未指定區間";}
 function poSaveReviewDraft(showMsg=false){
   try{
     const all=JSON.parse(localStorage.getItem(PO_REVIEW_DRAFT_KEY)||"{}");
     const period=poDraftPeriod();
-    all[period]={groups:JSON.parse(JSON.stringify(poGroups)),pdfPageCount:poPdfPageCount,pdfMonth:poPdfMonth,savedAt:new Date().toISOString(),review:true};
+    all[period]={groups:JSON.parse(JSON.stringify(poFixStoneGroups(poGroups))),pdfPageCount:poPdfPageCount,pdfMonth:poPdfMonth,savedAt:new Date().toISOString(),review:true};
     localStorage.setItem(PO_REVIEW_DRAFT_KEY,JSON.stringify(all));
     window.poRefreshPeriodOptions?.();
     if(showMsg)alert(`已儲存 ${period} 的人工配對／明細草稿（${poGroups.length} 張銷貨單）。不會覆寫已結算成本。請勿清除瀏覽器網站資料。`);
@@ -2459,7 +2468,7 @@ function poLoadReviewDraft(){
   try{
     const all=JSON.parse(localStorage.getItem(PO_REVIEW_DRAFT_KEY)||"{}");
     const d=all[poDraftPeriod()];if(!d||!Array.isArray(d.groups))return false;
-    poGroups=d.groups;poPdfPageCount=d.pdfPageCount||0;poPdfMonth=d.pdfMonth||"";poImportReview=true;
+    poGroups=poFixStoneGroups(d.groups);poPdfPageCount=d.pdfPageCount||0;poPdfMonth=d.pdfMonth||"";poImportReview=true;
     poRenderGroups();$("poStatus").textContent=`已還原人工配對／明細草稿：${poGroups.length} 張銷貨單（尚未正式入帳）。`;
     return true;
   }catch(e){console.error(e);return false;}
@@ -2467,43 +2476,38 @@ function poLoadReviewDraft(){
 
 
 // 人工核對完成後才將草稿正式入檔。先備份舊區間，避免 7 筆殘留或覆蓋 8-9 月。
+// 儲存已人工配對的區間資料；未核對完整時標示待核對，禁止流入成本報表。
 function poCommitReviewedPeriod(){
   const period=poDraftPeriod();
-  if(!/^\d{6}-\d{6}$/.test(period)){alert("請先填入正確請款區間");return;}
-  if(!poGroups.length){alert("目前沒有可儲存的銷貨單");return;}
-  const missing=poGroups.filter(g=>!g.salesNo||!Array.isArray(g.rows)||!g.rows.length||!Number.isFinite(Number(g.pdfTotal))||Number(g.pdfTotal)<=0);
-  if(missing.length){alert("以下銷貨單尚未完成明細或小計："+missing.map(g=>g.salesNo||"未指定").join("、")+"\n已保留草稿，請補齊後再正式儲存。");poSaveReviewDraft(false);return;}
-  const duplicates=poGroups.map(g=>String(g.salesNo)).filter((n,i,a)=>a.indexOf(n)!==i);
-  if(duplicates.length){alert("有重複銷貨單號，請先核對："+[...new Set(duplicates)].join("、"));return;}
-  const total=poGroups.reduce((sum,g)=>sum+Number(g.pdfTotal),0);
-  if(period==="260926-261025"&&(poGroups.length!==19||Math.abs(total-225066)>1)){
-    alert(`10 月資料尚未核對完成：目前 ${poGroups.length} 張、${total.toLocaleString()} 元；紙本應為 19 張、225,066 元。\n人工配對草稿已保留，不會覆寫原本 7 筆。`);
-    poSaveReviewDraft(false);return;
-  }
-  if(!confirm(`確定正式儲存 ${period} 的 ${poGroups.length} 張銷貨單、${total.toLocaleString()} 元？\n原區間資料會先備份；其他月份及成本鎖定資料不變。`))return;
+  if(!/^\d{6}-\d{6}$/.test(period)){alert('請先填入請款區間，例如 260926-261025');return;}
+  if(!poGroups.length){alert('目前沒有可儲存的銷貨單');return;}
+  const missing=poGroups.filter(g=>!g.salesNo||!Array.isArray(g.rows)||!g.rows.length||!(Number(g.pdfTotal)>0));
+  const total=poGroups.reduce((n,g)=>n+(Number(g.pdfTotal)||0),0);
+  const complete=missing.length===0 && (period!=='260926-261025'||(poGroups.length===19&&Math.abs(total-225066)<=1));
+  const message=complete
+    ? `確定儲存 ${period}：${poGroups.length} 張，${total.toLocaleString()} 元？\n只更新這個區間的本機明細，不改動成本報表。`
+    : `目前 ${poGroups.length} 張，其中 ${missing.length} 張缺少明細／小計。\n可以先儲存到區間明細，並標示「待核對」，不會計入成本報表。\n確定保存目前人工配對嗎？`;
+  if(!confirm(message))return;
   try{
-    const key="sbd_hongfu_period_work_v1";
-    const archive=JSON.parse(localStorage.getItem(key)||"{}");
+    const key='sbd_hongfu_period_work_v1';
+    const archive=JSON.parse(localStorage.getItem(key)||'{}');
     const old=archive[period];
-    if(old){
-      const backupKey="sbd_hongfu_period_backup_v1";
-      const backups=JSON.parse(localStorage.getItem(backupKey)||"{}");
-      (backups[period] ||= []).push({snapshot:old,backedUpAt:new Date().toISOString()});
-      localStorage.setItem(backupKey,JSON.stringify(backups));
-    }
-    const snapshot={groups:JSON.parse(JSON.stringify(poGroups)),pdfPageCount:poPdfPageCount,pdfMonth:poPdfMonth,savedAt:new Date().toISOString(),manuallyReviewed:true};
+    const backupKey='sbd_hongfu_period_backup_v1';
+    const backups=JSON.parse(localStorage.getItem(backupKey)||'{}');
+    if(old){(backups[period] ||= []).push({snapshot:old,backedUpAt:new Date().toISOString(),reason:'區間儲存前備份'});localStorage.setItem(backupKey,JSON.stringify(backups));}
+    const snapshot={groups:JSON.parse(JSON.stringify(poFixStoneGroups(poGroups))),pdfPageCount:poPdfPageCount,pdfMonth:poPdfMonth,savedAt:new Date().toISOString(),manuallyReviewed:true,pendingReview:!complete,missingSalesNos:missing.map(g=>g.salesNo)};
     archive[period]=snapshot;
     localStorage.setItem(key,JSON.stringify(archive));
-    localStorage.setItem("sbd_purchase_pdf_work_v1",JSON.stringify(snapshot));
-    localStorage.setItem("sbd_hongfu_last_period",period);
+    localStorage.setItem('sbd_hongfu_last_period',period);
+    // 本機工作檔與區間存檔分開；不改動雲端、原始 PDF、成本及其他區間。
     poSaveReviewDraft(false);
-    poImportReview=false;
-    window.poRefreshPeriodOptions?.();
-    const st=document.getElementById("poStatus");
-    if(st)st.textContent=`已儲存到本機 ${period}：${poGroups.length} 張銷貨單、${total.toLocaleString()} 元；舊版已備份，尚未同步雲端。`;
-    alert("本機儲存成功，舊版區間資料已備份。注意：此處尚未寫入雲端，請勿清除瀏覽器網站資料。");
-  }catch(e){console.error(e);alert("正式儲存失敗："+(e?.message||e));}
+    awaitArchiveRefresh();
+    const st=document.getElementById('poStatus');
+    if(st)st.textContent=`${period} 已儲存 ${poGroups.length} 張到本機區間明細${complete?'':'（待核對，不入帳）'}。`;
+    alert(`${period} 已儲存 ${poGroups.length} 張到下方「本機已儲存明細」。${complete?'':'\n仍有未核對明細，尚未正式入帳。'}\n其他區間與成本不變。`);
+  }catch(e){console.error(e);alert('區間儲存失敗：'+(e?.message||e));}
 }
+function awaitArchiveRefresh(){window.poRefreshPeriodOptions?.();}
 function poSaveAllWork(showMsg=true){
   if(poImportReview){return poSaveReviewDraft(showMsg);}
   try{
@@ -2530,7 +2534,7 @@ function poLoadAllWork(){
   try{
     const raw=localStorage.getItem(PO_WORK_KEY);if(!raw)return false;
     const d=JSON.parse(raw);if(!d||!Array.isArray(d.groups))return false;
-    window.poLastPdfCost=null;poGroups=d.groups;poPdfPageCount=Number(d.pdfPageCount||0);poPdfMonth=String(d.pdfMonth||"");
+    window.poLastPdfCost=null;poGroups=poFixStoneGroups(d.groups);poPdfPageCount=Number(d.pdfPageCount||0);poPdfMonth=String(d.pdfMonth||"");
     poRenderGroups();
     const rows=poGroups.reduce((a,g)=>a+(g.rows?.length||0),0);
     $("poStatus").textContent=`已載入上次完整存檔：${poGroups.length} 個銷貨單分組、${rows} 筆貨品；單號／案名配對已自動帶回。`;
@@ -2628,6 +2632,7 @@ b.innerHTML=a.map(r=>`<tr><td><button data-a="edit" data-k="${r.key}">修改</bu
   });
 }
 function poRenderGroups(){
+  poFixStoneGroups(poGroups);
   const host=$("poGroups");if(!host)return;
   let review=$("poReviewWarning");if(!review){review=document.createElement('div');review.id='poReviewWarning';host.parentNode.insertBefore(review,host);}
   review.textContent=poImportReview?'⚠ 目前是人工核對草稿；可以按「儲存全部配對／明細」保存你的修改，但不會正式入帳或覆寫已結算成本。':'';
@@ -2646,7 +2651,7 @@ function poRenderGroups(){
     const calculated=discountRow?Math.round(Number(discountRow.qty)*(1+Number(discountRow.price))):g.rows.reduce((n,r)=>n+(+r.qty||0)*(+r.price||0),0);
     const correctedTotals={};
     const total=Object.prototype.hasOwnProperty.call(correctedTotals,String(g.salesNo))?correctedTotals[String(g.salesNo)]:(Number.isFinite(Number(g.pdfTotal))&&g.pdfTotal!==null&&g.pdfTotal!==undefined?Number(g.pdfTotal):calculated);
-    const rows=g.rows.map((r,ri)=>`<tr><td>${ri+1}</td><td><input class="poName" value="${poEsc(r.name)}"></td><td><input class="poQty" inputmode="decimal" value="${r.qty}"></td><td><input class="poUnit" value="${poEsc(r.unit)}"></td><td><input class="poPrice" inputmode="decimal" value="${r.price}"></td><td class="poSum">${poFmt((+r.qty||0)*(+r.price||0))}</td><td><button type="button" class="poDel">刪</button></td></tr>`).join("");
+    const rows=g.rows.map((r,ri)=>`<tr><td>${ri+1}</td><td><input class="poName" value="${poEsc(poFixStoneName(r.name))}"></td><td><input class="poQty" inputmode="decimal" value="${r.qty}"></td><td><input class="poUnit" value="${poEsc(r.unit)}"></td><td><input class="poPrice" inputmode="decimal" value="${r.price}"></td><td class="poSum">${poFmt((+r.qty||0)*(+r.price||0))}</td><td><button type="button" class="poDel">刪</button></td></tr>`).join("");
     return `<div class="poGroup" data-gi="${gi}"><div class="poGroupHead"><div><div style="font-size:12px">浤富銷貨單號</div><strong>${poEsc(g.salesNo||("第 "+(gi+1)+" 組"))}</strong></div><div><div style="font-size:12px">總計</div><input class="poPaperTotal" type="number" min="0" step="1" value="${Number.isFinite(total)?total:''}" title="紙本銷貨單小計" style="width:145px;padding:6px;border:1px solid #bdc8d2;border-radius:6px"></div><label>單號／案名<select class="poProjectSel">${options}</select></label></div><div class="purchaseTableWrap"><table class="purchaseTable"><thead><tr><th>序號</th><th>型號品名</th><th>訂購量</th><th>單位</th><th>單價</th><th>合計</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
   }).join("");
   const total=Number.isFinite(Number(window.poLastPdfCost))&&window.poLastPdfCost!==null&&window.poLastPdfCost!==undefined?Number(window.poLastPdfCost):null;
@@ -2658,7 +2663,7 @@ function poRenderGroups(){
     box.querySelector(".poPaperTotal")?.addEventListener("change",e=>{const v=Number(e.target.value);if(Number.isFinite(v)&&v>=0){poGroups[gi].pdfTotal=v;poSaveAllWork(false);poRenderGroups();}});
     box.querySelector(".poProjectSel").onchange=e=>{poGroups[gi].projectKey=e.target.value;poSaveAllWork(false)};
     box.querySelectorAll("tbody tr").forEach((tr,ri)=>{
-      const sync=()=>{const r=poGroups[gi].rows[ri];r.name=tr.querySelector(".poName").value;r.qty=Number(tr.querySelector(".poQty").value||0);r.unit=tr.querySelector(".poUnit").value;r.price=Number(tr.querySelector(".poPrice").value||0);poSaveAllWork(false);poRenderGroups()};
+      const sync=()=>{const r=poGroups[gi].rows[ri];r.name=poFixStoneName(tr.querySelector(".poName").value);r.qty=Number(tr.querySelector(".poQty").value||0);r.unit=tr.querySelector(".poUnit").value;r.price=Number(tr.querySelector(".poPrice").value||0);poSaveAllWork(false);poRenderGroups()};
       tr.querySelectorAll("input").forEach(x=>x.addEventListener("change",sync));
       tr.querySelector(".poDel").onclick=()=>{poGroups[gi].rows.splice(ri,1);poSaveAllWork(false);poRenderGroups()};
     });
@@ -2849,13 +2854,13 @@ async function poImportParsedPages(pages,sourceFile){
       !g.rows.some(r=>/現金扣/.test(String(r.name||'')))&&
       Math.abs(g.rows.reduce((n,r)=>n+Number(r.qty||0)*Number(r.price||0),0)-g.pdfTotal)>1);
     const invalid=groups.filter(g=>!g.rows.length||!Number.isFinite(g.pdfTotal)||g.pdfTotal<=0);
-    if(invalid.length){poImportReview=true;poGroups=groups;poPdfPageCount=pages.length;poPdfMonth=month;poSaveReviewDraft(false);poRenderGroups();throw Error(`找到 ${groups.length} 張銷貨單，但 ${invalid.length} 張缺少明細或小計（${invalid.map(x=>x.salesNo).join('、')}）。${audits.join('；')}。下方顯示未儲存辨識預覽；原資料沒有覆寫。`);}
-    if(mismatched.length){poImportReview=true;poGroups=groups;poPdfPageCount=pages.length;poPdfMonth=month;poSaveReviewDraft(false);poRenderGroups();throw Error(`有 ${mismatched.length} 張銷貨單的紙本小計與明細計算不符（${mismatched.map(g=>g.salesNo).join('、')}），可能發生跨單錯配。下方僅為未儲存預覽，請逐筆核對，原資料未覆寫。`);}
-    if(!Number.isFinite(finalCost)){poImportReview=true;poGroups=groups;poPdfPageCount=pages.length;poPdfMonth=month;poSaveReviewDraft(false);poRenderGroups();throw Error('未可靠辨識本期合計；下方是未儲存預覽，原資料未覆寫。');}
+    if(invalid.length){poImportReview=true;poGroups=poFixStoneGroups(groups);poPdfPageCount=pages.length;poPdfMonth=month;poSaveReviewDraft(false);poRenderGroups();throw Error(`找到 ${groups.length} 張銷貨單，但 ${invalid.length} 張缺少明細或小計（${invalid.map(x=>x.salesNo).join('、')}）。${audits.join('；')}。下方顯示未儲存辨識預覽；原資料沒有覆寫。`);}
+    if(mismatched.length){poImportReview=true;poGroups=poFixStoneGroups(groups);poPdfPageCount=pages.length;poPdfMonth=month;poSaveReviewDraft(false);poRenderGroups();throw Error(`有 ${mismatched.length} 張銷貨單的紙本小計與明細計算不符（${mismatched.map(g=>g.salesNo).join('、')}），可能發生跨單錯配。下方僅為未儲存預覽，請逐筆核對，原資料未覆寫。`);}
+    if(!Number.isFinite(finalCost)){poImportReview=true;poGroups=poFixStoneGroups(groups);poPdfPageCount=pages.length;poPdfMonth=month;poSaveReviewDraft(false);poRenderGroups();throw Error('未可靠辨識本期合計；下方是未儲存預覽，原資料未覆寫。');}
     const orderSum=groups.reduce((s,g)=>s+g.pdfTotal,0);
-    if(Math.abs(orderSum-finalCost)>1){poImportReview=true;poGroups=groups;poPdfPageCount=pages.length;poPdfMonth=month;poSaveReviewDraft(false);poRenderGroups();throw Error(`辨識 ${groups.length} 張銷貨單，銷貨小計 ${orderSum.toLocaleString()} 與本期合計 ${finalCost.toLocaleString()} 不符。${audits.join('；')}。下方顯示未儲存預覽；原資料沒有覆寫。`);}
+    if(Math.abs(orderSum-finalCost)>1){poImportReview=true;poGroups=poFixStoneGroups(groups);poPdfPageCount=pages.length;poPdfMonth=month;poSaveReviewDraft(false);poRenderGroups();throw Error(`辨識 ${groups.length} 張銷貨單，銷貨小計 ${orderSum.toLocaleString()} 與本期合計 ${finalCost.toLocaleString()} 不符。${audits.join('；')}。下方顯示未儲存預覽；原資料沒有覆寫。`);}
     // 僅在所有單號與總額通過後才取代工作資料。
-    poImportReview=false;poGroups=groups;poPdfPageCount=pages.length;poPdfMonth=month;window.poLastPdfCost=finalCost;
+    poImportReview=false;poGroups=poFixStoneGroups(groups);poPdfPageCount=pages.length;poPdfMonth=month;window.poLastPdfCost=finalCost;
     poRenderGroups();
     $('poStatus').textContent=`已匯入 ${groups.length} 張銷貨單、${groups.reduce((n,g)=>n+g.rows.length,0)} 行明細；本期合計 ${poFmt(finalCost)}。請核對明細後再儲存。`;
   if(sourceFile)poArchivePdf(sourceFile,window.poLastPdfCost).catch(err=>console.warn('PDF 原檔儲存失敗',err));
@@ -3037,6 +3042,54 @@ $("poPeriodFilter")?.addEventListener("change",poRenderProjects);
 $("poProjectSaveBtn")?.addEventListener("click",poProjectSave);
 $("poSaveAllBtn")?.addEventListener("click",()=>poSaveAllWork(true));
 $("poCommitReviewedBtn")?.addEventListener("click",poCommitReviewedPeriod);
+
+// 依使用者提供的「勝鈔11510」三張原始對帳單逐張核對小計。
+// 只更正銷貨單的 pdfTotal；不變更人工配對、品名、數量、單價、已結算成本或其他請款區間。
+function poApplyPaperTotals202610(){
+  const period=($("poPdfPeriod")?.value||"").trim();
+  if(period!=="260926-261025"){alert("此紙本核對僅適用 260926-261025，其他月份不修改。");return;}
+  const totals={
+    "1155176":7055,"1155250":18650,"1155260":7987,"1155261":6333,
+    "1155290":6020,"1155292":3105,"1155250修":9302,
+    "1155291":5490,"1155276":8972,"1155381":6230,"1155285":8849,
+    "1155382":15204,"1155392":6984,"1155324":13195,
+    "1155401":1872,"1155427":4000,"1155402":10196,"1155357":62961,"1155403":22661
+  };
+  if(poGroups.length!==19){alert("目前分組 "+poGroups.length+" 張，不是紙本19張；未修改任何金額。");return;}
+  const normalize=n=>String(n||"").replace(/[\s　]/g,"").replace(/^銷貨/,"");
+  const seen=new Set(),unknown=[];
+  for(const g of poGroups){
+    const no=normalize(g.salesNo);
+    if(!(no in totals)||seen.has(no))unknown.push(no||"空白單號");
+    seen.add(no);
+  }
+  for(const no of Object.keys(totals))if(!seen.has(no))unknown.push("缺少 "+no);
+  if(unknown.length){
+    alert("目前銷貨單號與三頁紙本不一致，為保護人工配對，未自動修改：\n"+unknown.join("、")+
+      "\n注意紙本第1頁是「1155250修」，與「1155250」為不同銷貨單。");
+    return;
+  }
+  const sum=Object.values(totals).reduce((a,b)=>a+b,0);
+  if(sum!==225066){alert("紙本小計核對失敗，已取消修改。");return;}
+  if(!confirm("已依三張原始紙本核對19張銷貨單的小計，合計225,066元。\n將只修正目前畫面19張的小計，保留全部人工配對及明細；不更動已儲存成本。\n確定套用並備份草稿嗎？"))return;
+  const before=poGroups.map(g=>({salesNo:g.salesNo,pdfTotal:g.pdfTotal}));
+  try{
+    const backupKey="sbd_hongfu_paper_totals_backup_v1";
+    const all=JSON.parse(localStorage.getItem(backupKey)||"{}");
+    (all[period] ||= []).push({savedAt:new Date().toISOString(),totals:before});
+    localStorage.setItem(backupKey,JSON.stringify(all));
+    for(const g of poGroups)g.pdfTotal=totals[normalize(g.salesNo)];
+    poImportReview=true;
+    if(!poSaveReviewDraft(false))throw Error("草稿寫入失敗");
+    poRenderGroups();
+    alert("已核對19張紙本小計：225,066元。原人工配對及明細保留。\n仍有缺少的貨品明細時，會繼續標示待核對；請按「儲存目前明細至區間」保存。");
+  }catch(e){
+    for(const g of poGroups){const old=before.find(x=>x.salesNo===g.salesNo);if(old)g.pdfTotal=old.pdfTotal;}
+    alert("保存失敗，已還原修改前小計："+(e.message||e));
+  }
+}
+$("poPaperTotalsBtn")?.addEventListener("click",poApplyPaperTotals202610);
+
 (function(){const b=$("poSaveAllBtn");if(!b)return;
  const restore=document.createElement("button");restore.type="button";restore.textContent="還原人工配對草稿";restore.style.cssText="margin-left:6px;padding:8px;border:1px solid #8ba3b8;border-radius:6px;background:#fff;color:#19324d";
  restore.onclick=()=>{if(poGroups.length&&!confirm("要載入此區間先前儲存的人工草稿嗎？目前未儲存的畫面修改將被取代。"))return;if(!poLoadReviewDraft())alert("此請款區間沒有人工草稿；已儲存正式明細未被更動。");};b.insertAdjacentElement("afterend",restore);
@@ -4219,7 +4272,7 @@ async function exportCost(source){
    rows=files.filter(f=>!period||f.period===period).map(f=>({no:f.name,name:f.period,cost:Number(f.cost),items:1}));
    if(rows.some(r=>!Number.isFinite(r.cost)))return alert('有 PDF 未辨識到最後一頁「本期合計」，請重新匯入');
  }
- if(!rows.length)return alert('此區間沒有已保存的成本資料。浤富請先匯入 PDF 並確認最後一頁本期合計。');
+ if(!rows.length)return alert(source==='po'?'目前沒有這個區間的 PDF 成本原檔，無法下載 PDF 成本表。\n你已選好的 19 張人工配對／明細不受影響。\n若要保存人工配對，請按「儲存全部配對／明細」；若要列入下方區間明細，請按綠色「儲存目前19張至區間明細」按鈕。':'此區間沒有已保存的成本資料。');
  const wb=new ExcelJS.Workbook(),ws=wb.addWorksheet(source==='tc'?'草屯成本':'浤富成本');
  ws.addRow([source==='tc'?'草屯｜成本報表':'浤富｜成本報表']);
  ws.addRow(['請款區間',period||'全部']);
@@ -4272,9 +4325,9 @@ async function renderArchive(){
     const saved=(g.pdfTotal===null||g.pdfTotal===undefined)?calculated:Number(g.pdfTotal);
     return sum+(Number.isFinite(saved)?saved:calculated);
    },0);
-   return `<tr><td>${poEsc(p)}</td><td>${groups.length} 筆${groups.length<19&&p==='260926-261025'?'（資料不完整，請核對）':''}</td><td>${amount.toLocaleString('zh-TW',{maximumFractionDigits:0})}</td><td><button type="button" class="poLoadSavedPeriod" data-period="${poEsc(p)}" style="padding:6px 12px;cursor:pointer">載入／修改</button> <button type="button" class="poDeleteSavedPeriod" data-period="${poEsc(p)}" style="padding:6px 12px;cursor:pointer;color:#b42318;border:1px solid #e4a5a0;border-radius:6px;background:white">刪除</button></td></tr>`;
+   return `<tr><td>${poEsc(p)}</td><td>${groups.length} 筆${d.pendingReview?'（待核對，未入帳）':(groups.length<19&&p==='260926-261025'?'（資料不完整，請核對）':'')}</td><td>${amount.toLocaleString('zh-TW',{maximumFractionDigits:0})}</td><td><button type="button" class="poLoadSavedPeriod" data-period="${poEsc(p)}" style="padding:6px 12px;cursor:pointer">載入／修改</button> <button type="button" class="poDeleteSavedPeriod" data-period="${poEsc(p)}" style="padding:6px 12px;cursor:pointer;color:#b42318;border:1px solid #e4a5a0;border-radius:6px;background:white">刪除</button></td></tr>`;
   });
-  const draftRows=draftEntries.map(([p,d])=>{
+  const draftRows=draftEntries.filter(([p])=>!archive[p]).map(([p,d])=>{
     const groups=d.groups||[];
     const incomplete=groups.filter(g=>!Array.isArray(g.rows)||!g.rows.length||!(Number(g.pdfTotal)>0));
     const sum=groups.reduce((n,g)=>n+(Number(g.pdfTotal)||0),0);
@@ -4291,7 +4344,7 @@ async function renderArchive(){
       if(!poSaveReviewDraft(false)){alert('目前草稿備份失敗，已取消切換');return;}
     }
     $('poPdfPeriod').value=period;
-    poGroups=JSON.parse(JSON.stringify(d.groups));
+    poGroups=poFixStoneGroups(JSON.parse(JSON.stringify(d.groups)));
     poPdfPageCount=d.pdfPageCount||0;poPdfMonth=d.pdfMonth||'';poImportReview=true;
     poRenderGroups();
     $('poStatus').textContent=`已還原 ${period} 人工草稿 ${poGroups.length} 張；不影響正式帳務。`;
@@ -4306,8 +4359,6 @@ async function renderArchive(){
     const old=saved[p];
     if(!old){alert('這個區間目前沒有可刪除的本機存檔。');return;}
     if(!confirm(`確定刪除 ${p} 的本機已儲存明細（${(old.groups||[]).length} 張）？\n只刪除這個區間，不會刪除其他月份、PDF 原檔或人工配對草稿。刪除前會先備份。`))return;
-    const typed=prompt(`為避免誤刪，請輸入要刪除的區間：${p}`,'');
-    if(typed!==p){alert('區間輸入不一致，已取消刪除。');return;}
     try{
       const backupKey='sbd_hongfu_period_backup_v1';
       const backups=read(backupKey,{});
@@ -4360,7 +4411,7 @@ function switchPeriod(period){
  localStorage.setItem('sbd_hongfu_last_period',period);
  const archive=read('sbd_hongfu_period_work_v1',{});
  if(archive[period]&&Array.isArray(archive[period].groups)){
-   poGroups=archive[period].groups;poPdfPageCount=archive[period].pdfPageCount||0;poPdfMonth=archive[period].pdfMonth||'';
+   poGroups=poFixStoneGroups(archive[period].groups);poPdfPageCount=archive[period].pdfPageCount||0;poPdfMonth=archive[period].pdfMonth||'';
    poRenderGroups();
    $('poStatus').textContent=`已切換至 ${period}：${poGroups.length} 個銷貨單分組、${poGroups.reduce((n,g)=>n+(g.rows||[]).length,0)} 筆明細`;
  }else{$('poStatus').textContent=`請款區間 ${period}：尚未保存明細，匯入 PDF 後可保存。`;poGroups=[];poRenderGroups();}
