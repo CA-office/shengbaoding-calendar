@@ -3534,6 +3534,7 @@ async function tcLoadCloudForDropdown(){
 }
 let tcCloudWriteQueue=Promise.resolve();
 function tcSaveProjects(a){
+ window.tcLastSaveError=null;
  localStorage.setItem(TC_PROJECT_KEY,JSON.stringify(a));
  if(typeof isAdminAccount==='function'&&!isAdminAccount())return;
  // All project changes, including quotation sync, are persisted to Supabase in order.
@@ -3552,13 +3553,25 @@ function tcSaveProjects(a){
  }).catch(e=>{
   const el=document.getElementById('tcCloudProjectsStatus');
   if(el)el.textContent='草屯案件雲端儲存失敗：'+(e.message||e);
+  window.tcLastSaveError=e.message||String(e);
   console.error('草屯案件雲端儲存失敗',e);
  });
 }
 
 function tcProjectClear(){tcProjectEditKey=null;$t('tcNoPrefix').dataset.rawNumber='0';$t('tcNoPrefix').value='G5DE';$t('tcProjectNo').value='';$t('tcProjectCase').value='';$t('tcProjectAmount').value='';}
 function tcFullNo(){const x=$t('tcProjectNo')?.value.trim()||'';return x?(/^(?:G5DD|G5DE)/.test(x)?x:(/^\d+$/.test(x)&&$t('tcNoPrefix')?.dataset.rawNumber==='1'?x:(($t('tcNoPrefix')?.value||'')+x))):''}
-function tcProjectSave(){const oldRec=tcProjectEditKey?tcProjects().find(r=>String(r.key)===String(tcProjectEditKey)):null;const proposed=tcFullNo();const oldNo=String(oldRec?.no||"");const no=(oldRec && /^(G5DD|G5DE)/.test(oldNo) && /^\d+$/.test(String($t("tcProjectNo").value||"").trim()) && !/^(G5DD|G5DE)/.test(proposed))?oldNo.match(/^(G5DD|G5DE)/)[1]+String($t("tcProjectNo").value).trim():proposed,caseName=$t('tcProjectCase').value.trim(),caseAmount=$t('tcProjectAmount').value.trim();if(!no&&!caseName)return alert('請輸入單號或案名');const a=tcProjects(),key=tcProjectEditKey||Date.now().toString();const i=a.findIndex(x=>String(x.key)===String(key));const duplicate=a.findIndex((x,j)=>j!==i&&String(x.no||'').trim()===no&&!!no);if(duplicate>=0){alert('此單號已存在，請直接修改原案件，避免產生兩筆。');return;}const rec={...(i>=0?a[i]:{}),key,no,caseName,caseAmount,quoteSyncLocked:true,tcManuallyEdited:true,updatedAt:new Date().toISOString(),...(i>=0?{}:{sortAddedAt:Date.now()})};if(i>=0){a[i]=rec;}else a.unshift(rec);tcSaveProjects([...a,...tcLocalProjects().filter(x=>x.deleted===true&&String(x.no||"")!==no)]);tcProjectEditKey=null;tcRenderProjects();tcProjectClear();}
+async function tcProjectSave(){const oldRec=tcProjectEditKey?tcProjects().find(r=>String(r.key)===String(tcProjectEditKey)):null;const proposed=tcFullNo();const oldNo=String(oldRec?.no||"");const no=(oldRec && /^(G5DD|G5DE)/.test(oldNo) && /^\d+$/.test(String($t("tcProjectNo").value||"").trim()) && !/^(G5DD|G5DE)/.test(proposed))?oldNo.match(/^(G5DD|G5DE)/)[1]+String($t("tcProjectNo").value).trim():proposed,caseName=$t('tcProjectCase').value.trim(),caseAmount=$t('tcProjectAmount').value.trim();if(!no&&!caseName)return alert('請輸入單號或案名');const a=tcProjects(),key=tcProjectEditKey||Date.now().toString();const i=a.findIndex(x=>String(x.key)===String(key));const duplicate=a.findIndex((x,j)=>j!==i&&String(x.no||'').trim()===no&&!!no);if(duplicate>=0){alert('此單號已存在，請直接修改原案件，避免產生兩筆。');return;}const rec={...(i>=0?a[i]:{}),key,no,caseName,caseAmount,quoteSyncLocked:true,tcManuallyEdited:true,updatedAt:new Date().toISOString(),...(i>=0?{}:{sortAddedAt:Date.now()})};if(i>=0){a[i]=rec;}else a.unshift(rec);const snapshot=[...a,...tcLocalProjects().filter(x=>x.deleted===true&&String(x.no||"")!==no)];
+ const saveButton=$t('tcProjectSaveBtn');if(saveButton)saveButton.disabled=true;
+ try{
+  await tcSaveProjects(snapshot);
+  await tcCloudWriteQueue;
+  const cloudError=window.tcLastSaveError;
+  if(cloudError)throw new Error(cloudError);
+  tcProjectEditKey=null;tcRenderProjects();tcProjectClear();
+  const status=$t('tcCloudProjectsStatus');if(status)status.textContent='草屯案件儲存成功：'+no+'，共 '+tcProjects().length+' 筆';
+ }catch(e){
+  alert('草屯案件已暫存在本機，但雲端儲存失敗：'+e.message+'。請不要清除瀏覽器資料，稍後再按儲存。');
+ }finally{if(saveButton)saveButton.disabled=false;}}
 // 報價單只帶入「客戶名稱」與「未稅合計 subtotal」；以報價單 ID 固定識別，避免重複。
 // 原本手動草屯資料優先保留；已有相同報價單的資料不覆蓋修改內容。
 function tcSyncQuotes(){
