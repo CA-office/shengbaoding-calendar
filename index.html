@@ -2495,12 +2495,12 @@ function poCommitReviewedPeriod(){
     localStorage.setItem(key,JSON.stringify(archive));
     localStorage.setItem("sbd_purchase_pdf_work_v1",JSON.stringify(snapshot));
     localStorage.setItem("sbd_hongfu_last_period",period);
+    poSaveReviewDraft(false);
     poImportReview=false;
     window.poRefreshPeriodOptions?.();
-    window.renderArchive?.();
     const st=document.getElementById("poStatus");
-    if(st)st.textContent=`已正式儲存 ${period}：${poGroups.length} 張銷貨單、${total.toLocaleString()} 元；舊版已備份。`;
-    alert("正式儲存成功。原本的區間資料已先備份。");
+    if(st)st.textContent=`已儲存到本機 ${period}：${poGroups.length} 張銷貨單、${total.toLocaleString()} 元；舊版已備份，尚未同步雲端。`;
+    alert("本機儲存成功，舊版區間資料已備份。注意：此處尚未寫入雲端，請勿清除瀏覽器網站資料。");
   }catch(e){console.error(e);alert("正式儲存失敗："+(e?.message||e));}
 }
 function poSaveAllWork(showMsg=true){
@@ -2511,6 +2511,11 @@ function poSaveAllWork(showMsg=true){
     localStorage.setItem(PO_WORK_KEY,JSON.stringify(snapshot));
     if(/^\d{6}-\d{6}$/.test(period)){
       const archive=JSON.parse(localStorage.getItem("sbd_hongfu_period_work_v1")||"{}");
+      if(archive[period]?.groups?.length > poGroups.length){
+        poSaveReviewDraft(false);
+        if(showMsg)alert('已保存人工配對草稿；目前分組少於該區間原有資料，為避免覆寫，未更改正式存檔。');
+        return false;
+      }
       archive[period]=snapshot;
       localStorage.setItem("sbd_hongfu_period_work_v1",JSON.stringify(archive));
       localStorage.setItem("sbd_hongfu_last_period",period);
@@ -4264,7 +4269,7 @@ async function renderArchive(){
    },0);
    return `<tr><td>${poEsc(p)}</td><td>${groups.length} 筆${groups.length<19&&p==='260926-261025'?'（資料不完整，請核對）':''}</td><td>${amount.toLocaleString('zh-TW',{maximumFractionDigits:0})}</td><td><button type="button" class="poLoadSavedPeriod" data-period="${poEsc(p)}" style="padding:6px 12px;cursor:pointer">載入／修改</button></td></tr>`;
   });
-  summary.innerHTML='<h3>浤富已儲存明細｜依請款區間統計</h3><table class="purchaseRecords" style="width:100%"><thead><tr><th>區間日期</th><th>儲存筆數（銷貨單分組）</th><th>總金額（PDF 明細）</th><th>操作</th></tr></thead><tbody>'+(rows.join('')||'<tr><td colspan="4">目前尚無依區間儲存的明細</td></tr>')+'</tbody></table>';
+  summary.innerHTML='<h3>浤富本機已儲存明細｜依請款區間統計</h3><table class="purchaseRecords" style="width:100%"><thead><tr><th>區間日期</th><th>儲存筆數（銷貨單分組）</th><th>總金額（PDF 明細）</th><th>操作</th></tr></thead><tbody>'+(rows.join('')||'<tr><td colspan="4">目前尚無依區間儲存的明細</td></tr>')+'</tbody></table>';
   summary.querySelectorAll('.poLoadSavedPeriod').forEach(btn=>btn.addEventListener('click',()=>{
     const p=btn.dataset.period;
     if(!/^\d{6}-\d{6}$/.test(p)){alert('這份明細尚未指定區間，請先在上方設定區間並儲存。');return}
@@ -4292,6 +4297,10 @@ window.poRefreshPeriodOptions=()=>renderArchive().catch(console.error);
 function switchPeriod(period){
  if(!periodValid(period))return;
  const current=($('poPdfPeriod')?.value||'').trim();
+ // 切換區間前先備份目前正在人工核對的工作資料，絕不覆寫正式明細。
+ if(current && current!==period && typeof poImportReview!=='undefined' && poImportReview && Array.isArray(poGroups) && poGroups.length){
+   if(!poSaveReviewDraft(false)){alert('人工配對草稿備份失敗，已停止切換區間。');return;}
+ }
  // 切換區間只讀取已儲存內容，不將目前工作資料自動寫入另一個區間。
  $('poPdfPeriod').value=period;
  localStorage.setItem('sbd_hongfu_last_period',period);
