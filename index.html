@@ -613,6 +613,16 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
 #overtimeView table.quoteList { margin-left:auto; margin-right:auto; }
 @media (max-width:600px) { #overtimeView > .card { width:calc(100% - 16px); margin:12px auto !important; padding:12px; } }
 </style>
+<style id="pending-inline-layout">
+#pendingDialog.pending-inline-form{margin:14px 0;padding:16px;border:1px solid #d4dfeb;border-radius:10px;background:#f8fafc}
+#pendingDialog.pending-inline-form.hidden{display:none!important}
+.pending-form-fields{display:grid;grid-template-columns:minmax(180px,2cm) minmax(0,1fr);gap:14px;align-items:start}
+.pending-form-fields label{display:flex;flex-direction:column;gap:6px;font-size:14px;color:#263d55}
+.pending-form-fields input,.pending-form-fields textarea{width:100%;min-width:0;box-sizing:border-box;border:1px solid #bccbdc;border-radius:5px;padding:9px;font:inherit;background:white}
+.pending-form-fields textarea{resize:vertical;min-height:42px}
+.pending-form-actions{display:flex;gap:8px;margin-top:12px}
+@media(max-width:600px){.pending-form-fields{grid-template-columns:1fr}.pending-form-fields textarea{min-height:72px}}
+</style>
 </head>
 <body>
 <div id="pullRefreshIndicator" aria-hidden="true"><div class="pull-spinner"></div></div>
@@ -863,8 +873,15 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
 </section>
 
 
-<section id="overtimeView" class="hidden"><div class="card" style="margin-top:14px"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><h2 style="margin:0">待處理案件</h2><button id="pendingAdd" type="button">＋ 新增案件</button></div><p id="pendingStatus" style="color:#65758a;font-size:13px">讀取中…</p><div style="overflow-x:auto"><table class="quoteList" style="width:12cm;min-width:12cm;table-layout:fixed"><colgroup><col style="width:2cm"><col style="width:4cm"><col style="width:6cm"></colgroup><thead><tr><th>日期</th><th>案件內容</th><th id="pendingActionHeader">操作</th></tr></thead><tbody id="pendingRows"></tbody></table></div></div></section>
-<dialog id="pendingDialog"><form method="dialog" class="dlgForm"><h2 id="pendingTitle">新增待處理案件</h2><label>日期<input id="pendingDate" type="date"></label><label>案件內容<textarea id="pendingContent" rows="4" style="width:100%" placeholder="輸入待處理的案件內容"></textarea></label><div class="dlgBtns"><button type="button" id="pendingCancel">取消</button><button type="button" id="pendingSave" class="primary">儲存</button></div></form></dialog>
+<section id="overtimeView" class="hidden"><div class="card" style="margin-top:14px"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><h2 style="margin:0">待處理案件</h2><button id="pendingAdd" type="button">＋ 新增案件</button></div><div id="pendingDialog" class="hidden pending-inline-form" aria-label="新增或修改待處理案件">
+ <h3 id="pendingTitle" style="margin:0 0 12px">新增待處理案件</h3>
+ <div class="pending-form-fields">
+  <label>日期<input id="pendingDate" type="date"></label>
+  <label>案件內容<textarea id="pendingContent" rows="2" placeholder="輸入待處理的案件內容"></textarea></label>
+ </div>
+ <div class="pending-form-actions"><button type="button" id="pendingCancel">取消</button><button type="button" id="pendingSave" class="primary">儲存</button></div>
+</div><p id="pendingStatus" style="color:#65758a;font-size:13px">讀取中…</p><div style="overflow-x:auto"><table class="quoteList" style="width:12cm;min-width:12cm;table-layout:fixed"><colgroup><col style="width:2cm"><col style="width:4cm"><col style="width:6cm"></colgroup><thead><tr><th>日期</th><th>案件內容</th><th id="pendingActionHeader">操作</th></tr></thead><tbody id="pendingRows"></tbody></table></div></div></section>
+
 <section id="taichungPurchaseView" class="quoteWrap hidden">
   <div class="purchaseCard">
     <h2 class="purchaseTitle">新弘報價單</h2>
@@ -3195,11 +3212,11 @@ initInstallerPicker();updateMasterBillingRange();renderStatsEditingPreviewRow();
  function render(){if(!el('pendingRows'))return;el('pendingAdd').classList.toggle('hidden',!admin());el('pendingActionHeader').classList.toggle('hidden',!admin());el('pendingRows').innerHTML=records.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(x=>`<tr><td style="white-space:nowrap">${esc(x.date)}</td><td style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(x.content)}</td>${admin()?`<td><button type="button" data-edit="${esc(x.id)}">修改</button> <button type="button" class="danger" data-delete="${esc(x.id)}">刪除</button></td>`:''}</tr>`).join('')||'<tr><td colspan="3" style="text-align:center;padding:18px">目前沒有待處理案件</td></tr>';el('pendingStatus').textContent=`共 ${records.length} 筆｜${admin()?'管理者可新增、修改、刪除':'僅供查看，不可編輯'}`}
  async function load(){records=local();render();try{const v=await costReportKeyValue(KEY);if(v!==null){const a=typeof v==='string'?JSON.parse(v):v;if(Array.isArray(a)){records=a;localStorage.setItem(KEY,JSON.stringify(a));render()}}}catch(e){el('pendingStatus').textContent='雲端讀取未成功；目前顯示本機資料：'+e.message}}
  async function persist(){if(!admin())return;const user=(await sb.auth.getUser()).data?.user;if(!user)throw Error('尚未登入');const {error}=await sb.from('sbd_app_data').upsert({user_id:user.id,data_key:KEY,payload:{value:JSON.stringify(records)}},{onConflict:'user_id,data_key'});if(error)throw error;localStorage.setItem(KEY,JSON.stringify(records))}
- function open(x){if(!admin())return;editing=x?.id||null;el('pendingTitle').textContent=x?'修改待處理案件':'新增待處理案件';el('pendingDate').value=x?.date||new Date().toLocaleDateString('en-CA');el('pendingContent').value=x?.content||'';el('pendingDialog').showModal()}
+ function open(x){if(!admin())return;editing=x?.id||null;el('pendingTitle').textContent=x?'修改待處理案件':'新增待處理案件';el('pendingDate').value=x?.date||new Date().toLocaleDateString('en-CA');el('pendingContent').value=x?.content||'';el('pendingDialog').classList.remove('hidden');el('pendingDialog').scrollIntoView({behavior:'smooth',block:'center'})}
  document.addEventListener('DOMContentLoaded',()=>{
   el('overtimeTabBtn')?.addEventListener('click',()=>{if(!allowed())return;showFeature('overtime');load()});
-  el('pendingAdd')?.addEventListener('click',()=>open(null));el('pendingCancel')?.addEventListener('click',()=>el('pendingDialog').close());
-  el('pendingSave')?.addEventListener('click',async()=>{if(!admin())return;const date=el('pendingDate').value,content=el('pendingContent').value.trim();if(!date||!content){alert('請填寫日期及案件內容');return}const before=records.slice();const x={id:editing||String(Date.now()),date,content};records=editing?records.map(v=>v.id===editing?x:v):[...records,x];el('pendingSave').disabled=true;try{await persist();el('pendingDialog').close();render()}catch(e){records=before;alert('雲端儲存失敗，資料未覆蓋：'+e.message)}finally{el('pendingSave').disabled=false}});
+  el('pendingAdd')?.addEventListener('click',()=>open(null));el('pendingCancel')?.addEventListener('click',()=>el('pendingDialog').classList.add('hidden'));
+  el('pendingSave')?.addEventListener('click',async()=>{if(!admin())return;const date=el('pendingDate').value,content=el('pendingContent').value.trim();if(!date||!content){alert('請填寫日期及案件內容');return}const before=records.slice();const x={id:editing||String(Date.now()),date,content};records=editing?records.map(v=>v.id===editing?x:v):[...records,x];el('pendingSave').disabled=true;try{await persist();el('pendingDialog').classList.add('hidden');render()}catch(e){records=before;alert('雲端儲存失敗，資料未覆蓋：'+e.message)}finally{el('pendingSave').disabled=false}});
   el('pendingRows')?.addEventListener('click',async e=>{if(!admin())return;const edit=e.target.closest('[data-edit]'),del=e.target.closest('[data-delete]');if(edit){const x=records.find(x=>x.id===edit.dataset.edit);if(x)open(x)}if(del&&confirm('確定刪除這筆待處理案件？')){const before=records.slice();records=records.filter(x=>x.id!==del.dataset.delete);try{await persist();render()}catch(err){records=before;alert('刪除失敗：'+err.message)}}});
  });
 })();
