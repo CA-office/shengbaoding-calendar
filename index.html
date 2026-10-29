@@ -807,12 +807,12 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
     <div class="statsFilter">
       <label>查詢月份<input id="stMonth" type="month"></label>
       <button type="button" id="stLoadBtn">查詢</button><label style="display:flex;align-items:center;gap:5px;white-space:nowrap"><input type="checkbox" id="stShowAll" checked style="width:auto">顯示全部月份</label><button type="button" id="stSyncAllBtn">同步全部報價單</button><span id="stSyncStatus" role="status" style="font-size:13px;color:#42617b"></span>
-      <div style="text-align:right"><button type="button" id="stExportBtn" class="primary">下載製作安裝統計表 Excel</button></div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><button type="button" id="stSelectAllBtn">全選目前清單</button><button type="button" id="stClearSelectionBtn">取消全選</button><span id="stSelectionCount" style="font-size:13px;color:#42617b">已選 0 筆</span></div><div style="text-align:right"><button type="button" id="stExportBtn" class="primary">下載製作安裝統計表 Excel</button></div>
     </div>
     <div class="statsTableWrap">
       <table class="statsTable">
         <thead><tr>
-          <th>操作</th><th>客編</th><th>客戶</th><th>編號</th><th>出貨單號</th><th>接單日期</th><th>安裝日期</th>
+          <th style="min-width:54px">下載勾選</th><th>操作</th><th>客編</th><th>客戶</th><th>編號</th><th>出貨單號</th><th>接單日期</th><th>安裝日期</th>
           <th>案名</th><th>色號-人</th><th>色號-石</th><th>型號</th><th>尺寸(cm)</th><th>未稅金額</th>
           <th>備註</th><th>樓層</th><th>安裝人員</th><th>龍</th><th>凱</th><th>自安</th><th>富</th><th>草屯</th>
         </tr></thead>
@@ -1645,7 +1645,7 @@ function renderStatsEditingPreviewRow(){
   const tr=document.createElement("tr");
   tr.className="statsEditingPreview";
   tr.style.background="#fffdf2";
-  tr.innerHTML=`<td><div class="statsRowBtns"><button type="button" onclick="focusStatsDraft()">修改</button><button type="button" class="danger" onclick="clearStatsDraft()">刪除</button></div></td>
+  tr.innerHTML=`<td style="text-align:center"><input type="checkbox" class="stExportPick" data-id="${esc(String(x.id))}" ${selected.has(String(x.id))?"checked":""} aria-label="下載單號 ${esc(x.job_no||"")}" style="width:18px;height:18px"></td><td><div class="statsRowBtns"><button type="button" onclick="focusStatsDraft()">修改</button><button type="button" class="danger" onclick="clearStatsDraft()">刪除</button></div></td>
     <td>${esc($("stCustomerCode")?.value.trim()||"")}</td>
     <td>${esc($("stCustomer")?.value.trim()||"")}</td>
     <td>${esc($("stJobNo")?.value.trim()||"")}</td>
@@ -2091,6 +2091,14 @@ function initInstallerPicker(){
 
 // ===== 製作安裝統計表（僅 admin）=====
 let installStatsRows=[],masterInstallRows=null,editingInstallStatId=null,currentStatsQuoteId=null;
+// 每個月份分開記住勾選，不改動 Supabase 原始案件。
+function stSelectionKey(){return 'sbd_install_excel_selected_v1_'+($('stMonth')?.value||statsTodayMonth())}
+function stSelectedIds(){try{return new Set(JSON.parse(localStorage.getItem(stSelectionKey())||'[]').map(String))}catch(e){return new Set()}}
+function stSetSelectedIds(ids){localStorage.setItem(stSelectionKey(),JSON.stringify([...ids]));stUpdateSelectionCount()}
+function stUpdateSelectionCount(){const el=$('stSelectionCount');if(el)el.textContent='已選 '+stSelectedIds().size+' 筆（'+($('stMonth')?.value||'本月')+'）'}
+function stToggleSelection(id,checked){const ids=stSelectedIds();if(checked)ids.add(String(id));else ids.delete(String(id));stSetSelectedIds(ids)}
+function stSelectVisible(checked){const ids=stSelectedIds();for(const r of installStatsRows){if(checked)ids.add(String(r.id));else ids.delete(String(r.id))}stSetSelectedIds(ids);renderInstallStats()}
+
 
 function statsTodayMonth(){
   const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}`;
@@ -2101,6 +2109,12 @@ function inferStatsModel(items){
   if(names.some(n=>n.includes("L型檯面")))return "L";
   if(names.some(n=>n.includes("ㄇ字型檯面")))return "ㄇ";
   return "";
+}
+// 客戶欄位可能為「A997 沐淯」：同步時分離客編與客戶名稱。
+function stSplitCustomer(raw){
+ const value=String(raw||'').trim();
+ const m=value.match(/^([A-Za-z]{1,5}\d{2,8})(?:[\s　\-－:：]+)(.+)$/);
+ return m?{code:m[1].toUpperCase(),name:m[2].trim()}:{code:'',name:value};
 }
 function statDraftFromQuote(x){
   const m=qMetaFromNote(x.note);
@@ -2208,7 +2222,7 @@ async function syncOneQuoteToInstallStats(x){
   if(existing){
     // 報價單來源欄位以最新報價單為準，修改後同步更新；師傅、樓層、備註、安裝分攤等人工欄位保留。
     const patch={};
-    for(const k of ["customer_name","order_date","install_date","case_name","color_no","model","size_cm","untaxed_amount"]){
+    for(const k of ["customer_code","customer_name","order_date","install_date","case_name","color_no","model","size_cm","untaxed_amount"]){
       const next=draft[k]??null;
       if(String(existing[k]??"")!==String(next??""))patch[k]=next;
     }
@@ -2286,12 +2300,18 @@ async function loadInstallStats(){
 function renderInstallStats(){
   const b=$("stTableBody");b.innerHTML="";
   $("stEmpty").classList.toggle("hidden",installStatsRows.length>0);
+  const selected=stSelectedIds();
   installStatsRows.forEach(x=>{
     const human=x.color_type==="human"?x.color_no||"":"",stone=x.color_type==="stone"?x.color_no||"":"";
+    const customer=stSplitCustomer(x.customer_name);
+    const displayCode=x.customer_code||customer.code;
+    const displayName=customer.code?customer.name:(x.customer_name||"");
     const tr=document.createElement("tr");
-    tr.innerHTML=`<td><div class="statsRowBtns"><button data-st="edit" data-id="${x.id}">修改</button><button class="danger" data-st="del" data-id="${x.id}">刪除</button></div></td><td>${esc(x.customer_code||"")}</td><td>${esc(x.customer_name||"")}</td><td>${esc(x.job_no||"")}</td><td>${esc(x.shipment_no||"")}</td><td>${esc(statDateToMD(x.order_date||""))}</td><td>${esc(statDateToMD(x.install_date||""))}</td><td>${esc(x.case_name||"")}</td><td>${esc(human)}</td><td>${esc(stone)}</td><td>${esc(x.model||"")}</td><td>${qMoney(x.size_cm||0)}</td><td>${qMoney(x.untaxed_amount||0)}</td><td>${esc(x.note||"")}</td><td>${esc(x.floor||"")}</td><td>${esc(x.installers||"")}</td><td>${x.long_share||""}</td><td>${x.kai_share||""}</td><td>${x.self_install_share||""}</td><td>${x.fu_share||""}</td><td>${x.caotun_share||""}</td>`;
+    tr.innerHTML=`<td><input type="checkbox" class="stExportPick" data-id="${x.id}" ${selected.has(String(x.id))?"checked":""} aria-label="選擇下載 ${esc(x.job_no||"")}"></td><td><div class="statsRowBtns"><button data-st="edit" data-id="${x.id}">修改</button><button class="danger" data-st="del" data-id="${x.id}">刪除</button></div></td><td>${esc(displayCode)}</td><td>${esc(displayName)}</td><td>${esc(x.job_no||"")}</td><td>${esc(x.shipment_no||"")}</td><td>${esc(statDateToMD(x.order_date||""))}</td><td>${esc(statDateToMD(x.install_date||""))}</td><td>${esc(x.case_name||"")}</td><td>${esc(human)}</td><td>${esc(stone)}</td><td>${esc(x.model||"")}</td><td>${qMoney(x.size_cm||0)}</td><td>${qMoney(x.untaxed_amount||0)}</td><td>${esc(x.note||"")}</td><td>${esc(x.floor||"")}</td><td>${esc(x.installers||"")}</td><td>${x.long_share||""}</td><td>${x.kai_share||""}</td><td>${x.self_install_share||""}</td><td>${x.fu_share||""}</td><td>${x.caotun_share||""}</td>`;
     b.appendChild(tr);
   });
+  b.querySelectorAll(".stExportPick").forEach(cb=>cb.addEventListener("change",()=>stToggleSelection(cb.dataset.id,cb.checked)));
+  stUpdateSelectionCount();
   b.querySelectorAll("button").forEach(btn=>btn.onclick=()=>btn.dataset.st==="edit"?editInstallStat(btn.dataset.id):deleteInstallStat(btn.dataset.id));renderStatsEditingPreviewRow();renderMasterInstallSummary();
 }
 function editInstallStat(id){
@@ -2319,19 +2339,19 @@ function exportInstallStatsExcel(){
   const draft=draftHasAny?getStatForm():null;
 
   // 若正在修改既有資料：Excel 用目前畫面內容取代舊資料，不重複一列
-  let exportRows=[...installStatsRows];
-  if(draft){
+  const selected=stSelectedIds();
+  if(!selected.size)return alert('請先勾選本月要下載的單號，再按下載 Excel。');
+  let exportRows=installStatsRows.filter(x=>selected.has(String(x.id)));
+  if(draft && editingInstallStatId && selected.has(String(editingInstallStatId))){
     if(editingInstallStatId){
       const idx=exportRows.findIndex(x=>String(x.id)===String(editingInstallStatId));
       if(idx>=0)exportRows[idx]={...exportRows[idx],...draft};
       else exportRows.unshift(draft);
-    }else{
-      exportRows.unshift(draft);
     }
   }
 
   const rows=exportRows.map(x=>[
-    x.customer_code||"",x.customer_name||"",x.job_no||"",x.shipment_no||"",
+    x.customer_code||stSplitCustomer(x.customer_name).code,stSplitCustomer(x.customer_name).name,x.job_no||"",x.shipment_no||"",
     statDateToMD(x.order_date||""),statDateToMD(x.install_date||""),x.case_name||"",
     x.color_type==="human"?(x.color_no||""):"",x.color_type==="stone"?(x.color_no||""):"",
     x.model||"",
@@ -3082,6 +3102,8 @@ $("poPdfInput")?.addEventListener("change",e=>{const f=e.target.files?.[0];if(f)
 $("poClearBtn")?.addEventListener("click",poClearPdf);
 $("poExcelBtn")?.addEventListener("click",poDownloadExcel);
 $("stMasterLoadBtn")?.addEventListener("click",loadMasterInstallSummary);
+$("stSelectAllBtn")?.addEventListener("click",()=>stSelectVisible(true));
+$("stClearSelectionBtn")?.addEventListener("click",()=>stSelectVisible(false));
 $("stExportBtn")?.addEventListener("click",()=>{try{exportInstallStatsExcel()}catch(e){console.error("製作安裝統計 Excel 下載失敗",e);alert("Excel 下載失敗："+(e?.message||e))}});
 $("stMasterExportBtn")?.addEventListener("click",exportMasterInstallSummaryExcel);
 $("stFinalExportBtn")?.addEventListener("click",exportFinalInstallSummaryExcel);
