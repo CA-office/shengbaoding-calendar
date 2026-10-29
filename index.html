@@ -905,6 +905,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
 <label>請款區間<select id="hfSimplePeriod" style="width:100%;padding:9px"><option value="">選擇區間</option></select></label>
 <label>銷售額<input id="hfSimpleSales" type="number" min="0" step="1" placeholder="輸入銷售總額" style="width:100%;padding:9px"></label>
 <label>填寫欄／備註<input id="hfSimpleNote" placeholder="例如：已核對 Excel" style="width:100%;padding:9px"></label>
+<label>件數<input id="hfSimpleCount" type="number" min="0" step="1" placeholder="輸入案件件數" style="width:100%;padding:9px"></label>
 <label>成本<input id="hfSimpleCost" type="number" min="0" step="1" placeholder="輸入成本總額" style="width:100%;padding:9px"></label>
 </div><div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button type="button" id="hfSimpleSave" class="primary">儲存並同步成本銷售</button><button type="button" id="hfSimpleCancelEdit" style="display:none">取消修改</button><span id="hfSimpleStatus" style="color:#52687c"></span></div>
 <div id="hfSimpleHistory" style="margin-top:15px"></div>
@@ -3908,38 +3909,38 @@ function show(){
  const current=saved[select.value];
  el('hfSimpleSales').value=current?.sales??'';
  el('hfSimpleCost').value=current?.cost??'';
+ el('hfSimpleCount').value=current?.count??'';
  el('hfSimpleNote').value=current?.note??'';
- const canEdit=!!current&&editingPeriod===select.value&&isAdminAccount();
- el('hfSimpleSales').disabled=!!current&&!canEdit;el('hfSimpleCost').disabled=!!current&&!canEdit;el('hfSimpleNote').disabled=!!current&&!canEdit;
- el('hfSimpleSave').disabled=!!current&&!canEdit;
- el('hfSimpleSave').textContent=canEdit?'確認修改並同步成本銷售':'儲存並同步成本銷售';
- el('hfSimpleCancelEdit').style.display=canEdit?'inline-block':'none';
- el('hfSimpleStatus').textContent=canEdit?'修改模式：請核對金額，按確認修改後才會更新。':current?'此區間已儲存；如需更正，請按下方「修改」。':'';
- el('hfSimpleHistory').innerHTML='<table style="width:100%;border-collapse:collapse"><thead><tr><th>區間日期</th><th>銷售額</th><th>備註</th><th>成本</th><th>操作</th></tr></thead><tbody>'+Object.entries(saved).sort().map(([p,v])=>`<tr><td>${p}</td><td>${Number(v.sales).toLocaleString()}</td><td>${String(v.note||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}</td><td>${Number(v.cost).toLocaleString()}</td><td><button type="button" data-hf-edit="${p}" style="padding:5px 10px">修改</button></td></tr>`).join('')+'</tbody></table>';
+ const canEdit=isAdminAccount();
+ el('hfSimpleCount').disabled=!canEdit;el('hfSimpleSales').disabled=!canEdit;el('hfSimpleCost').disabled=!canEdit;el('hfSimpleNote').disabled=!canEdit;
+ el('hfSimpleSave').disabled=!canEdit;
+ el('hfSimpleSave').textContent='儲存並同步成本銷售';
+ el('hfSimpleCancelEdit').style.display='none';
+ el('hfSimpleStatus').textContent=current?'可直接修改上方欄位，按「儲存並同步成本銷售」更新。':'';
+ el('hfSimpleHistory').innerHTML='<table style="width:100%;border-collapse:collapse"><thead><tr><th>區間日期</th><th>銷售額</th><th>件數</th><th>備註</th><th>成本</th></tr></thead><tbody>'+Object.entries(saved).sort().map(([p,v])=>`<tr><td>${p}</td><td>${Number(v.sales).toLocaleString()}</td><td>${v.count==null?'—':Number(v.count).toLocaleString()}</td><td>${String(v.note||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}</td><td>${Number(v.cost).toLocaleString()}</td></tr>`).join('')+'</tbody></table>';
  el('hfSimpleHistory').querySelectorAll('[data-hf-edit]').forEach(btn=>btn.onclick=()=>{if(!isAdminAccount())return;editingPeriod=btn.dataset.hfEdit;editingVersion=saved[editingPeriod]?.savedAt||null;el('hfSimplePeriod').value=editingPeriod;show();el('hfSimpleSales').focus();});
 }
 async function refresh(){try{saved=await fetchData();show()}catch(e){el('hfSimpleStatus').textContent='雲端讀取失敗：'+e.message}}
 async function save(){
  if(!isAdminAccount())return;
- const period=el('hfSimplePeriod').value,sales=el('hfSimpleSales').value,cost=el('hfSimpleCost').value,note=el('hfSimpleNote').value.trim();
- if(!/^\d{6}-\d{6}$/.test(period)||sales===''||cost===''||Number(sales)<0||Number(cost)<0||!Number.isFinite(Number(sales))||!Number.isFinite(Number(cost))){alert('請選擇區間並填寫正確銷售額、成本');return}
+ const period=el('hfSimplePeriod').value,sales=el('hfSimpleSales').value,cost=el('hfSimpleCost').value,count=el('hfSimpleCount').value,note=el('hfSimpleNote').value.trim();
+ if(!/^\d{6}-\d{6}$/.test(period)||sales===''||cost===''||count===''||!Number.isInteger(Number(count))||Number(count)<0||Number(sales)<0||Number(cost)<0||!Number.isFinite(Number(sales))||!Number.isFinite(Number(cost))){alert('請選擇區間並填寫正確銷售額、成本');return}
  const b=el('hfSimpleSave');b.disabled=true;
  try{
   const {data:{user}}=await sb.auth.getUser();if(!user)throw Error('尚未登入');
   const {data:found,error}=await sb.from('sbd_app_data').select('payload').eq('user_id',user.id).eq('data_key',KEY).maybeSingle();if(error)throw error;
   const latest=parse(found?.payload?.value);
-  const isEditing=editingPeriod===period;
-  if(latest[period]&&!isEditing)throw Error('此區間已儲存，請使用下方修改按鈕');
-  if(isEditing&&(!latest[period]||String(latest[period].savedAt||'')!==String(editingVersion||'')))throw Error('此區間資料已被其他裝置更新，請重新載入後再修改');
-  const action=isEditing?'修改':'新增';
-  if(!confirm(`確認${action}浤富 ${period}：銷售額 ${Number(sales).toLocaleString()} 元、成本 ${Number(cost).toLocaleString()} 元？此操作將更新成本銷售報表。`))return;
-  latest[period]={...(latest[period]||{}),sales:Number(sales),cost:Number(cost),note,savedAt:new Date().toISOString(), ...(isEditing?{previousVersion:{sales:latest[period].sales,cost:latest[period].cost,note:latest[period].note,savedAt:latest[period].savedAt}}:{})};
+  const isEditing=!!latest[period];
+  if(isEditing&&String(latest[period].savedAt||'')!==String(saved[period]?.savedAt||''))throw Error('此區間已被其他裝置更新，請重新選擇區間後再修改');
+  const action=isEditing?'更新':'新增';
+  if(!confirm(`確認${action}浤富 ${period}：銷售額 ${Number(sales).toLocaleString()} 元、件數 ${Number(count).toLocaleString()} 筆、成本 ${Number(cost).toLocaleString()} 元？此操作將更新成本銷售報表。`))return;
+  latest[period]={...(latest[period]||{}),sales:Number(sales),cost:Number(cost),count:Number(count),note,savedAt:new Date().toISOString(), ...(isEditing?{previousVersion:{sales:latest[period].sales,cost:latest[period].cost,count:latest[period].count,note:latest[period].note,savedAt:latest[period].savedAt}}:{})};
   const payload={value:JSON.stringify(latest)};
   const result=found?await sb.from('sbd_app_data').update({payload,updated_at:new Date().toISOString()}).eq('user_id',user.id).eq('data_key',KEY):await sb.from('sbd_app_data').insert({user_id:user.id,data_key:KEY,payload,updated_at:new Date().toISOString()});
   if(result.error)throw result.error;
   saved=latest;editingPeriod=null;editingVersion=null;show();el('hfSimpleStatus').textContent='雲端儲存成功；成本銷售報表將使用更新後的區間總額。';
  }catch(e){el('hfSimpleStatus').textContent='未儲存：'+e.message}
- finally{b.disabled=!!saved[period]&&editingPeriod!==period}
+ finally{b.disabled=false}
 }
 function bind(){
  const b=el('hfSimpleTabBtn');if(!b)return;
@@ -4197,6 +4198,8 @@ async function render(){
   }
  }catch(e){console.warn('浤富案件件數雲端讀取失敗',e)}
  if(hfCaseCount!==null)groups[0].count=hfCaseCount;
+ const manualCount=manualHf?.[period.value]?.count;
+ if(manualCount!==undefined&&manualCount!==null&&Number.isInteger(Number(manualCount))&&Number(manualCount)>=0)groups[0].count=Number(manualCount);
  const expenseDetailRows=expenses.filter(x=>(period.value==='all'||sbdDateInPeriod(x.date,period.value))&&(sel.value==='all'||String(x.date||'').startsWith(sel.value)));
  const expensePanel=document.getElementById('crExpenseDetailPanel');
  const expenseContent=document.getElementById('crExpenseDetailContent');
