@@ -3082,6 +3082,7 @@ $("poPdfInput")?.addEventListener("change",e=>{const f=e.target.files?.[0];if(f)
 $("poClearBtn")?.addEventListener("click",poClearPdf);
 $("poExcelBtn")?.addEventListener("click",poDownloadExcel);
 $("stMasterLoadBtn")?.addEventListener("click",loadMasterInstallSummary);
+$("stExportBtn")?.addEventListener("click",()=>{try{exportInstallStatsExcel()}catch(e){console.error("製作安裝統計 Excel 下載失敗",e);alert("Excel 下載失敗："+(e?.message||e))}});
 $("stMasterExportBtn")?.addEventListener("click",exportMasterInstallSummaryExcel);
 $("stFinalExportBtn")?.addEventListener("click",exportFinalInstallSummaryExcel);
 $("stMasterMonth")?.addEventListener("change",()=>{
