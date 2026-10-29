@@ -605,6 +605,14 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
 
 
 
+<style id="pending-center-layout">
+/* 待處理案件頁面整體置中；保留原表格欄寬 2 / 4 / 6 cm */
+#overtimeView { width:100%; box-sizing:border-box; }
+#overtimeView > .card { width:min(100% - 24px, 960px); max-width:960px; margin:24px auto !important; box-sizing:border-box; }
+#overtimeView > .card > div:has(> table) { width:100%; }
+#overtimeView table.quoteList { margin-left:auto; margin-right:auto; }
+@media (max-width:600px) { #overtimeView > .card { width:calc(100% - 16px); margin:12px auto !important; padding:12px; } }
+</style>
 </head>
 <body>
 <div id="pullRefreshIndicator" aria-hidden="true"><div class="pull-spinner"></div></div>
@@ -742,7 +750,12 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
 <section id="invoiceCustomerView" class="invoiceWrap hidden">
  <div class="invoiceCard"><h2 class="invoiceTitle">客戶發票資料</h2>
   <div class="invoiceGrid"><label>公司名<input id="ciCompany" placeholder="公司名"></label><label>統編<input id="ciTaxId" placeholder="統編"></label><label>寄（郵遞區＋地址）<input id="ciMail" placeholder="例如 242623新北市新莊區..."></label><button type="button" id="ciSaveBtn" class="btn primary">儲存資料</button></div><div id="ciEditHint" class="ciHint">已匯入最新 Word 的公司名、統編與寄送地址；需要列印哪幾家，直接勾左側小方框。</div>
-  <div class="ciTableWrap"><table class="ciTable"><thead><tr><th class="ciCheckCell">勾選</th><th>操作</th><th>公司名</th><th>統編</th><th>寄（郵遞區＋地址）</th></tr></thead><tbody id="ciRows"></tbody></table></div>
+  <div class="invoiceBtns" style="align-items:center;margin:8px 0 10px">
+<button type="button" id="ciSelectAllBtn">全選目前清單</button>
+<button type="button" id="ciClearAllBtn">取消全選</button>
+<span id="ciSelectionCount" style="font-size:13px;color:#42617b">已選 0 筆</span>
+</div>
+<div class="ciTableWrap"><table class="ciTable"><thead><tr><th class="ciCheckCell">勾選</th><th>操作</th><th>公司名</th><th>統編</th><th>寄（郵遞區＋地址）</th></tr></thead><tbody id="ciRows"></tbody></table></div>
   <div class="ciDownloadRow invoiceBtns"><button type="button" id="ciDownloadBtn" class="primary">下載 Excel 列印檔</button></div>
  </div>
 </section>
@@ -3259,8 +3272,9 @@ function load(){let a=[];try{a=JSON.parse(localStorage.getItem(KEY)||'[]')}catch
 function save(a){localStorage.setItem(KEY,JSON.stringify(a))}
 function esc(v){return String(v??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]))}
 function selected(){try{const x=JSON.parse(localStorage.getItem(SEL)||'[]');return Array.isArray(x)?x:[]}catch(e){return[]}}
-function setSelected(names){localStorage.setItem(SEL,JSON.stringify(names))}
-function render(){const a=load(),body=$i('ciRows');if(!body)return;const keep=new Set(selected());body.innerHTML=a.map((x,n)=>'<tr><td class="ciCheckCell"><input class="ciCheck" type="checkbox" data-check="'+n+'" '+(keep.has(x.company)?'checked':'')+' aria-label="勾選 '+esc(x.company)+'"></td><td class="ciOps"><button type="button" class="ciAction" data-edit="'+n+'">修改</button> <button type="button" class="ciAction ciDelete" data-del="'+n+'">刪除</button></td><td>'+esc(x.company)+'</td><td>'+esc(x.taxId)+'</td><td>'+esc(x.mail)+'</td></tr>').join('');body.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>edit(+b.dataset.edit));body.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>del(+b.dataset.del));body.querySelectorAll('[data-check]').forEach(b=>b.onchange=saveChecks)}
+function setSelected(names){localStorage.setItem(SEL,JSON.stringify(names));updateCount()}
+function updateCount(){const el=$i('ciSelectionCount');if(el)el.textContent='已選 '+selected().length+' 筆'}
+function render(){const a=load(),body=$i('ciRows');if(!body)return;const keep=new Set(selected());body.innerHTML=a.map((x,n)=>'<tr><td class="ciCheckCell"><input class="ciCheck" type="checkbox" data-check="'+n+'" '+(keep.has(x.company)?'checked':'')+' aria-label="勾選 '+esc(x.company)+'"></td><td class="ciOps"><button type="button" class="ciAction" data-edit="'+n+'">修改</button> <button type="button" class="ciAction ciDelete" data-del="'+n+'">刪除</button></td><td>'+esc(x.company)+'</td><td>'+esc(x.taxId)+'</td><td>'+esc(x.mail)+'</td></tr>').join('');body.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>edit(+b.dataset.edit));body.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>del(+b.dataset.del));body.querySelectorAll('[data-check]').forEach(b=>b.onchange=saveChecks);updateCount()}
 function saveChecks(){const a=load(),names=[...document.querySelectorAll('#ciRows [data-check]:checked')].map(b=>a[+b.dataset.check]?.company).filter(Boolean);setSelected(names)}
 function edit(n){const x=load()[n];if(!x)return;editing=n;$i('ciCompany').value=x.company||'';$i('ciTaxId').value=x.taxId||'';$i('ciMail').value=x.mail||'';$i('ciEditHint').textContent='正在修改：'+(x.company||'');$i('ciCompany').focus()}
 function del(n){const a=load();if(!a[n]||!confirm('確定刪除「'+a[n].company+'」？'))return;const name=a[n].company;a.splice(n,1);save(a);setSelected(selected().filter(v=>v!==name));editing=-1;render()}
@@ -3309,7 +3323,7 @@ async function download(){
  const buf=await wb.xlsx.writeBuffer(),blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),u=URL.createObjectURL(blob),link=document.createElement('a');link.href=u;link.download='客戶發票_列印.xlsx';link.click();setTimeout(()=>URL.revokeObjectURL(u),1000)
 }
 function open(){if(typeof isAdminAccount==='function'&&!isAdminAccount())return;['calendarView','quoteView','purchaseView','installStatsView','overtimeView'].forEach(id=>$i(id)?.classList.add('hidden'));$i('invoiceCustomerView')?.classList.remove('hidden');$i('calendarControls')?.classList.add('hidden');document.querySelectorAll('.featureTabs button').forEach(b=>b.classList.remove('active'));$i('invoiceCustomerTabBtn')?.classList.add('active');render()}
-function bind(){const tab=$i('invoiceCustomerTabBtn');if(tab)tab.onclick=e=>{e.preventDefault();open()};$i('ciSaveBtn')?.addEventListener('click',doSave);$i('ciDownloadBtn')?.addEventListener('click',download);render()}
+function bind(){const tab=$i('invoiceCustomerTabBtn');if(tab)tab.onclick=e=>{e.preventDefault();open()};$i('ciSaveBtn')?.addEventListener('click',doSave);$i('ciDownloadBtn')?.addEventListener('click',download);$i('ciSelectAllBtn')?.addEventListener('click',()=>{const a=load();setSelected(a.map(x=>x.company));render()});$i('ciClearAllBtn')?.addEventListener('click',()=>{setSelected([]);render()});render()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();
 })();
 </script>
