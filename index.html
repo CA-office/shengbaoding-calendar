@@ -965,6 +965,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
 <button type="button" id="hfQuoteSync">同步有訂單編號的報價單</button>
 <button type="button" id="hfQuoteAll">全選目前清單</button>
 <button type="button" id="hfQuoteNone">取消全選</button>
+<button type="button" id="hfQuoteExcel" style="background:#17334e;color:#fff">下載 Excel（已勾選）</button>
 <span id="hfQuotePicked">已選 0 筆</span>
 </div>
 <div id="hfQuoteForm" style="margin:12px 0">
@@ -4820,7 +4821,28 @@ async function sync(){
  msg.textContent=`報價單共 ${quotes.length} 筆；有訂單編號 ${eligible} 筆；本次新增 ${added} 筆。已存在的案件不覆蓋，浤富手動成本銷售總額不變。`;
  }catch(e){msg.textContent='報價單同步失敗：'+e.message}
 }
-function init(){if(!$('hfQuoteRows'))return;items=read();$('hfQuoteNew').onclick=()=>{reset();$('hfQuoteNo').focus()};$('hfQuoteSave').onclick=store;$('hfQuoteSync').onclick=sync;$('hfQuoteAll').onclick=()=>{shown().forEach(x=>chosen.add(x.id));render()};$('hfQuoteNone').onclick=()=>{chosen.clear();render()};['hfQuoteFilterNo','hfQuoteFilterName','hfQuoteFilterPeriod'].forEach(id=>$(id).onchange=render);render();sync()}
+function downloadExcel(){
+ const rows=shown().filter(x=>chosen.has(x.id));
+ if(!rows.length){alert('請先勾選要下載的案件');return}
+ if(typeof XLSX==='undefined'){alert('Excel 元件尚未載入，請重新整理網頁');return}
+ const data=[['單號','案名','案件金額','區間日期'],...rows.map(x=>[String(x.no||''),String(x.name||''),Number(x.amount||0),String(x.period||'')])];
+ data.push(['','總計',rows.reduce((n,x)=>n+Number(x.amount||0),0),'']);
+ const ws=XLSX.utils.aoa_to_sheet(data);
+ ws['!cols']=[{wch:20},{wch:55},{wch:18},{wch:22}];
+ ws['!rows']=[{hpt:28},...rows.map(()=>({hpt:24})),{hpt:26}];
+ for(let r=0;r<data.length;r++){
+  for(let c=0;c<4;c++){
+   const ref=XLSX.utils.encode_cell({r,c}),cell=ws[ref];
+   if(!cell)continue;
+   cell.s={font:{name:'Noto Sans HK',sz:12,bold:r===0||r===data.length-1},alignment:{vertical:'center',horizontal:c===2?'right':'left'},border:{top:{style:'thin',color:{rgb:'B9C8D6'}},bottom:{style:'thin',color:{rgb:'B9C8D6'}},left:{style:'thin',color:{rgb:'B9C8D6'}},right:{style:'thin',color:{rgb:'B9C8D6'}}},fill:r===0?{fgColor:{rgb:'EAF0F5'}}:undefined};
+   if(c===2&&r>0)cell.z='#,##0';
+  }
+ }
+ const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'浤富案件');
+ const periods=[...new Set(rows.map(x=>x.period).filter(Boolean))];
+ XLSX.writeFile(wb,`浤富案件_${periods.length===1?periods[0]:'已勾選'}_${rows.length}筆.xlsx`);
+}
+function init(){if(!$('hfQuoteRows'))return;items=read();$('hfQuoteNew').onclick=()=>{reset();$('hfQuoteNo').focus()};$('hfQuoteSave').onclick=store;$('hfQuoteSync').onclick=sync;$('hfQuoteAll').onclick=()=>{shown().forEach(x=>chosen.add(x.id));render()};$('hfQuoteNone').onclick=()=>{chosen.clear();render()};$('hfQuoteExcel').onclick=downloadExcel;['hfQuoteFilterNo','hfQuoteFilterName','hfQuoteFilterPeriod'].forEach(id=>$(id).onchange=render);render();sync()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
 </script></body>
