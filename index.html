@@ -4048,10 +4048,13 @@ async function fetchData(){
   const {data,error}=await sb.from('sbd_app_data').select('payload').eq('user_id',user.id).eq('data_key',KEY).maybeSingle();
   if(error)throw error;return parse(data?.payload?.value);
  }
- // 浤富手動總額使用專用唯讀 RPC；避免舊報表服務漏傳此資料鍵。
- const {data,error}=await sb.rpc('sbd_read_hongfu_manual_totals');
- if(error)throw Error('浤富唯讀服務尚未部署或讀取失敗：'+error.message);
- return parse(data?.value);
+ // 使用現有 sbd_read_cost_report_sources 唯讀服務，無須另外部署專用函式。
+ const {data,error}=await sb.rpc('sbd_read_cost_report_sources');
+ if(error)throw Error('成本銷售唯讀服務讀取失敗：'+error.message);
+ if(!Array.isArray(data))throw Error('成本銷售唯讀服務回傳格式錯誤');
+ const row=data.find(r=>r.data_key===KEY);
+ if(!row)throw Error('唯讀服務未提供 '+KEY+'；請確認管理者已儲存此區間資料');
+ return parse(row.payload?.value);
 }
 window.sbdHfManualTotals=fetchData;
 let saved={},editingPeriod=null,editingVersion=null;
@@ -4116,10 +4119,13 @@ async function fetchData(){
   const {data,error}=await sb.from('sbd_app_data').select('payload').eq('user_id',user.id).eq('data_key',KEY).maybeSingle();
   if(error)throw error;return parse(data?.payload?.value);
  }
- // 草屯手動總額使用專用唯讀 RPC；避免舊報表服務漏傳此資料鍵。
- const {data,error}=await sb.rpc('sbd_read_taichung_manual_totals');
- if(error)throw Error('草屯唯讀服務尚未部署或讀取失敗：'+error.message);
- return parse(data?.value);
+ // 使用現有 sbd_read_cost_report_sources 唯讀服務，無須另外部署專用函式。
+ const {data,error}=await sb.rpc('sbd_read_cost_report_sources');
+ if(error)throw Error('成本銷售唯讀服務讀取失敗：'+error.message);
+ if(!Array.isArray(data))throw Error('成本銷售唯讀服務回傳格式錯誤');
+ const row=data.find(r=>r.data_key===KEY);
+ if(!row)throw Error('唯讀服務未提供 '+KEY+'；請確認管理者已儲存此區間資料');
+ return parse(row.payload?.value);
 }
 window.sbdTcManualTotals=fetchData;
 let saved={},editingPeriod=null,editingVersion=null;
@@ -4410,7 +4416,7 @@ async function render(){
   if(!isAdminAccount() && !Object.keys(manualHf).length)throw Error('使用者唯讀服務沒有提供浤富手動總額資料（sbd_hongfu_manual_totals_v1）');
   if(period.value!=='all' && !manualHf[period.value] && !isAdminAccount())throw Error('唯讀服務缺少 '+period.value+' 的浤富手動總額，不能顯示不完整合計');
  }catch(e){
-  const message='使用者1、2的浤富資料無法同步：'+(e.message||e)+'。請先部署 sbd_read_hongfu_manual_totals 唯讀服務，讓使用者取得管理者已儲存的區間總額；原始資料未更動。';
+  const message='使用者1、2的浤富資料無法同步：'+(e.message||e)+'。請確認 sbd_read_cost_report_sources 已包含管理者手動儲存的浤富區間總額；原始資料未更動。';
   document.getElementById('crCloudStatus').textContent=message;
   document.getElementById('crCards').innerHTML='';
   document.getElementById('crSummary').innerHTML='<p style="color:#a22;padding:16px;border:1px solid #e5b2b2;border-radius:8px">'+esc(message)+'</p>';
