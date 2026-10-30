@@ -578,7 +578,7 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
 </style>
 
 <style id="v134-user-two-tabs-center">
-/* 手機版使用者：行事曆與成本銷售報表兩個頁籤水平置中 */
+/* 手機版使用者：頁籤水平置中 */
 @media(max-width:700px){
  body:not(.admin-account) #appPage .featureTabs{
    display:flex!important;flex-wrap:wrap!important;justify-content:center!important;
@@ -635,27 +635,37 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
 .hf-case-table th{background:#f2f5f8}
 .hf-case-table td button{margin-right:5px;padding:5px 9px}
 @media(max-width:650px){.hf-case-fields{grid-template-columns:1fr}.hf-case-toolbar button,.hf-case-toolbar select{font-size:13px}}
-</style><style id="pending-mobile-responsive-v2">
-/* 手機採縱向卡片，不再用桌面固定公分寬度迫使水平捲動 */
+</style><style id="pending-mobile-responsive-v3">
+/* 手機維持橫向表格：每筆案件一列，不拆成直式卡片 */
 @media(max-width:700px){
- #overtimeView>.card{width:calc(100% - 16px)!important;max-width:none!important;margin:8px auto!important;padding:12px!important}
+ #overtimeView>.card{width:calc(100% - 12px)!important;max-width:none!important;margin:8px auto!important;padding:10px!important}
  #overtimeView .pending-form-fields{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:10px!important}
  #overtimeView .pending-form-fields label{width:100%!important;min-width:0!important}
  #overtimeView .pending-form-fields input,#overtimeView .pending-form-fields textarea{width:100%!important;max-width:100%!important;font-size:16px!important}
- #overtimeView .quoteList{display:block!important;width:100%!important;min-width:0!important;table-layout:auto!important;margin:0!important}
- #overtimeView .quoteList colgroup,#overtimeView .quoteList thead{display:none!important}
- #overtimeView .quoteList tbody{display:block!important;width:100%!important}
- #overtimeView .quoteList tbody tr{display:grid!important;grid-template-columns:1fr!important;width:100%!important;margin:0 0 12px!important;padding:10px!important;box-sizing:border-box!important;border:1px solid #d8e2ed!important;border-radius:9px!important;background:#fff!important}
- #overtimeView .quoteList tbody td{display:grid!important;grid-template-columns:80px minmax(0,1fr)!important;gap:8px!important;align-items:start!important;box-sizing:border-box!important;width:100%!important;min-width:0!important;max-width:none!important;padding:6px 3px!important;border:0!important;white-space:pre-wrap!important;overflow-wrap:anywhere!important}
- #overtimeView .quoteList tbody td:nth-child(1):before{content:'日期';font-weight:700}
- #overtimeView .quoteList tbody td:nth-child(2):before{content:'客戶';font-weight:700}
- #overtimeView .quoteList tbody td:nth-child(3):before{content:'安裝日';font-weight:700}
- #overtimeView .quoteList tbody td:nth-child(4):before{content:'案件內容';font-weight:700}
- #overtimeView .quoteList tbody td:nth-child(5):before{content:'追蹤';font-weight:700}
- #overtimeView .quoteList tbody td:nth-child(6):before{content:'操作';font-weight:700}
- #overtimeView .quoteList tbody tr td[colspan]{display:block!important;text-align:center!important}
+ #overtimeView .quoteList{display:table!important;width:19cm!important;min-width:19cm!important;table-layout:fixed!important;margin:0!important;font-size:12px!important}
+ #overtimeView .quoteList colgroup{display:table-column-group!important}
+ #overtimeView .quoteList thead{display:table-header-group!important}
+ #overtimeView .quoteList tbody{display:table-row-group!important;width:auto!important}
+ #overtimeView .quoteList tbody tr{display:table-row!important;width:auto!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important}
+ #overtimeView .quoteList tbody td{display:table-cell!important;width:auto!important;min-width:0!important;max-width:none!important;padding:7px 5px!important;border-bottom:1px solid #d8e2ed!important;vertical-align:top!important;white-space:pre-wrap!important;overflow-wrap:anywhere!important}
+ #overtimeView .quoteList tbody td:before{content:none!important;display:none!important}
+ #overtimeView .quoteList col:nth-child(1){width:2.6cm!important}
+ #overtimeView .quoteList col:nth-child(2){width:2.6cm!important}
+ #overtimeView .quoteList col:nth-child(3){width:2cm!important}
+ #overtimeView .quoteList col:nth-child(4){width:4.6cm!important}
+ #overtimeView .quoteList col:nth-child(5){width:4.6cm!important}
+ #overtimeView .quoteList col:nth-child(6){width:2.6cm!important}
+ #overtimeView .quoteList th{padding:7px 5px!important;white-space:nowrap!important}
+ #overtimeView .quoteList td button{padding:4px 5px!important;font-size:12px!important}
 }
-</style></head>
+</style><style id="sbd-hide-hf-expense-for-users">
+/* 非管理者不得看到或操作浤富與其他支出；包含手機與電腦 */
+body:not(.admin-account) #hfSimpleTabBtn,
+body:not(.admin-account) #otherExpensesTabBtn,
+body:not(.admin-account) #hfSimpleView,
+body:not(.admin-account) #otherExpensesView {display:none!important}
+</style>
+</head>
 <body>
 <div id="pullRefreshIndicator" aria-hidden="true"><div class="pull-spinner"></div></div>
 <section id="loginPage" class="loginWrap"><div class="loginCard"><h1>勝寶鼎/新弘股公司</h1><label class="field">Email<input id="loginEmail" type="email" autocomplete="username"></label><label class="field">密碼<input id="loginPassword" type="password" autocomplete="current-password"></label><button id="loginBtn" class="loginBtn">登入</button><button id="passkeyBtn" class="loginBtn" type="button" style="margin-top:10px;background:#fff;border:1px solid #81D8D0">使用 Face ID／裝置解鎖登入</button><div id="loginErr" class="err"></div></div></section>
@@ -1182,7 +1192,9 @@ function canEditCalendar(){return isAdminAccount()||isUser1()}
 function canViewCostReport(){return isAdminAccount()||isUser1()||isUser2()}
 function canUseOuting(){return isAdminAccount()}
 function canUseOvertime(){return isAdminAccount()||isUser1()}
-async function boot(){const {data:{session}}=await sb.auth.getSession();if(!session){$("loginPage").classList.remove("hidden");$("appPage").classList.add("hidden");return}currentUser=session.user;const {data,error}=await sb.from("sbd_users").select("display_name,role,active").eq("user_id",currentUser.id).maybeSingle();if(error||!data||!data.active){await sb.auth.signOut();$("loginErr").textContent="此帳號尚未開通勝寶鼎/新弘股公司權限";$("loginPage").classList.remove("hidden");$("appPage").classList.add("hidden");return}profile=data;document.body.classList.toggle("admin-account",isAdminAccount());$("loginPage").classList.add("hidden");$("appPage").classList.remove("hidden");const roleText=isAdminAccount()?"管理者":"使用者";$("roleLine").textContent=`${profile.display_name||currentUser.email}｜${roleText}`;$("noteBtn").classList.toggle("hidden",!isAdminAccount());$("quoteTabBtn").classList.toggle("hidden",!isAdminAccount());$("quoteQuickNoteHeaderBtn")?.classList.toggle("hidden",!isAdminAccount());$("installStatsTabBtn").classList.toggle("hidden",!isAdminAccount());$("purchaseTabBtn")?.classList.toggle("hidden",!isAdminAccount());$("costReportTabBtn")?.classList.toggle("hidden",!canViewCostReport());$("invoiceCustomerTabBtn")?.classList.toggle("hidden",!isAdminAccount());$("overtimeTabBtn")?.classList.toggle("hidden",!canUseOvertime());$("outingRecords")?.classList.toggle("hidden",!canUseOuting());showFeature("calendar");await loadMonth();if(canUseOuting()&&window.renderOutingRecords)window.renderOutingRecords()}
+async function boot(){const {data:{session}}=await sb.auth.getSession();if(!session){$("loginPage").classList.remove("hidden");$("appPage").classList.add("hidden");return}currentUser=session.user;const {data,error}=await sb.from("sbd_users").select("display_name,role,active").eq("user_id",currentUser.id).maybeSingle();if(error||!data||!data.active){await sb.auth.signOut();$("loginErr").textContent="此帳號尚未開通勝寶鼎/新弘股公司權限";$("loginPage").classList.remove("hidden");$("appPage").classList.add("hidden");return}profile=data;document.body.classList.toggle("admin-account",isAdminAccount());$("loginPage").classList.add("hidden");$("appPage").classList.remove("hidden");const roleText=isAdminAccount()?"管理者":"使用者";$("roleLine").textContent=`${profile.display_name||currentUser.email}｜${roleText}`;$("noteBtn").classList.toggle("hidden",!isAdminAccount());$("quoteTabBtn").classList.toggle("hidden",!isAdminAccount());$("quoteQuickNoteHeaderBtn")?.classList.toggle("hidden",!isAdminAccount());$("installStatsTabBtn").classList.toggle("hidden",!isAdminAccount());$("purchaseTabBtn")?.classList.toggle("hidden",!isAdminAccount());$("costReportTabBtn")?.classList.toggle("hidden",!canViewCostReport());
+$("hfSimpleTabBtn")?.classList.toggle("hidden",!isAdminAccount());
+$("otherExpensesTabBtn")?.classList.toggle("hidden",!isAdminAccount());$("invoiceCustomerTabBtn")?.classList.toggle("hidden",!isAdminAccount());$("overtimeTabBtn")?.classList.toggle("hidden",!canUseOvertime());$("outingRecords")?.classList.toggle("hidden",!canUseOuting());showFeature("calendar");await loadMonth();if(canUseOuting()&&window.renderOutingRecords)window.renderOutingRecords()}
 async function loadMonth(){ $("syncText").textContent="讀取中…";const {data:e,error:ee}=await sb.from("sbd_calendar_events").select("id,event_date,event_time,title,details,color,created_at").gte("event_date",firstDay()).lt("event_date",nextMonthFirst()).order("event_date").order("event_time",{ascending:true,nullsFirst:true});if(ee){$("syncText").textContent="行事曆讀取失敗，請確認網路後重新整理；原有資料未被清除";console.error("Calendar read failed",ee);return}events=e||[];const {data:n,error:ne}=await sb.from("sbd_month_notes").select("id,month_start,note").eq("month_start",firstDay()).maybeSingle();currentNoteRow=ne?null:n;render();$("syncText").textContent=ne?"行程已載入；月份備註讀取失敗":"資料已同步" }
 function render(){const y=view.getFullYear(),m=view.getMonth()+1;$("monthTitle").textContent=`${y} 年 ${m} 月`;const last=new Date(y,m,0).getDate(),first=(new Date(y,m-1,1).getDay()+6)%7,h=holidayMap(y,m);let out="";for(let r=0;r<6;r++){out+='<div class="week">';for(let c=0;c<7;c++){const n=r*7+c-first+1;if(n<1||n>last){out+='<div class="day blank"></div>';continue}const key=`${ym()}-${pad(n)}`,a=events.filter(x=>x.event_date===key),upper=a.filter(x=>eventInstall(x)==="勝寶鼎"),lower=a.filter(x=>eventInstall(x)==="外包"),isRed=!!h[n]||c>=5;const chip=x=>{const t=(x.event_time?x.event_time.slice(0,5)+" ":"")+esc(x.title);return `<div class="event ${esc(x.color)} adminEvent" data-id="${x.id}">${t}</div>`};const canAdd=canEditCalendar();out+=`<div class="day${isRed?" holiday":""}" data-date="${key}"><div class="dateLine${canAdd?" canAdd":""}"${canAdd?` data-date="${key}" role="button" tabindex="0" aria-label="新增 ${key} 行程"`:""}><div class="date">${n}${h[n]?`<span class="holidayName">${esc(h[n])}</span>`:""}</div>${canAdd?`<span class="dayAdd">＋</span>`:""}</div>${upper.map(chip).join("")}<div class="split"></div>${lower.map(chip).join("")}</div>`}out+='</div>'}$("weeks").innerHTML=out;$("weeks").querySelectorAll(".adminEvent").forEach(el=>el.addEventListener("click",ev=>{ev.stopPropagation();if(canEditCalendar())openEditEvent(el.dataset.id);else openViewEvent(el.dataset.id)}));$("weeks").querySelectorAll(".dateLine.canAdd").forEach(el=>{el.addEventListener("click",ev=>{ev.stopPropagation();openNewEvent(el.dataset.date)});el.addEventListener("keydown",ev=>{if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();openNewEvent(el.dataset.date)}})});const note=(currentNoteRow?.note||"").trim();$("noteText").textContent=note;$("noteBox").classList.toggle("show",!!note)}
 function openNewEvent(dateOverride){if(!canEditCalendar())return;currentEditId=null;$("eventDlgTitle").textContent="新增行程";$("deleteEventBtn").classList.add("hidden");$("installField").classList.toggle("hidden",!["admin","editor"].includes(profile.role));$("fdate").value=displayDateInput(dateOverride||`${ym()}-01`);$("ftime").value="";$("ftitle").value="";$("fdetail").value="▲下午安裝、\n✓有配件\n宜蘭/U5002｜  ，\nL+中-各*1";$("fcolor").value="blue";$("finstall").value="勝寶鼎";refreshMasterOptions("");$("eventDlg").showModal()}
