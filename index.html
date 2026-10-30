@@ -947,6 +947,20 @@ body:not(.admin-account) #otherExpensesView {display:none!important}
 </div><p id="pendingStatus" style="color:#65758a;font-size:13px">讀取中…</p><div style="overflow-x:auto"><table class="quoteList" style="width:29cm;min-width:29cm;table-layout:fixed"><colgroup><col style="width:4cm"><col style="width:3cm"><col style="width:3cm"><col style="width:6cm"><col style="width:10cm"><col style="width:3cm"></colgroup><thead><tr><th>日期</th><th>客戶</th><th>安裝日</th><th>案件內容</th><th>追蹤</th><th id="pendingActionHeader">操作</th></tr></thead><tbody id="pendingRows"></tbody></table></div></div></section>
 
 <section id="taichungPurchaseView" class="quoteWrap hidden">
+<div id="tcManualTotals" class="quoteCard" style="margin:18px 0;padding:18px;border:1px solid #dce5ee;border-radius:12px">
+<h2>草屯｜區間銷售與成本（手動同步）</h2>
+<p style="color:#64748b">僅此成本銷售報表改採手動總額；原草屯報價單、採購單、明細與 Excel 功能全部保留。</p>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px">
+<label>請款區間<select id="tcManualPeriod" style="width:100%;padding:9px"><option value="">選擇區間</option></select></label>
+<label>銷售額<input id="tcManualSales" type="number" min="0" step="1" placeholder="輸入銷售額" style="width:100%;padding:9px"></label>
+<label>填寫欄／備註<input id="tcManualNote" placeholder="輸入備註" style="width:100%;padding:9px"></label>
+<label>件數<input id="tcManualCount" type="number" min="0" step="1" placeholder="輸入件數" style="width:100%;padding:9px"></label>
+<label>成本<input id="tcManualCost" type="number" min="0" step="1" placeholder="輸入成本" style="width:100%;padding:9px"></label>
+</div>
+<div style="display:flex;align-items:center;gap:10px;margin:12px 0;flex-wrap:wrap"><button type="button" class="primary" id="tcManualSave">儲存並同步成本銷售</button><span id="tcManualStatus" style="color:#52687c"></span></div>
+<div id="tcManualHistory"></div>
+</div>
+
   <div class="purchaseCard">
     <h2 class="purchaseTitle">新弘報價單</h2>
     <div class="purchaseActions">
@@ -972,19 +986,6 @@ body:not(.admin-account) #otherExpensesView {display:none!important}
       </tr></tfoot>
     </table><div style="margin-top:18px"><h3>代安裝明細</h3><div style="max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch"><table class="purchaseRecords" id="tcAgencyDetailTable" style="width:14cm;min-width:14cm;max-width:14cm;table-layout:fixed"><colgroup><col style="width:4cm"><col style="width:8cm"><col style="width:2cm"></colgroup><thead><tr><th>單號</th><th>案名</th><th>案件金額</th></tr></thead><tbody id="tcAgencyRows"></tbody><tfoot><tr><th>總計</th><th id="tcAgencyCount">0 件</th><th id="tcAgencyTotal">0</th></tr></tfoot></table></div></div><details style="margin:10px 0 18px;border:1px solid #d8e0e7;border-radius:8px;padding:10px"><summary style="cursor:pointer;font-weight:700">核對 10/10 舊備份代安裝（不計入目前金額／件數）</summary><p style="font-size:12px;color:#66788a">以下只是歷史備份，不代表目前有效案件。標示「未找到」的資料不會自動恢復，避免重複計算。</p><div style="overflow-x:auto"><table class="purchaseRecords" style="min-width:470px"><thead><tr><th>單號</th><th>案名</th><th>舊備份金額</th><th>比對</th></tr></thead><tbody id="tcAgencyBackupAudit"></tbody></table></div></details>
   </div>
-<div id="tcManualTotals" class="quoteCard" style="margin:18px 0;padding:18px;border:1px solid #dce5ee;border-radius:12px">
-<h2>草屯｜區間銷售與成本（手動同步）</h2>
-<p style="color:#64748b">僅此成本銷售報表改採手動總額；原草屯報價單、採購單、明細與 Excel 功能全部保留。</p>
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px">
-<label>請款區間<select id="tcManualPeriod" style="width:100%;padding:9px"><option value="">選擇區間</option></select></label>
-<label>銷售額<input id="tcManualSales" type="number" min="0" step="1" placeholder="輸入銷售額" style="width:100%;padding:9px"></label>
-<label>填寫欄／備註<input id="tcManualNote" placeholder="輸入備註" style="width:100%;padding:9px"></label>
-<label>件數<input id="tcManualCount" type="number" min="0" step="1" placeholder="輸入件數" style="width:100%;padding:9px"></label>
-<label>成本<input id="tcManualCost" type="number" min="0" step="1" placeholder="輸入成本" style="width:100%;padding:9px"></label>
-</div>
-<div style="display:flex;align-items:center;gap:10px;margin:12px 0;flex-wrap:wrap"><button type="button" class="primary" id="tcManualSave">儲存並同步成本銷售</button><span id="tcManualStatus" style="color:#52687c"></span></div>
-<div id="tcManualHistory"></div>
-</div>
   <div class="quoteCard">
     <h2 class="quoteTitle">草屯採購單</h2>
     <div id="tcCloudProjectsStatus" style="font-size:12px;color:#52687c;margin-bottom:7px">正在準備讀取雲端草屯案件…</div><div style="margin:0 0 12px"><label style="font-size:13px;font-weight:800">指定單號／案名<select id="tcAssignmentSelect" style="width:100%;padding:10px;border:1px solid #bdc8d2;border-radius:8px;margin-top:4px;background:#fff"><option value="">請選擇要指定的單號／案名</option></select></label><div style="font-size:12px;color:var(--muted);margin-top:4px">報價單會帶入客戶名稱與未稅合計；原有草屯資料不覆蓋，可在上方新增、修改。 <button type="button" id="tcRefreshProjectBtn" style="padding:4px 8px">重新讀取清單</button><button type="button" id="tcQuoteAuditBtn" style="padding:4px 8px;margin-left:6px">檢查所有 0 元案件</button></div><div id="tcQuoteAuditPanel" style="display:none;margin:12px 0;padding:12px;border:1px solid #cbd5e1;border-radius:8px"></div></div>
