@@ -4074,14 +4074,16 @@ function show(){
  el('hfSimpleSave').textContent='儲存並同步成本銷售';
  el('hfSimpleCancelEdit').style.display='none';
  el('hfSimpleStatus').textContent=current?'可直接修改上方欄位，按「儲存並同步成本銷售」更新。':'';
- el('hfSimpleHistory').innerHTML='<table style="width:100%;border-collapse:collapse"><thead><tr><th>區間日期</th><th>銷售額</th><th>件數</th><th>備註</th><th>成本</th><th>操作</th></tr></thead><tbody>'+Object.entries(saved).sort().map(([p,v])=>`<tr><td>${p}</td><td>${Number(v.sales).toLocaleString()}</td><td>${v.count==null?'—':Number(v.count).toLocaleString()}</td><td>${String(v.note||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}</td><td>${Number(v.cost).toLocaleString()}</td><td><button type="button" data-hf-edit="${p}" style="padding:6px 12px;cursor:pointer">修改</button></td></tr>`).join('')+'</tbody></table>';
+ el('hfSimpleHistory').innerHTML='<table style="width:100%;border-collapse:collapse"><thead><tr><th>區間日期</th><th>銷售額</th><th>件數</th><th>備註</th><th>成本</th><th>操作</th></tr></thead><tbody>'+Object.entries(saved).sort().map(([p,v])=>`<tr><td>${p}</td><td>${v.sales==null?'—':Number(v.sales).toLocaleString()}</td><td>${v.count==null?'—':Number(v.count).toLocaleString()}</td><td>${String(v.note||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}</td><td>${v.cost==null?'—':Number(v.cost).toLocaleString()}</td><td><button type="button" data-hf-edit="${p}" style="padding:6px 12px;cursor:pointer">修改</button></td></tr>`).join('')+'</tbody></table>';
  el('hfSimpleHistory').querySelectorAll('[data-hf-edit]').forEach(btn=>btn.onclick=()=>{if(!isAdminAccount())return;editingPeriod=btn.dataset.hfEdit;editingVersion=saved[editingPeriod]?.savedAt||null;el('hfSimplePeriod').value=editingPeriod;show();el('hfSimpleSales').focus();el('hfSimpleView').scrollIntoView({behavior:'smooth',block:'start'});});
 }
 async function refresh(){try{saved=await fetchData();show()}catch(e){el('hfSimpleStatus').textContent='雲端讀取失敗：'+e.message}}
 async function save(){
  if(!isAdminAccount())return;
  const period=el('hfSimplePeriod').value,sales=el('hfSimpleSales').value,cost=el('hfSimpleCost').value,count=el('hfSimpleCount').value,note=el('hfSimpleNote').value.trim();
- if(!/^\d{6}-\d{6}$/.test(period)||sales===''||cost===''||count===''||!Number.isInteger(Number(count))||Number(count)<0||Number(sales)<0||Number(cost)<0||!Number.isFinite(Number(sales))||!Number.isFinite(Number(cost))){alert('請選擇區間並填寫正確銷售額、成本');return}
+ if(!/^\d{6}-\d{6}$/.test(period)){el('hfSimpleStatus').textContent='請先選擇請款區間';return}
+ if([sales,cost,count].every(v=>v==='')){el('hfSimpleStatus').textContent='請至少填寫銷售額、成本或件數其中一項';return}
+ if((sales!==''&&(!Number.isFinite(Number(sales))||Number(sales)<0))||(cost!==''&&(!Number.isFinite(Number(cost))||Number(cost)<0))||(count!==''&&(!Number.isInteger(Number(count))||Number(count)<0))){el('hfSimpleStatus').textContent='請輸入正確的非負數字';return}
  const b=el('hfSimpleSave');b.disabled=true;
  try{
   const {data:{user}}=await sb.auth.getUser();if(!user)throw Error('尚未登入');
@@ -4090,8 +4092,8 @@ async function save(){
   const isEditing=!!latest[period];
   if(isEditing&&String(latest[period].savedAt||'')!==String(saved[period]?.savedAt||''))throw Error('此區間已被其他裝置更新，請重新選擇區間後再修改');
   const action=isEditing?'更新':'新增';
-  if(!confirm(`確認${action}浤富 ${period}：銷售額 ${Number(sales).toLocaleString()} 元、件數 ${Number(count).toLocaleString()} 筆、成本 ${Number(cost).toLocaleString()} 元？此操作將更新成本銷售報表。`))return;
-  latest[period]={...(latest[period]||{}),sales:Number(sales),cost:Number(cost),count:Number(count),note,savedAt:new Date().toISOString(), ...(isEditing?{previousVersion:{sales:latest[period].sales,cost:latest[period].cost,count:latest[period].count,note:latest[period].note,savedAt:latest[period].savedAt}}:{})};
+  if(!confirm(`確認${action}浤富 ${period}：銷售額 ${sales===''?'維持原值':Number(sales).toLocaleString()+' 元'}、件數 ${count===''?'維持原值':Number(count).toLocaleString()+' 筆'}、成本 ${cost===''?'維持原值':Number(cost).toLocaleString()+' 元'}？此操作將更新成本銷售報表。`))return;
+  latest[period]={...(latest[period]||{}),...(sales!==''?{sales:Number(sales)}:{}),...(cost!==''?{cost:Number(cost)}:{}),...(count!==''?{count:Number(count)}:{}),note,savedAt:new Date().toISOString(), ...(isEditing?{previousVersion:{sales:latest[period].sales,cost:latest[period].cost,count:latest[period].count,note:latest[period].note,savedAt:latest[period].savedAt}}:{})};
   const payload={value:JSON.stringify(latest)};
   const result=found?await sb.from('sbd_app_data').update({payload,updated_at:new Date().toISOString()}).eq('user_id',user.id).eq('data_key',KEY):await sb.from('sbd_app_data').insert({user_id:user.id,data_key:KEY,payload,updated_at:new Date().toISOString()});
   if(result.error)throw result.error;
@@ -4145,14 +4147,16 @@ function show(){
  el('tcManualSave').textContent='儲存並同步成本銷售';
 
  el('tcManualStatus').textContent=current?'可直接修改上方欄位，按「儲存並同步成本銷售」更新。':'';
- el('tcManualHistory').innerHTML='<table style="width:100%;border-collapse:collapse"><thead><tr><th>區間日期</th><th>銷售額</th><th>件數</th><th>備註</th><th>成本</th><th>操作</th></tr></thead><tbody>'+Object.entries(saved).sort().map(([p,v])=>`<tr><td>${p}</td><td>${Number(v.sales).toLocaleString()}</td><td>${v.count==null?'—':Number(v.count).toLocaleString()}</td><td>${String(v.note||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}</td><td>${Number(v.cost).toLocaleString()}</td><td><button type="button" data-hf-edit="${p}" style="padding:6px 12px;cursor:pointer">修改</button></td></tr>`).join('')+'</tbody></table>';
+ el('tcManualHistory').innerHTML='<table style="width:100%;border-collapse:collapse"><thead><tr><th>區間日期</th><th>銷售額</th><th>件數</th><th>備註</th><th>成本</th><th>操作</th></tr></thead><tbody>'+Object.entries(saved).sort().map(([p,v])=>`<tr><td>${p}</td><td>${v.sales==null?'—':Number(v.sales).toLocaleString()}</td><td>${v.count==null?'—':Number(v.count).toLocaleString()}</td><td>${String(v.note||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}</td><td>${v.cost==null?'—':Number(v.cost).toLocaleString()}</td><td><button type="button" data-hf-edit="${p}" style="padding:6px 12px;cursor:pointer">修改</button></td></tr>`).join('')+'</tbody></table>';
  el('tcManualHistory').querySelectorAll('[data-hf-edit]').forEach(btn=>btn.onclick=()=>{if(!isAdminAccount())return;editingPeriod=btn.dataset.hfEdit;editingVersion=saved[editingPeriod]?.savedAt||null;el('tcManualPeriod').value=editingPeriod;show();el('tcManualSales').focus();el('tcManualTotals').scrollIntoView({behavior:'smooth',block:'start'});});
 }
 async function refresh(){try{saved=await fetchData();show()}catch(e){el('tcManualStatus').textContent='雲端讀取失敗：'+e.message}}
 async function save(){
  if(!isAdminAccount())return;
  const period=el('tcManualPeriod').value,sales=el('tcManualSales').value,cost=el('tcManualCost').value,count=el('tcManualCount').value,note=el('tcManualNote').value.trim();
- if(!/^\d{6}-\d{6}$/.test(period)||sales===''||cost===''||count===''||!Number.isInteger(Number(count))||Number(count)<0||Number(sales)<0||Number(cost)<0||!Number.isFinite(Number(sales))||!Number.isFinite(Number(cost))){alert('請選擇區間並填寫正確銷售額、成本');return}
+ if(!/^\d{6}-\d{6}$/.test(period)){el('tcManualStatus').textContent='請先選擇請款區間';return}
+ if([sales,cost,count].every(v=>v==='')){el('tcManualStatus').textContent='請至少填寫銷售額、成本或件數其中一項';return}
+ if((sales!==''&&(!Number.isFinite(Number(sales))||Number(sales)<0))||(cost!==''&&(!Number.isFinite(Number(cost))||Number(cost)<0))||(count!==''&&(!Number.isInteger(Number(count))||Number(count)<0))){el('tcManualStatus').textContent='請輸入正確的非負數字';return}
  const b=el('tcManualSave');b.disabled=true;
  try{
   const {data:{user}}=await sb.auth.getUser();if(!user)throw Error('尚未登入');
@@ -4161,8 +4165,8 @@ async function save(){
   const isEditing=!!latest[period];
   if(isEditing&&String(latest[period].savedAt||'')!==String(saved[period]?.savedAt||''))throw Error('此區間已被其他裝置更新，請重新選擇區間後再修改');
   const action=isEditing?'更新':'新增';
-  if(!confirm(`確認${action}草屯 ${period}：銷售額 ${Number(sales).toLocaleString()} 元、件數 ${Number(count).toLocaleString()} 筆、成本 ${Number(cost).toLocaleString()} 元？此操作將更新成本銷售報表。`))return;
-  latest[period]={...(latest[period]||{}),sales:Number(sales),cost:Number(cost),count:Number(count),note,savedAt:new Date().toISOString(), ...(isEditing?{previousVersion:{sales:latest[period].sales,cost:latest[period].cost,count:latest[period].count,note:latest[period].note,savedAt:latest[period].savedAt}}:{})};
+  if(!confirm(`確認${action}草屯 ${period}：銷售額 ${sales===''?'維持原值':Number(sales).toLocaleString()+' 元'}、件數 ${count===''?'維持原值':Number(count).toLocaleString()+' 筆'}、成本 ${cost===''?'維持原值':Number(cost).toLocaleString()+' 元'}？此操作將更新成本銷售報表。`))return;
+  latest[period]={...(latest[period]||{}),...(sales!==''?{sales:Number(sales)}:{}),...(cost!==''?{cost:Number(cost)}:{}),...(count!==''?{count:Number(count)}:{}),note,savedAt:new Date().toISOString(), ...(isEditing?{previousVersion:{sales:latest[period].sales,cost:latest[period].cost,count:latest[period].count,note:latest[period].note,savedAt:latest[period].savedAt}}:{})};
   const payload={value:JSON.stringify(latest)};
   const result=found?await sb.from('sbd_app_data').update({payload,updated_at:new Date().toISOString()}).eq('user_id',user.id).eq('data_key',KEY):await sb.from('sbd_app_data').insert({user_id:user.id,data_key:KEY,payload,updated_at:new Date().toISOString()});
   if(result.error)throw result.error;
@@ -4372,7 +4376,8 @@ async function render(){
  try {const raw=await costReportKeyValue('sbd_tc_invoice_periods_v1');const v=typeof raw==='string'?JSON.parse(raw):raw;if(Array.isArray(v))saved=v;}catch(e){console.warn('讀取雲端請款區間失敗',e);const st=document.getElementById('crCloudStatus');if(st)st.textContent='請款區間雲端讀取失敗：'+(e.message||e)}
  if(!saved.length && isAdminAccount())saved=read('sbd_tc_invoice_periods_v1','[]');
  const hfCosts={...(isAdminAccount()?hfLocal():{}),...(await hfCloud()||{})};
- let tcManualPeriods=[];try{tcManualPeriods=Object.keys(await window.sbdTcManualTotals?.()||{})}catch(e){}\n let hfManualPeriods=[];try{hfManualPeriods=Object.keys(await window.sbdHfManualTotals?.()||{})}catch(e){console.warn('浤富手動總額區間讀取失敗',e)}
+ let tcManualPeriods=[];try{tcManualPeriods=Object.keys(await window.sbdTcManualTotals?.()||{})}catch(e){}
+ let hfManualPeriods=[];try{hfManualPeriods=Object.keys(await window.sbdHfManualTotals?.()||{})}catch(e){console.warn('浤富手動總額區間讀取失敗',e)}
  const periods=[...new Set([...tcManualPeriods,...hfManualPeriods,...all.map(r=>r.period).filter(Boolean),...(Array.isArray(saved)?saved:[]),...all.map(r=>r.period).filter(Boolean),...Object.keys(hfCosts),(companyHongfuPeriod||(!isAdminAccount()?'':localStorage.getItem('sbd_hongfu_last_period')))].filter(Boolean))].sort();
  period.innerHTML='<option value="all">全部請款區間（含所有日期）</option>'+periods.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');
  // v122: Never silently start with every invoice period combined.
@@ -4397,8 +4402,8 @@ async function render(){
  try{manualTc=await window.sbdTcManualTotals?.()||{}}catch(e){
   console.warn('草屯手動總額尚未能從雲端讀取',e);
  }
- const tcManualPeriods=period.value==='all'?Object.keys(manualTc):[period.value];
- const tcManualValues=tcManualPeriods.map(p=>manualTc[p]).filter(v=>v&&Number.isFinite(Number(v.sales))&&Number.isFinite(Number(v.cost)));
+ const tcSelectedPeriods=period.value==='all'?Object.keys(manualTc):[period.value];
+ const tcManualValues=tcSelectedPeriods.map(p=>manualTc[p]).filter(v=>v&&Number.isFinite(Number(v.sales))&&Number.isFinite(Number(v.cost)));
  groups[1].sale=tcManualValues.reduce((n,v)=>n+Number(v.sales),0);
  groups[1].cost=tcManualValues.reduce((n,v)=>n+Number(v.cost),0);
  groups[1].count=tcManualValues.reduce((n,v)=>n+(Number.isInteger(Number(v.count))?Number(v.count):0),0);
@@ -4460,7 +4465,7 @@ async function render(){
  </div><div style="border:1px solid #e2e8f0;border-radius:10px;padding:12px;background:#fff"><div style="font-weight:700;color:#173653;margin-bottom:8px">銷售／成本／件數圖表</div><div style="font-size:12px;color:#60738a">🔵 銷售額　🟢 成本　🟠 件數（右側刻度）</div><div style="overflow-x:auto"><svg viewBox="0 0 700 240" style="display:block;width:100%;min-width:560px;height:auto" role="img" aria-label="銷售、成本柱狀圖及件數折線圖"><line x1="0" y1="193" x2="690" y2="193" stroke="#bdcbd9"/>${[0,1,2,3,4].map(i=>`<line x1="0" y1="${193-i*38.75}" x2="690" y2="${193-i*38.75}" stroke="#e6edf4" stroke-dasharray="3 4"/>`).join('')}${barGroups}<path d="${countPath}" stroke="#f28a39" stroke-width="2.5" fill="none"/>${countDots}</svg></div></div></div>`;
 
  const cell=(value,muted=false,isTotal=false)=>`<td style="padding:15px 12px;text-align:center;font-size:16px;font-weight:${isTotal?'750':'400'};color:${muted&&!isTotal?'#718096':'#173653'};white-space:nowrap;font-variant-numeric:tabular-nums;border-bottom:1px solid #e0e3e8">${value}</td>`;
- document.getElementById('crSummary').innerHTML=`${tcMissing?'<p style="color:#9b5b1d">提醒：此區間草屯有 '+tcMissing+' 筆案件尚未對應已儲存的採購明細；下方成本只計算已儲存的部分，並非完整結算成本。</p>':''}<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px"><h3 style="margin:0;color:#173653">銷售／成本／件數統計</h3><button type="button" id="crExpenseOpen" style="padding:9px 14px;border:1px solid #94acc5;border-radius:7px;background:#eef5fc;color:#173653;cursor:pointer">支出明細（${expenseDetailRows.length}筆）</button></div><div style="width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;background:#fff"><table style="width:10cm;min-width:10cm;table-layout:fixed;border-collapse:collapse;background:#fff"><colgroup><col style="width:2cm"><col style="width:3cm"><col style="width:3cm"><col style="width:2cm"></colgroup><thead><tr style="background:#f4f5f7;color:#354153"><th style="padding:14px 12px;text-align:center;font-weight:700;border-bottom:1px solid #cfd5dd;white-space:nowrap">業務類別</th><th style="padding:14px 12px;text-align:center;font-weight:700;border-bottom:1px solid #cfd5dd;white-space:nowrap">銷售額</th><th style="padding:14px 12px;text-align:center;font-weight:700;border-bottom:1px solid #cfd5dd;white-space:nowrap">成本</th><th style="padding:14px 12px;text-align:center;font-weight:700;border-bottom:1px solid #cfd5dd;white-space:nowrap">件數</th></tr></thead><tbody>${[...groups,total].map((g,i)=>{const isTotal=i===groups.length;return `<tr style="background:#fff"><th style="padding:15px 12px;text-align:left;color:#173653;font-size:16px;font-weight:${isTotal?'750':'400'};border-bottom:1px solid #e0e3e8;white-space:nowrap">${g.name}</th>${cell(g.name==='其他支出'?'－':fmt(g.sale),false,isTotal)}${cell(g.name==='代安裝'?'－':(isTotal?fmt(g.cost):(g.known?fmt(g.cost):(g.hasCost?fmt(g.cost)+' <span style="font-size:11px;color:#a66">（部分成本，'+g.missingCost+'筆未有明細）</span>':'尚無成本資料'))),g.name==='代安裝'?false:!g.known,isTotal)}${cell(g.name==='其他支出'?'－':String(g.count),false,isTotal)}</tr>`}).join('')}</tbody></table></div><p style="color:#718096;font-size:12px;margin:12px 0 0">其他支出依所選請款區間的日期計入成本，其他支出不屬於案件，件數顯示「－」且不列入總件數；成本未儲存的案件不會當作 0；浤富銷售額、成本及件數僅採管理者手動儲存的區間資料；唯讀服務若缺少資料則停止顯示不完整的合計。</p>`;
+ document.getElementById('crSummary').innerHTML=`${tcMissing?'<p style="color:#9b5b1d">提醒：此區間草屯有 '+tcMissing+' 筆案件尚未對應已儲存的採購明細；下方成本只計算已儲存的部分，並非完整結算成本。</p>':''}<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px"><h3 style="margin:0;color:#173653">銷售／成本／件數統計</h3><button type="button" id="crExpenseOpen" style="padding:9px 14px;border:1px solid #94acc5;border-radius:7px;background:#eef5fc;color:#173653;cursor:pointer">支出明細（${expenseDetailRows.length}筆）</button></div><div style="width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;background:#fff"><table style="width:10cm;min-width:10cm;table-layout:fixed;border-collapse:collapse;background:#fff"><colgroup><col style="width:2cm"><col style="width:3cm"><col style="width:3cm"><col style="width:2cm"></colgroup><thead><tr style="background:#f4f5f7;color:#354153"><th style="padding:14px 12px;text-align:center;font-weight:700;border-bottom:1px solid #cfd5dd;white-space:nowrap">業務類別</th><th style="padding:14px 12px;text-align:center;font-weight:700;border-bottom:1px solid #cfd5dd;white-space:nowrap">銷售額</th><th style="padding:14px 12px;text-align:center;font-weight:700;border-bottom:1px solid #cfd5dd;white-space:nowrap">成本</th><th style="padding:14px 12px;text-align:center;font-weight:700;border-bottom:1px solid #cfd5dd;white-space:nowrap">件數</th></tr></thead><tbody>${[...groups,total].map((g,i)=>{const isTotal=i===groups.length;return `<tr style="background:#fff"><th style="padding:15px 12px;text-align:left;color:#173653;font-size:16px;font-weight:${isTotal?'750':'400'};border-bottom:1px solid #e0e3e8;white-space:nowrap">${g.name}</th>${cell(g.name==='其他支出'?'－':fmt(g.sale),false,isTotal)}${cell(g.name==='代安裝'?'－':(isTotal?fmt(g.cost):(g.known?fmt(g.cost):(g.hasCost?fmt(g.cost):'尚無成本資料'))),g.name==='代安裝'?false:!g.known,isTotal)}${cell(g.name==='其他支出'?'－':String(g.count),false,isTotal)}</tr>`}).join('')}</tbody></table></div><p style="color:#718096;font-size:12px;margin:12px 0 0">其他支出依所選請款區間的日期計入成本，其他支出不屬於案件，件數顯示「－」且不列入總件數；成本未儲存的案件不會當作 0；浤富銷售額、成本及件數僅採管理者手動儲存的區間資料；唯讀服務若缺少資料則停止顯示不完整的合計。</p>`;
  document.getElementById('crRows').innerHTML='';
 document.getElementById('crExpenseOpen')?.addEventListener('click',()=>{document.getElementById('crExpenseDetailPanel')?.classList.remove('hidden');document.getElementById('crExpenseDetailPanel')?.scrollIntoView({behavior:'smooth',block:'nearest'})});
 }
