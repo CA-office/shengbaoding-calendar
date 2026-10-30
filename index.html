@@ -972,6 +972,19 @@ body:not(.admin-account) #otherExpensesView {display:none!important}
       </tr></tfoot>
     </table><div style="margin-top:18px"><h3>代安裝明細</h3><div style="max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch"><table class="purchaseRecords" id="tcAgencyDetailTable" style="width:14cm;min-width:14cm;max-width:14cm;table-layout:fixed"><colgroup><col style="width:4cm"><col style="width:8cm"><col style="width:2cm"></colgroup><thead><tr><th>單號</th><th>案名</th><th>案件金額</th></tr></thead><tbody id="tcAgencyRows"></tbody><tfoot><tr><th>總計</th><th id="tcAgencyCount">0 件</th><th id="tcAgencyTotal">0</th></tr></tfoot></table></div></div><details style="margin:10px 0 18px;border:1px solid #d8e0e7;border-radius:8px;padding:10px"><summary style="cursor:pointer;font-weight:700">核對 10/10 舊備份代安裝（不計入目前金額／件數）</summary><p style="font-size:12px;color:#66788a">以下只是歷史備份，不代表目前有效案件。標示「未找到」的資料不會自動恢復，避免重複計算。</p><div style="overflow-x:auto"><table class="purchaseRecords" style="min-width:470px"><thead><tr><th>單號</th><th>案名</th><th>舊備份金額</th><th>比對</th></tr></thead><tbody id="tcAgencyBackupAudit"></tbody></table></div></details>
   </div>
+<div id="tcManualTotals" class="quoteCard" style="margin:18px 0;padding:18px;border:1px solid #dce5ee;border-radius:12px">
+<h2>草屯｜區間銷售與成本（手動同步）</h2>
+<p style="color:#64748b">僅此成本銷售報表改採手動總額；原草屯報價單、採購單、明細與 Excel 功能全部保留。</p>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px">
+<label>請款區間<select id="tcManualPeriod" style="width:100%;padding:9px"><option value="">選擇區間</option></select></label>
+<label>銷售額<input id="tcManualSales" type="number" min="0" step="1" placeholder="輸入銷售額" style="width:100%;padding:9px"></label>
+<label>填寫欄／備註<input id="tcManualNote" placeholder="輸入備註" style="width:100%;padding:9px"></label>
+<label>件數<input id="tcManualCount" type="number" min="0" step="1" placeholder="輸入件數" style="width:100%;padding:9px"></label>
+<label>成本<input id="tcManualCost" type="number" min="0" step="1" placeholder="輸入成本" style="width:100%;padding:9px"></label>
+</div>
+<div style="display:flex;align-items:center;gap:10px;margin:12px 0;flex-wrap:wrap"><button type="button" class="primary" id="tcManualSave">儲存並同步成本銷售</button><span id="tcManualStatus" style="color:#52687c"></span></div>
+<div id="tcManualHistory"></div>
+</div>
   <div class="quoteCard">
     <h2 class="quoteTitle">草屯採購單</h2>
     <div id="tcCloudProjectsStatus" style="font-size:12px;color:#52687c;margin-bottom:7px">正在準備讀取雲端草屯案件…</div><div style="margin:0 0 12px"><label style="font-size:13px;font-weight:800">指定單號／案名<select id="tcAssignmentSelect" style="width:100%;padding:10px;border:1px solid #bdc8d2;border-radius:8px;margin-top:4px;background:#fff"><option value="">請選擇要指定的單號／案名</option></select></label><div style="font-size:12px;color:var(--muted);margin-top:4px">報價單會帶入客戶名稱與未稅合計；原有草屯資料不覆蓋，可在上方新增、修改。 <button type="button" id="tcRefreshProjectBtn" style="padding:4px 8px">重新讀取清單</button><button type="button" id="tcQuoteAuditBtn" style="padding:4px 8px;margin-left:6px">檢查所有 0 元案件</button></div><div id="tcQuoteAuditPanel" style="display:none;margin:12px 0;padding:12px;border:1px solid #cbd5e1;border-radius:8px"></div></div>
@@ -4093,6 +4106,76 @@ function bind(){
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();
 })();
 </script>
+<script id="tc-simple-manual-v1">
+(function(){
+const KEY='sbd_taichung_manual_totals_v1',el=id=>document.getElementById(id);
+const parse=v=>{try{const x=JSON.parse(v||'{}');return x&&typeof x==='object'&&!Array.isArray(x)?x:{}}catch(e){return {}}};
+async function fetchData(){
+ const {data:{user}}=await sb.auth.getUser();if(!user)throw Error('尚未登入');
+ if(isAdminAccount()){
+  const {data,error}=await sb.from('sbd_app_data').select('payload').eq('user_id',user.id).eq('data_key',KEY).maybeSingle();
+  if(error)throw error;return parse(data?.payload?.value);
+ }
+ // 草屯手動總額使用專用唯讀 RPC；避免舊報表服務漏傳此資料鍵。
+ const {data,error}=await sb.rpc('sbd_read_taichung_manual_totals');
+ if(error)throw Error('草屯唯讀服務尚未部署或讀取失敗：'+error.message);
+ return parse(data?.value);
+}
+window.sbdTcManualTotals=fetchData;
+let saved={},editingPeriod=null,editingVersion=null;
+function show(){
+ const select=el('tcManualPeriod');if(!select)return;
+ const periods=[...new Set(['260826-260925','260926-261025',...Object.keys(saved)])].sort();
+ const old=select.value;select.innerHTML='<option value="">選擇區間</option>'+periods.map(p=>`<option value="${p}">${p}</option>`).join('');
+ if(periods.includes(old))select.value=old;
+ const current=saved[select.value];
+ el('tcManualSales').value=current?.sales??'';
+ el('tcManualCost').value=current?.cost??'';
+ el('tcManualCount').value=current?.count??'';
+ el('tcManualNote').value=current?.note??'';
+ const canEdit=isAdminAccount();
+ el('tcManualCount').disabled=!canEdit;el('tcManualSales').disabled=!canEdit;el('tcManualCost').disabled=!canEdit;el('tcManualNote').disabled=!canEdit;
+ el('tcManualSave').disabled=!canEdit;
+ el('tcManualSave').textContent='儲存並同步成本銷售';
+
+ el('tcManualStatus').textContent=current?'可直接修改上方欄位，按「儲存並同步成本銷售」更新。':'';
+ el('tcManualHistory').innerHTML='<table style="width:100%;border-collapse:collapse"><thead><tr><th>區間日期</th><th>銷售額</th><th>件數</th><th>備註</th><th>成本</th><th>操作</th></tr></thead><tbody>'+Object.entries(saved).sort().map(([p,v])=>`<tr><td>${p}</td><td>${Number(v.sales).toLocaleString()}</td><td>${v.count==null?'—':Number(v.count).toLocaleString()}</td><td>${String(v.note||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}</td><td>${Number(v.cost).toLocaleString()}</td><td><button type="button" data-hf-edit="${p}" style="padding:6px 12px;cursor:pointer">修改</button></td></tr>`).join('')+'</tbody></table>';
+ el('tcManualHistory').querySelectorAll('[data-hf-edit]').forEach(btn=>btn.onclick=()=>{if(!isAdminAccount())return;editingPeriod=btn.dataset.hfEdit;editingVersion=saved[editingPeriod]?.savedAt||null;el('tcManualPeriod').value=editingPeriod;show();el('tcManualSales').focus();el('tcManualTotals').scrollIntoView({behavior:'smooth',block:'start'});});
+}
+async function refresh(){try{saved=await fetchData();show()}catch(e){el('tcManualStatus').textContent='雲端讀取失敗：'+e.message}}
+async function save(){
+ if(!isAdminAccount())return;
+ const period=el('tcManualPeriod').value,sales=el('tcManualSales').value,cost=el('tcManualCost').value,count=el('tcManualCount').value,note=el('tcManualNote').value.trim();
+ if(!/^\d{6}-\d{6}$/.test(period)||sales===''||cost===''||count===''||!Number.isInteger(Number(count))||Number(count)<0||Number(sales)<0||Number(cost)<0||!Number.isFinite(Number(sales))||!Number.isFinite(Number(cost))){alert('請選擇區間並填寫正確銷售額、成本');return}
+ const b=el('tcManualSave');b.disabled=true;
+ try{
+  const {data:{user}}=await sb.auth.getUser();if(!user)throw Error('尚未登入');
+  const {data:found,error}=await sb.from('sbd_app_data').select('payload').eq('user_id',user.id).eq('data_key',KEY).maybeSingle();if(error)throw error;
+  const latest=parse(found?.payload?.value);
+  const isEditing=!!latest[period];
+  if(isEditing&&String(latest[period].savedAt||'')!==String(saved[period]?.savedAt||''))throw Error('此區間已被其他裝置更新，請重新選擇區間後再修改');
+  const action=isEditing?'更新':'新增';
+  if(!confirm(`確認${action}草屯 ${period}：銷售額 ${Number(sales).toLocaleString()} 元、件數 ${Number(count).toLocaleString()} 筆、成本 ${Number(cost).toLocaleString()} 元？此操作將更新成本銷售報表。`))return;
+  latest[period]={...(latest[period]||{}),sales:Number(sales),cost:Number(cost),count:Number(count),note,savedAt:new Date().toISOString(), ...(isEditing?{previousVersion:{sales:latest[period].sales,cost:latest[period].cost,count:latest[period].count,note:latest[period].note,savedAt:latest[period].savedAt}}:{})};
+  const payload={value:JSON.stringify(latest)};
+  const result=found?await sb.from('sbd_app_data').update({payload,updated_at:new Date().toISOString()}).eq('user_id',user.id).eq('data_key',KEY):await sb.from('sbd_app_data').insert({user_id:user.id,data_key:KEY,payload,updated_at:new Date().toISOString()});
+  if(result.error)throw result.error;
+  saved=latest;editingPeriod=null;editingVersion=null;show();if(!document.getElementById('costReportView')?.classList.contains('hidden'))document.getElementById('costReportTabBtn')?.click();el('tcManualStatus').textContent='雲端儲存成功；成本銷售報表將使用更新後的區間總額。';
+ }catch(e){el('tcManualStatus').textContent='未儲存：'+e.message}
+ finally{b.disabled=false}
+}
+function bind(){
+ const section=el('tcManualTotals');if(!section)return;
+ section.style.display=isAdminAccount()?'':'none';
+ el('tcManualPeriod').addEventListener('change',()=>{editingPeriod=null;editingVersion=null;show()});
+ el('tcManualSave').addEventListener('click',save);
+ document.getElementById('tcTabBtn')?.addEventListener('click',()=>refresh());
+ refresh();
+}
+
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();
+})();
+</script>
 <script id="cost-report-live">(function(){
 const fmt=n=>Math.round(n).toLocaleString('zh-TW'),esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function read(k,f){try{return JSON.parse(localStorage.getItem(k)||f)}catch(e){return JSON.parse(f)}}
@@ -4283,8 +4366,8 @@ async function render(){
  try {const raw=await costReportKeyValue('sbd_tc_invoice_periods_v1');const v=typeof raw==='string'?JSON.parse(raw):raw;if(Array.isArray(v))saved=v;}catch(e){console.warn('讀取雲端請款區間失敗',e);const st=document.getElementById('crCloudStatus');if(st)st.textContent='請款區間雲端讀取失敗：'+(e.message||e)}
  if(!saved.length && isAdminAccount())saved=read('sbd_tc_invoice_periods_v1','[]');
  const hfCosts={...(isAdminAccount()?hfLocal():{}),...(await hfCloud()||{})};
- let hfManualPeriods=[];try{hfManualPeriods=Object.keys(await window.sbdHfManualTotals?.()||{})}catch(e){console.warn('浤富手動總額區間讀取失敗',e)}
- const periods=[...new Set([...hfManualPeriods,...all.map(r=>r.period).filter(Boolean),...(Array.isArray(saved)?saved:[]),...all.map(r=>r.period).filter(Boolean),...Object.keys(hfCosts),(companyHongfuPeriod||(!isAdminAccount()?'':localStorage.getItem('sbd_hongfu_last_period')))].filter(Boolean))].sort();
+ let tcManualPeriods=[];try{tcManualPeriods=Object.keys(await window.sbdTcManualTotals?.()||{})}catch(e){}\n let hfManualPeriods=[];try{hfManualPeriods=Object.keys(await window.sbdHfManualTotals?.()||{})}catch(e){console.warn('浤富手動總額區間讀取失敗',e)}
+ const periods=[...new Set([...tcManualPeriods,...hfManualPeriods,...all.map(r=>r.period).filter(Boolean),...(Array.isArray(saved)?saved:[]),...all.map(r=>r.period).filter(Boolean),...Object.keys(hfCosts),(companyHongfuPeriod||(!isAdminAccount()?'':localStorage.getItem('sbd_hongfu_last_period')))].filter(Boolean))].sort();
  period.innerHTML='<option value="all">全部請款區間（含所有日期）</option>'+periods.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');
  // v122: Never silently start with every invoice period combined.
  // Preserve the user's chosen period during rerenders and across page reloads.
@@ -4303,6 +4386,19 @@ async function render(){
  }
  const rows=all.filter(r=>(period.value!=='all'||sel.value==='all'||r.month===sel.value)&&(period.value==='all'||r.period===period.value||(r.group==='浤富'&&!r.period&&period.value===(companyHongfuPeriod||(!isAdminAccount()?'':localStorage.getItem('sbd_hongfu_last_period'))))));
  const groups=['浤富','草屯','代安裝'].map(name=>{const rr=rows.filter(r=>r.group===name);return {name,sale:rr.reduce((n,r)=>n+r.sale,0),cost:rr.reduce((n,r)=>n+(r.cost||0),0),known:rr.every(r=>r.cost!==null),missingCost:rr.filter(r=>r.cost===null).length,hasCost:rr.some(r=>r.cost!==null),count:rr.length}});
+ // 草屯成本銷售改為管理者手動輸入的區間總額；不影響草屯其他功能。
+ let manualTc={};
+ try{manualTc=await window.sbdTcManualTotals?.()||{}}catch(e){
+  console.warn('草屯手動總額尚未能從雲端讀取',e);
+ }
+ const tcManualPeriods=period.value==='all'?Object.keys(manualTc):[period.value];
+ const tcManualValues=tcManualPeriods.map(p=>manualTc[p]).filter(v=>v&&Number.isFinite(Number(v.sales))&&Number.isFinite(Number(v.cost)));
+ groups[1].sale=tcManualValues.reduce((n,v)=>n+Number(v.sales),0);
+ groups[1].cost=tcManualValues.reduce((n,v)=>n+Number(v.cost),0);
+ groups[1].count=tcManualValues.reduce((n,v)=>n+(Number.isInteger(Number(v.count))?Number(v.count):0),0);
+ groups[1].known=tcManualValues.length>0;
+ groups[1].hasCost=tcManualValues.length>0;
+ groups[1].missingCost=0;
  // 浤富僅採用管理者手動儲存的區間總額；不讀取舊採購單、PDF 或自動同步案件。
  groups[0].sale=0;groups[0].cost=0;groups[0].count=0;groups[0].known=true;groups[0].missingCost=0;
  // 管理員已確認的浤富區間總額優先；不再混用舊 PDF OCR 明細。
