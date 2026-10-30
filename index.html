@@ -635,14 +635,32 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
 .hf-case-table th{background:#f2f5f8}
 .hf-case-table td button{margin-right:5px;padding:5px 9px}
 @media(max-width:650px){.hf-case-fields{grid-template-columns:1fr}.hf-case-toolbar button,.hf-case-toolbar select{font-size:13px}}
-</style><style id="pending-mobile-responsive-v3">
+</style><style id="pending-desktop-fit-centered-20261030">
+/* 電腦：表格置中、依容器縮放，完整顯示六欄，不需水平捲動；手機規則不變。 */
+@media (min-width:701px) {
+ #overtimeView {width:100%!important;max-width:100%!important;box-sizing:border-box}
+ #overtimeView > .card {width:calc(100% - 32px)!important;max-width:1500px!important;margin:20px auto!important;box-sizing:border-box}
+ #overtimeView > .card > div:has(> table.quoteList) {width:100%!important;max-width:100%!important;overflow-x:visible!important}
+ #overtimeView table.quoteList {width:100%!important;min-width:0!important;max-width:100%!important;table-layout:fixed!important;margin:0 auto!important}
+ #overtimeView table.quoteList col:nth-child(1) {width:12%!important}
+ #overtimeView table.quoteList col:nth-child(2) {width:12%!important}
+ #overtimeView table.quoteList col:nth-child(3) {width:10%!important}
+ #overtimeView table.quoteList col:nth-child(4) {width:23%!important}
+ #overtimeView table.quoteList col:nth-child(5) {width:31%!important}
+ #overtimeView table.quoteList col:nth-child(6) {width:12%!important}
+ #overtimeView table.quoteList th,#overtimeView table.quoteList td {box-sizing:border-box;white-space:normal;overflow-wrap:anywhere;word-break:break-word;vertical-align:middle}
+ #overtimeView table.quoteList td:last-child {white-space:nowrap!important}
+ #overtimeView .pending-form-fields {grid-template-columns:1.05fr 1fr 1fr 1.65fr 2.2fr!important;gap:12px!important}
+}
+</style>
+<style id="pending-mobile-responsive-v3">
 /* 手機維持橫向表格：每筆案件一列，不拆成直式卡片 */
 @media(max-width:700px){
  #overtimeView>.card{width:calc(100% - 12px)!important;max-width:none!important;margin:8px auto!important;padding:10px!important}
  #overtimeView .pending-form-fields{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:10px!important}
  #overtimeView .pending-form-fields label{width:100%!important;min-width:0!important}
  #overtimeView .pending-form-fields input,#overtimeView .pending-form-fields textarea{width:100%!important;max-width:100%!important;font-size:16px!important}
- #overtimeView .quoteList{display:table!important;width:19cm!important;min-width:19cm!important;table-layout:fixed!important;margin:0!important;font-size:12px!important}
+ #overtimeView .quoteList{display:table!important;width:24.4cm!important;min-width:24.4cm!important;table-layout:fixed!important;margin:0!important;font-size:12px!important}
  #overtimeView .quoteList colgroup{display:table-column-group!important}
  #overtimeView .quoteList thead{display:table-header-group!important}
  #overtimeView .quoteList tbody{display:table-row-group!important;width:auto!important}
@@ -653,8 +671,9 @@ main{padding:8px!important}.calendar{border:0!important;border-radius:18px!impor
  #overtimeView .quoteList col:nth-child(2){width:2.6cm!important}
  #overtimeView .quoteList col:nth-child(3){width:2cm!important}
  #overtimeView .quoteList col:nth-child(4){width:4.6cm!important}
- #overtimeView .quoteList col:nth-child(5){width:4.6cm!important}
+ #overtimeView .quoteList col:nth-child(5){width:10cm!important}
  #overtimeView .quoteList col:nth-child(6){width:2.6cm!important}
+ #overtimeView .quoteList tbody td:nth-child(5){white-space:nowrap!important;overflow-wrap:normal!important;word-break:normal!important}
  #overtimeView .quoteList th{padding:7px 5px!important;white-space:nowrap!important}
  #overtimeView .quoteList td button{padding:4px 5px!important;font-size:12px!important}
 }
