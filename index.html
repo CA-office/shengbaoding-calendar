@@ -2254,6 +2254,21 @@ function stSplitCustomer(raw){
  const m=value.match(/^([A-Za-z]{1,5}\d{2,8})(?:[\s　\-－:：]+)(.+)$/);
  return m?{code:m[1].toUpperCase(),name:m[2].trim()}:{code:'',name:value};
 }
+// 製作安裝統計：僅「公分 / cm」品項納入未稅金額，其他單位不計。
+function stCmUntaxedFromQuote(quote){
+  const items=Array.isArray(quote?.items)?quote.items:[];
+  return items.reduce((sum,it)=>{
+    const unit=String(it.unit||'').trim().toLowerCase();
+    return sum+(unit==='cm'||unit==='公分'?Number(it.total_cm??it.qty??0)*Number(it.price||0):0);
+  },0);
+}
+function stDisplayUntaxed(row){
+  const quote=(quoteRows||[]).find(q=>String(q.quote_no||'').trim()===String(row.job_no||'').trim());
+  // 有原報價單就依單位重新計算，避免把「式／個／層／才」計入。
+  if(quote)return stCmUntaxedFromQuote(quote)||null;
+  // 找不到來源時不拿舊整張報價單金額充當公分金額。
+  return null;
+}
 function statDraftFromQuote(x){
   const m=qMetaFromNote(x.note);
   const items=Array.isArray(x.items)?x.items:[];
@@ -2263,7 +2278,7 @@ function statDraftFromQuote(x){
     shipment_no:"", order_date:x.quote_date||"", install_date:m.install_date||"",
     case_name:m.case_name||x.contact_name||x.address||"", color_type:"",
     color_no:m.color_no||"", model:inferStatsModel(items), size_cm:size||0,
-    untaxed_amount:Number(x.subtotal||0), note:"", floor:"", installers:"",
+    untaxed_amount:stCmUntaxedFromQuote(x), note:"", floor:"", installers:"",
     long_share:0,kai_share:0,self_install_share:0,fu_share:0,caotun_share:0
   };
 }
@@ -2432,6 +2447,7 @@ async function loadInstallStats(){
     if(bn!==an)return bn-an;
     return bv.localeCompare(av,"zh-Hant",{numeric:true,sensitivity:"base"});
   });
+  await loadQuotesForStats();
   renderInstallStats();
   await loadMasterInstallSummary();
 }
@@ -2445,7 +2461,7 @@ function renderInstallStats(){
     const displayCode=x.customer_code||customer.code;
     const displayName=customer.code?customer.name:(x.customer_name||"");
     const tr=document.createElement("tr");
-    tr.innerHTML=`<td><input type="checkbox" class="stExportPick" data-id="${x.id}" ${selected.has(String(x.id))?"checked":""} aria-label="選擇下載 ${esc(x.job_no||"")}"></td><td><div class="statsRowBtns"><button data-st="edit" data-id="${x.id}">修改</button><button class="danger" data-st="del" data-id="${x.id}">刪除</button></div></td><td>${esc(displayCode)}</td><td>${esc(displayName)}</td><td>${esc(x.job_no||"")}</td><td>${esc(x.shipment_no||"")}</td><td>${esc(statDateToMD(x.order_date||""))}</td><td>${esc(statDateToMD(x.install_date||""))}</td><td>${esc(x.case_name||"")}</td><td>${esc(human)}</td><td>${esc(stone)}</td><td>${esc(x.model||"")}</td><td>${qMoney(x.size_cm||0)}</td><td>${qMoney(x.untaxed_amount||0)}</td><td>${esc(x.note||"")}</td><td>${esc(x.floor||"")}</td><td>${esc(x.installers||"")}</td><td>${x.long_share||""}</td><td>${x.kai_share||""}</td><td>${x.self_install_share||""}</td><td>${x.fu_share||""}</td><td>${x.caotun_share||""}</td>`;
+    tr.innerHTML=`<td><input type="checkbox" class="stExportPick" data-id="${x.id}" ${selected.has(String(x.id))?"checked":""} aria-label="選擇下載 ${esc(x.job_no||"")}"></td><td><div class="statsRowBtns"><button data-st="edit" data-id="${x.id}">修改</button><button class="danger" data-st="del" data-id="${x.id}">刪除</button></div></td><td>${esc(displayCode)}</td><td>${esc(displayName)}</td><td>${esc(x.job_no||"")}</td><td>${esc(x.shipment_no||"")}</td><td>${esc(statDateToMD(x.order_date||""))}</td><td>${esc(statDateToMD(x.install_date||""))}</td><td>${esc(x.case_name||"")}</td><td>${esc(human)}</td><td>${esc(stone)}</td><td>${esc(x.model||"")}</td><td>${qMoney(x.size_cm||0)}</td><td>${stDisplayUntaxed(x)===null?"—":qMoney(stDisplayUntaxed(x))}</td><td>${esc(x.note||"")}</td><td>${esc(x.floor||"")}</td><td>${esc(x.installers||"")}</td><td>${x.long_share||""}</td><td>${x.kai_share||""}</td><td>${x.self_install_share||""}</td><td>${x.fu_share||""}</td><td>${x.caotun_share||""}</td>`;
     b.appendChild(tr);
   });
   b.querySelectorAll(".stExportPick").forEach(cb=>cb.addEventListener("change",()=>stToggleSelection(cb.dataset.id,cb.checked)));
@@ -2494,7 +2510,7 @@ function exportInstallStatsExcel(){
     x.color_type==="human"?(x.color_no||""):"",x.color_type==="stone"?(x.color_no||""):"",
     x.model||"",
     x.size_cm===""?"":Number(x.size_cm||0),
-    x.untaxed_amount===""?"":Number(x.untaxed_amount||0),
+    stDisplayUntaxed(x)===null?"":stDisplayUntaxed(x),
     x.note||"",x.floor||"",x.installers||"",
     x.long_share||"",x.kai_share||"",x.self_install_share||"",x.fu_share||"",x.caotun_share||""
   ]);
