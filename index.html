@@ -71,6 +71,13 @@ dialog{border:0;border-radius:14px;padding:0;width:min(470px,94vw);box-shadow:0 
 #tcAgencyDetailTable th:nth-child(1),#tcAgencyDetailTable td:nth-child(1){width:4cm;max-width:4cm;}
 #tcAgencyDetailTable th:nth-child(2),#tcAgencyDetailTable td:nth-child(2){width:8cm;max-width:8cm;}
 #tcAgencyDetailTable th:nth-child(3),#tcAgencyDetailTable td:nth-child(3){width:2cm;max-width:2cm;}
+
+/* 報價單紀錄：案名欄縮窄，保留其他欄位及手機橫向捲動 */
+.quoteListWrap .quoteList th:nth-child(4),
+.quoteListWrap .quoteList td:nth-child(4){
+  width:160px!important; min-width:160px!important; max-width:160px!important;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
 </style>
 
 <style id="quote-note-align-fix">
