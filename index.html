@@ -2311,9 +2311,32 @@ function stSameQuoteIdentity(row,draft){
   return !!a && a===b && !!caseA && caseA===caseB;
 }
 // 從報價單案名或備註抓明確的樓層標記；不把地址門牌號誤認為樓層。
+function stFloorNumber(value){
+  const raw=String(value??"").normalize("NFKC").trim();
+  if(!raw)return "";
+  const cn={"零":0,"〇":0,"一":1,"二":2,"兩":2,"三":3,"四":4,"五":5,"六":6,"七":7,"八":8,"九":9,"十":10};
+  const parse=v=>{
+    if(/^\d{1,2}$/.test(v))return String(Number(v));
+    if(v==="十")return "10";
+    if(v.includes("十")){
+      const [a,b]=v.split("十");
+      if((!a||cn[a]!=null)&&(!b||cn[b]!=null))return String((a?cn[a]:1)*10+(b?cn[b]:0));
+    }
+    return cn[v]!=null?String(cn[v]):"";
+  };
+  // 只擷取樓層相關文字，避免將地址門牌或色號誤當樓層。
+  const match=raw.match(/(?:地下\s*([一二三四五六七八九十\d]+)\s*樓)|(?:^|[^A-Za-z0-9])B\s*(\d{1,2})\s*F?|(?:^|[^A-Za-z0-9])([一二三四五六七八九十\d]{1,3})\s*(?:F|樓|層)(?![A-Za-z0-9])|(?:號|樓層[:：]?\s*)([一二三四五六七八九十\d]{1,3})(?!\d)/i);
+  if(match){
+    if(match[1]||match[2]){const n=parse(match[1]||match[2]);return n?"-"+n:"";}
+    return parse(match[3]||match[4]);
+  }
+  if(/^[-−]\s*\d{1,2}$/.test(raw))return "-"+String(Number(raw.replace(/[-−\s]/g,"")));
+  if(/^[一二三四五六七八九十\d]{1,3}$/.test(raw))return parse(raw);
+  return "";
+}
 function stFloorFromQuote(x,m){
   for(const val of [m.floor,m.floor_no,m.level,m.floor_name,x.floor]){
-    if(val!=null && String(val).trim())return String(val).trim();
+    if(val!=null && String(val).trim())return stFloorNumber(val)||String(val).trim();
   }
   const items=Array.isArray(x.items)?x.items:[];
   const parts=[m.case_name,m.project_name,m.project,m.case_note,m.remark,m.memo,
@@ -2323,7 +2346,7 @@ function stFloorFromQuote(x,m){
   for(const value of parts){
     const text=value.normalize("NFKC");
     const match=text.match(/地下\s*[一二三四五六七八九十\d]+\s*樓|(?:^|[^A-Za-z0-9])B\s*\d+\s*F?|(?:^|[^A-Za-z0-9])(?:\d{1,2}|[一二三四五六七八九十]+)\s*(?:F|樓|層)(?![A-Za-z0-9])|(?:^|[^A-Za-z0-9])RF(?![A-Za-z0-9])/i);
-    if(match)return match[0].trim();
+    if(match)return stFloorNumber(match[0]);
   }
   return "";
 }
@@ -2447,7 +2470,9 @@ async function syncOneQuoteToInstallStats(x){
       if(String(existing[k]??"")!==String(next??""))patch[k]=next;
     }
     // 已有人工填寫的樓層不覆蓋；只補齊尚未填寫的資料。
-    if(!String(existing.floor||"").trim() && draft.floor)patch.floor=draft.floor;
+    const normalizedExisting=stFloorNumber(existing.floor);
+    if(normalizedExisting && normalizedExisting!==String(existing.floor||"").trim())patch.floor=normalizedExisting;
+    else if(!String(existing.floor||"").trim() && draft.floor)patch.floor=draft.floor;
     if(!Object.keys(patch).length)return {status:"existing"};
     const {error:e}=await sb.from("sbd_install_stats").update(patch).eq("id",existing.id);
     return e?{status:"error",no:draft.job_no,message:e.message}:{status:"updated"};
@@ -2537,7 +2562,7 @@ function renderInstallStats(){
     const displayCode=x.customer_code||customer.code;
     const displayName=customer.code?customer.name:(x.customer_name||"");
     const tr=document.createElement("tr");
-    tr.innerHTML=`<td><input type="checkbox" class="stExportPick" data-id="${x.id}" ${selected.has(String(x.id))?"checked":""} aria-label="選擇下載 ${esc(x.job_no||"")}"></td><td><div class="statsRowBtns"><button data-st="edit" data-id="${x.id}">修改</button><button class="danger" data-st="del" data-id="${x.id}">刪除</button></div></td><td>${esc(displayCode)}</td><td>${esc(displayName)}</td><td>${esc(x.job_no||"")}</td><td>${esc(x.shipment_no||"")}</td><td>${esc(statDateToMD(x.order_date||""))}</td><td>${esc(statDateToMD(x.install_date||""))}</td><td>${esc(x.case_name||"")}</td><td>${esc(human)}</td><td>${esc(stone)}</td><td>${esc(x.model||"")}</td><td>${qMoney(x.size_cm||0)}</td><td>${stDisplayUntaxed(x)===null?"—":qMoney(stDisplayUntaxed(x))}</td><td>${esc(x.note||"")}</td><td>${esc(x.floor||"")}</td><td>${esc(x.installers||"")}</td><td>${x.long_share||""}</td><td>${x.kai_share||""}</td><td>${x.self_install_share||""}</td><td>${x.fu_share||""}</td><td>${x.caotun_share||""}</td>`;
+    tr.innerHTML=`<td><input type="checkbox" class="stExportPick" data-id="${x.id}" ${selected.has(String(x.id))?"checked":""} aria-label="選擇下載 ${esc(x.job_no||"")}"></td><td><div class="statsRowBtns"><button data-st="edit" data-id="${x.id}">修改</button><button class="danger" data-st="del" data-id="${x.id}">刪除</button></div></td><td>${esc(displayCode)}</td><td>${esc(displayName)}</td><td>${esc(x.job_no||"")}</td><td>${esc(x.shipment_no||"")}</td><td>${esc(statDateToMD(x.order_date||""))}</td><td>${esc(statDateToMD(x.install_date||""))}</td><td>${esc(x.case_name||"")}</td><td>${esc(human)}</td><td>${esc(stone)}</td><td>${esc(x.model||"")}</td><td>${qMoney(x.size_cm||0)}</td><td>${stDisplayUntaxed(x)===null?"—":qMoney(stDisplayUntaxed(x))}</td><td>${esc(x.note||"")}</td><td>${esc(stFloorNumber(x.floor)||x.floor||"")}</td><td>${esc(x.installers||"")}</td><td>${x.long_share||""}</td><td>${x.kai_share||""}</td><td>${x.self_install_share||""}</td><td>${x.fu_share||""}</td><td>${x.caotun_share||""}</td>`;
     b.appendChild(tr);
   });
   b.querySelectorAll(".stExportPick").forEach(cb=>cb.addEventListener("change",()=>stToggleSelection(cb.dataset.id,cb.checked)));
