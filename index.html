@@ -2297,12 +2297,25 @@ function stDisplayUntaxed(row){
   // 沒有來源報價單或沒有公分品項時顯示「—」，不使用舊的未稅總額。
   return quote?stCmUntaxedFromQuote(quote):null;
 }
+// 報價單編號必須直接採用報價單紀錄的 quote_no，不得用 UUID、日期或 Q 前綴重新組號。
+function stCanonicalQuoteNo(x){return String(x?.quote_no??'').trim();}
+function stIsLegacyGeneratedNo(value,canonical){
+  const old=String(value??'').trim(),correct=String(canonical??'').trim();
+  return !!correct && old!==correct && /^Q20\d{6}-\d{4,}$/i.test(old);
+}
+function stSameQuoteIdentity(row,draft){
+  const a=stSplitCustomer(row.customer_name||'').name.replace(/\s/g,'');
+  const b=stSplitCustomer(draft.customer_name||'').name.replace(/\s/g,'');
+  const caseA=String(row.case_name||'').replace(/\s/g,'');
+  const caseB=String(draft.case_name||'').replace(/\s/g,'');
+  return !!a && a===b && !!caseA && caseA===caseB;
+}
 function statDraftFromQuote(x){
   const m=qMetaFromNote(x.note);
   const items=Array.isArray(x.items)?x.items:[];
   const size=items.reduce((s,it)=>s+Number(it.total_cm??it.qty??0),0);
   return {
-    quote_id:x.id, customer_code:"", customer_name:x.customer_name||"", job_no:x.quote_no||"",
+    quote_id:x.id, customer_code:"", customer_name:x.customer_name||"", job_no:stCanonicalQuoteNo(x),
     shipment_no:"", order_date:x.quote_date||"", install_date:m.install_date||"",
     case_name:m.case_name||x.contact_name||x.address||"", color_type:"",
     color_no:m.color_no||"", model:inferStatsModel(items), size_cm:size||0,
@@ -2399,11 +2412,20 @@ async function syncOneQuoteToInstallStats(x){
   if(!draft.job_no)return {status:"skip"};
   const {data,error}=await sb.from("sbd_install_stats").select("*").eq("job_no",draft.job_no).limit(1);
   if(error)return {status:"error",no:draft.job_no,message:error.message};
-  const existing=(data||[])[0];
+  let existing=(data||[])[0];
+  // 修復舊版同步產生的 Q20261104-093042 等編號：只在同一客戶＋同一案名
+  // 且僅找到一筆舊 Q 編號時才修正，避免錯誤合併其他案件。
+  if(!existing){
+    const {data:legacy,error:legacyError}=await sb.from("sbd_install_stats")
+      .select("*").like("job_no","Q20%") .limit(1000);
+    if(legacyError)return {status:"error",no:draft.job_no,message:legacyError.message};
+    const matches=(legacy||[]).filter(r=>stIsLegacyGeneratedNo(r.job_no,draft.job_no)&&stSameQuoteIdentity(r,draft));
+    if(matches.length===1)existing=matches[0];
+  }
   if(existing){
     // 報價單來源欄位以最新報價單為準，修改後同步更新；師傅、樓層、備註、安裝分攤等人工欄位保留。
     const patch={};
-    for(const k of ["customer_code","customer_name","order_date","install_date","case_name","color_no","model","size_cm"]){
+    for(const k of ["job_no","customer_code","customer_name","order_date","install_date","case_name","color_no","model","size_cm"]){
       const next=draft[k]??null;
       if(String(existing[k]??"")!==String(next??""))patch[k]=next;
     }
