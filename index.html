@@ -2312,14 +2312,18 @@ function stSameQuoteIdentity(row,draft){
 }
 // 從報價單案名或備註抓明確的樓層標記；不把地址門牌號誤認為樓層。
 function stFloorFromQuote(x,m){
-  for(const val of [m.floor,m.floor_no,m.level]){
+  for(const val of [m.floor,m.floor_no,m.level,m.floor_name,x.floor]){
     if(val!=null && String(val).trim())return String(val).trim();
   }
-  const parts=[m.case_name,x.contact_name,x.address,m.remark,m.memo]
+  const items=Array.isArray(x.items)?x.items:[];
+  const parts=[m.case_name,m.project_name,m.project,m.case_note,m.remark,m.memo,
+    x.contact_name,x.address,x.customer_name,
+    ...items.flatMap(it=>[it.name,it.product_name,it.description,it.remark,it.note])]
     .filter(Boolean).map(String);
-  for(const text of parts){
-    const hit=text.match(/(?:地下\\s*[一二三四五六七八九十\\d]+\\s*樓|B\\s*\\d+\\s*F?|(?:^|[^A-Za-z0-9])(?:\\d{1,2}|[一二三四五六七八九十]+)\\s*(?:F|樓|層)(?![A-Za-z0-9])|(?:^|[^A-Za-z0-9])RF(?![A-Za-z0-9]))/i);
-    if(hit)return hit[0].trim();
+  for(const value of parts){
+    const text=value.normalize("NFKC");
+    const match=text.match(/地下\s*[一二三四五六七八九十\d]+\s*樓|(?:^|[^A-Za-z0-9])B\s*\d+\s*F?|(?:^|[^A-Za-z0-9])(?:\d{1,2}|[一二三四五六七八九十]+)\s*(?:F|樓|層)(?![A-Za-z0-9])|(?:^|[^A-Za-z0-9])RF(?![A-Za-z0-9])/i);
+    if(match)return match[0].trim();
   }
   return "";
 }
