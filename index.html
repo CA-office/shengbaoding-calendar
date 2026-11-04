@@ -897,7 +897,7 @@ body:not(.admin-account) #otherExpensesView {display:none!important}
     <h2 class="statsTitle">製作安裝統計表 <small style="font-size:12px;font-weight:400;color:#59748a">（未稅金額僅計公分／cm）</small></h2>
     <div class="statsFilter">
       <label>查詢月份（安裝日期：上月26日～當月25日）<input id="stMonth" type="month"></label>
-      <button type="button" id="stLoadBtn">查詢</button><label style="display:flex;align-items:center;gap:5px;white-space:nowrap"><input type="checkbox" id="stShowAll" style="width:auto">顯示全部月份</label><button type="button" id="stSyncAllBtn">同步全部報價單</button><span id="stSyncStatus" role="status" style="font-size:13px;color:#42617b"></span>
+      <button type="button" id="stLoadBtn">查詢</button><span id="stActualRange" style="font-size:13px;color:#173c60;font-weight:600;white-space:nowrap" aria-live="polite"></span><label style="display:flex;align-items:center;gap:5px;white-space:nowrap"><input type="checkbox" id="stShowAll" style="width:auto">顯示全部月份</label><button type="button" id="stSyncAllBtn">同步全部報價單</button><span id="stSyncStatus" role="status" style="font-size:13px;color:#42617b"></span>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><button type="button" id="stSelectAllBtn">全選目前清單</button><button type="button" id="stClearSelectionBtn">取消全選</button><span id="stSelectionCount" style="font-size:13px;color:#42617b">已選 0 筆</span></div><div style="text-align:right"><button type="button" id="stExportBtn" class="primary">下載製作安裝統計表 Excel</button></div>
     </div>
     <div class="statsTableWrap">
@@ -1957,8 +1957,10 @@ function renderMasterInstallSummary(){
   const defs=masterInstallerDefs();
   let visibleGroups=0;
 
-  defs.forEach(def=>{
-    const personRows=rows.filter(x=>masterShareNumber(x?.[def.key])>0);
+  const groupDefs=[...defs];
+  if(rows.some(x=>defs.every(d=>masterShareNumber(x?.[d.key])<=0)))groupDefs.push({name:'未指定安裝人員',key:'__unassigned'});
+  groupDefs.forEach(def=>{
+    const personRows=def.key==='__unassigned' ? rows.filter(x=>defs.every(d=>masterShareNumber(x?.[d.key])<=0)) : rows.filter(x=>masterShareNumber(x?.[def.key])>0);
     if(!personRows.length)return;
     visibleGroups++;
 
@@ -2029,20 +2031,48 @@ function updateMasterBillingRange(){
   return p;
 }
 
+function statsInstallDateISO(value,year){
+  const v=String(value||'').trim().replace(/[.\/]/g,'-');
+  if(/^\d{4}-\d{1,2}-\d{1,2}$/.test(v)){
+    const [y,m,d]=v.split('-').map(Number);
+    return `${y}-${pad(m)}-${pad(d)}`;
+  }
+  if(/^\d{1,2}-\d{1,2}$/.test(v)){
+    const [m,d]=v.split('-').map(Number);
+    return `${year}-${pad(m)}-${pad(d)}`;
+  }
+  return '';
+}
 async function loadMasterInstallSummary(){
   if(profile?.role!=="admin")return;
-  const month=$("stMasterMonth")?.value||statsTodayMonth();
-  if(!$("stMasterMonth").value)$("stMasterMonth").value=month;
+  const btn=$("stMasterLoadBtn"),empty=$("stMasterEmpty");
+  const month=$("stMasterMonth")?.value||$("stMonth")?.value||statsTodayMonth();
+  $("stMasterMonth").value=month;
   const p=updateMasterBillingRange();
-  let q=sb.from("sbd_install_stats").select("*").order("install_date",{ascending:true,nullsFirst:true}).order("created_at",{ascending:true});
-  if(p.start&&p.end)q=q.gte("install_date",p.start).lte("install_date",p.end);
-  const {data,error}=await q;
-  if(error){
-    if($("stMasterEmpty")){$("stMasterEmpty").textContent="讀取失敗："+error.message;$("stMasterEmpty").classList.remove("hidden");}
-    return;
-  }
-  masterInstallRows=data||[];
-  renderMasterInstallSummary();
+  if(btn){btn.disabled=true;btn.textContent='查詢中…';}
+  if(empty)empty.classList.add('hidden');
+  try{
+    // Read existing installation records, then filter locally. This avoids an empty result
+    // when install_date was saved as text or with a different date representation.
+    const {data,error}=await sb.from('sbd_install_stats').select('*').order('created_at',{ascending:false});
+    if(error)throw error;
+    const all=Array.isArray(data)?data:[];
+    const year=Number(month.slice(0,4));
+    masterInstallRows=all.filter(x=>{
+      const date=statsInstallDateISO(x.install_date,year);
+      return date && date>=p.start && date<=p.end;
+    });
+    renderMasterInstallSummary();
+    if(!masterInstallRows.length && empty){
+      empty.textContent=`${p.label} 沒有符合安裝日期的資料（共讀取 ${all.length} 筆）。請檢查案件「安裝日期」是否已填寫。`;
+      empty.classList.remove('hidden');
+    }
+  }catch(e){
+    masterInstallRows=[];
+    renderMasterInstallSummary();
+    if(empty){empty.textContent='查詢失敗：'+(e?.message||e);empty.classList.remove('hidden');}
+    console.error('安裝組查詢失敗',e);
+  }finally{if(btn){btn.disabled=false;btn.textContent='查詢';}}
 }
 
 function exportMasterInstallSummaryExcel(){
@@ -2461,17 +2491,19 @@ async function loadInstallStats(){
   if(profile?.role!=="admin")return;
   if(!$("stMonth").value)$("stMonth").value=statsTodayMonth();
   const month=$("stMonth").value;
+  const actualRange=masterBillingPeriod(month);
+  if($("stActualRange"))$("stActualRange").textContent=`實際安裝日期：${actualRange.label}`;
   if($("stMasterMonth"))$("stMasterMonth").value=month;
   updateMasterBillingRange();
   let q=sb.from("sbd_install_stats").select("*").order("install_date",{ascending:true,nullsFirst:true}).order("created_at",{ascending:true});
-  if(month && !$("stShowAll")?.checked){
-    const [y,m]=month.split("-").map(Number);
-    const range=masterBillingPeriod(month);
-    q=q.gte("install_date",range.start).lte("install_date",range.end);
-  }
   const {data,error}=await q;
   if(error){$("stEmpty").textContent="讀取失敗："+error.message;$("stEmpty").classList.remove("hidden");return}
-  installStatsRows=(data||[]).sort((a,b)=>{
+  const range=masterBillingPeriod(month);
+  const filtered=month && !$("stShowAll")?.checked ? (data||[]).filter(x=>{
+    const date=statsInstallDateISO(x.install_date,Number(month.slice(0,4)));
+    return date && date>=range.start && date<=range.end;
+  }) : (data||[]);
+  installStatsRows=filtered.sort((a,b)=>{
     const av=String(a.job_no||"").trim(), bv=String(b.job_no||"").trim();
     const an=Number(av.replace(/\D/g,""))||0, bn=Number(bv.replace(/\D/g,""))||0;
     if(bn!==an)return bn-an;
@@ -3294,6 +3326,7 @@ $("stFinalExportBtn")?.addEventListener("click",exportFinalInstallSummaryExcel);
 $("stMasterMonth")?.addEventListener("change",()=>{
   masterInstallRows=null;
   updateMasterBillingRange();
+  loadMasterInstallSummary();
 });$("qAddItemBtn").addEventListener("click",()=>addQuoteItem());$("qNameManageBtn")?.addEventListener("click",()=>{resetQNameEditor();renderQNameManager();$("qNameDlg").showModal()});$("qNameOptionSaveBtn")?.addEventListener("click",saveQNameOption);$("qNameOptionCancelBtn")?.addEventListener("click",resetQNameEditor);$("qNameDlgCloseBtn")?.addEventListener("click",()=>$("qNameDlg").close());$("qCustomerManageBtn")?.addEventListener("click",()=>{resetQCustomerEditor();renderQCustomerManager();$("qCustomerDlg").showModal()});$("qCustomerOptionSaveBtn")?.addEventListener("click",saveQCustomer);$("qCustomerOptionCancelBtn")?.addEventListener("click",resetQCustomerEditor);$("qCustomerDlgCloseBtn")?.addEventListener("click",()=>$("qCustomerDlg").close());$("qSaveBtn").addEventListener("click",saveQuote);$("qCancelEditBtn").addEventListener("click",resetQuoteForm);["stCustomerCode","stCustomer","stJobNo","stShipNo","stOrderDate","stInstallDate","stCaseName","stColorType","stColorNo","stModel","stSizeCm","stUntaxedAmount","stNote","stFloor","stInstallers","stLong","stKai","stSelfInstall","stFu","stCaotun"].forEach(id=>{
   $(id)?.addEventListener("input",renderStatsEditingPreviewRow);
   $(id)?.addEventListener("change",renderStatsEditingPreviewRow);
@@ -3312,13 +3345,19 @@ $("stMasterMonth")?.addEventListener("change",()=>{
 
 $("stLoadBtn")?.addEventListener("click",()=>loadInstallStats());
 $("stShowAll")?.addEventListener("change",()=>loadInstallStats());
-$("stMonth")?.addEventListener("change",()=>{
+$("stMonth")?.addEventListener("change",async()=>{
+  // 選擇請款月份後直接查詢對應的安裝日期區間；避免舊的「全部月份」設定使畫面看似沒更新。
+  if($("stShowAll"))$("stShowAll").checked=false;
   if($("stMasterMonth"))$("stMasterMonth").value=$("stMonth").value;
   masterInstallRows=null;
   updateMasterBillingRange();
+  await loadInstallStats();
   renderFinalInstallSummary();
 });
-initInstallerPicker();updateMasterBillingRange();renderStatsEditingPreviewRow();renderMasterInstallSummary();boot();
+initInstallerPicker();updateMasterBillingRange();
+if($("stMonth") && !$("stMonth").value)$("stMonth").value=statsTodayMonth();
+if($("stActualRange"))$("stActualRange").textContent=`實際安裝日期：${masterBillingPeriod($("stMonth").value).label}`;
+renderStatsEditingPreviewRow();renderMasterInstallSummary();boot();
 </script>
 
 <script>
