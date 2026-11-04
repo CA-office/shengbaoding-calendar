@@ -896,7 +896,7 @@ body:not(.admin-account) #otherExpensesView {display:none!important}
   <div class="statsCard">
     <h2 class="statsTitle">製作安裝統計表 <small style="font-size:12px;font-weight:400;color:#59748a">（未稅金額僅計公分／cm）</small></h2>
     <div class="statsFilter">
-      <label>查詢月份（安裝日期：上月26日～當月25日）<input id="stMonth" type="month"></label>
+      <label>查詢月份（安裝日期：上月26日～當月25日）<input id="stMonth" type="month"></label><span id="stActualRange" style="font-size:12px;color:#52697e"></span>
       <button type="button" id="stLoadBtn">查詢</button><label style="display:flex;align-items:center;gap:5px;white-space:nowrap"><input type="checkbox" id="stShowAll" style="width:auto">顯示全部月份</label><button type="button" id="stSyncAllBtn">同步全部報價單</button><span id="stSyncStatus" role="status" style="font-size:13px;color:#42617b"></span>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><button type="button" id="stSelectAllBtn">全選目前清單</button><button type="button" id="stClearSelectionBtn">取消全選</button><span id="stSelectionCount" style="font-size:13px;color:#42617b">已選 0 筆</span></div><div style="text-align:right"><button type="button" id="stExportBtn" class="primary">下載製作安裝統計表 Excel</button></div>
     </div>
@@ -1350,7 +1350,7 @@ function showFeature(name){
   $("purchaseTabBtn")?.classList.toggle("active",purchase);
   $("overtimeTabBtn")?.classList.toggle("active",overtime);$("invoiceCustomerTabBtn")?.classList.remove("active");
   if(quote&&["admin","editor"].includes(profile?.role)){resetQuoteForm();loadQuoteOptions();loadQuotes()}
-  if(stats&&isAdminAccount()){(async()=>{await loadQuotesForStats();await loadInstallStats()})()}
+  if(stats&&isAdminAccount()){(async()=>{await loadQuotesForStats();await syncAllQuotesToInstallStats();await loadInstallStats()})()}
   if(purchase&&isAdminAccount()){poRenderProjects();poRenderGroups();}
 }
 function addQuoteItem(item={}){const tr=document.createElement("tr");const totalCm=item.total_cm??item.qty??0;tr.innerHTML=`<td class="qidx"></td><td><input class="qname" list="qNameOptionsList" placeholder="選擇或直接輸入" value="${esc(fmtQName(item.name||item.description||""))}"></td><td><input class="qsize" value="${esc(item.process_size||"")}"></td><td><input class="qcm" type="number" min="0" step="0.01" value="${Number(totalCm||0)}"></td><td><select class="qunit"><option value=""></option><option value="cm" ${String(item.unit||"").toLowerCase()==="cm"?"selected":""}>cm</option><option value="式" ${String(item.unit||"")==="式"?"selected":""}>式</option><option value="個" ${String(item.unit||"")==="個"?"selected":""}>個</option><option value="層" ${String(item.unit||"")==="層"?"selected":""}>層</option><option value="才" ${String(item.unit||"")==="才"?"selected":""}>才</option></select></td><td><input class="qprice" type="number" min="0" step="0.01" value="${Number(item.price||0)}"></td><td class="qamount">0</td><td><button type="button" class="qremove">刪</button></td>`;$("qItemsBody").appendChild(tr);tr.querySelectorAll("input,select").forEach(i=>i.addEventListener("input",calcQuote));const qi=tr.querySelector(".qname");qi?.addEventListener("blur",()=>{qi.value=fmtQName(qi.value);calcQuote()});tr.querySelector(".qremove").addEventListener("click",()=>{tr.remove();renumberQuoteItems();calcQuote()});renumberQuoteItems();calcQuote()}
@@ -2275,18 +2275,15 @@ function stSplitCustomer(raw){
 // 製作安裝統計：僅「公分 / cm」品項納入未稅金額，其他單位不計。
 function stCmUntaxedFromQuote(quote){
   // 以報價單每一筆明細的單位判斷，絕不使用整張報價單小計替代。
-  let items=quote?.items;
-  if(typeof items==='string'){try{items=JSON.parse(items)}catch(e){items=[]}}
-  items=Array.isArray(items)?items:[];
+  const items=Array.isArray(quote?.items)?quote.items:[];
   let hasCm=false,total=0;
   for(const it of items){
     const unit=String(it.unit??it.uom??'').replace(/[\s　]/g,'').toLowerCase();
     if(unit!=='cm'&&unit!=='公分')continue;
-    const qty=Number(String(it.total_cm??it.qty??it.quantity??'').replace(/,/g,''));
-    const price=Number(String(it.price??it.unit_price??'').replace(/,/g,''));
-    if(Number.isFinite(qty)&&Number.isFinite(price)){
-      hasCm=true;total+=qty*price;
-    }
+    hasCm=true;
+    const qty=Number(String(it.total_cm??it.qty??it.quantity??0).replace(/,/g,''));
+    const price=Number(String(it.price??it.unit_price??0).replace(/,/g,''));
+    if(Number.isFinite(qty)&&Number.isFinite(price))total+=qty*price;
   }
   return hasCm?total:null;
 }
@@ -2463,11 +2460,19 @@ async function loadInstallStats(){
   const month=$("stMonth").value;
   if($("stMasterMonth"))$("stMasterMonth").value=month;
   updateMasterBillingRange();
+  const rangeLabel=$("stActualRange");
+  if(rangeLabel && month){
+    const [ry,rm]=month.split("-").map(Number);
+    const prev=new Date(ry,rm-2,26);
+    rangeLabel.textContent=`實際查詢：${prev.getFullYear()}/${pad(prev.getMonth()+1)}/26 ～ ${ry}/${pad(rm)}/25（依安裝日期）`;
+  }
   let q=sb.from("sbd_install_stats").select("*").order("install_date",{ascending:true,nullsFirst:true}).order("created_at",{ascending:true});
   if(month && !$("stShowAll")?.checked){
     const [y,m]=month.split("-").map(Number);
-    const range=masterBillingPeriod(month);
-    q=q.gte("install_date",range.start).lte("install_date",range.end);
+    const previous=new Date(y,m-2,26);
+    const start=`${previous.getFullYear()}-${pad(previous.getMonth()+1)}-26`;
+    const end=`${y}-${pad(m)}-26`;
+    q=q.gte("install_date",start).lt("install_date",end);
   }
   const {data,error}=await q;
   if(error){$("stEmpty").textContent="讀取失敗："+error.message;$("stEmpty").classList.remove("hidden");return}
@@ -3310,8 +3315,20 @@ $("stMasterMonth")?.addEventListener("change",()=>{
   $(id)?.addEventListener("blur",e=>calcExcelLikeInput(e.target));
 });
 
-$("stLoadBtn")?.addEventListener("click",()=>loadInstallStats());
+// 製作安裝統計表專用：查詢按鈕與月份選擇都直接重查安裝日期資料。
+$("stLoadBtn")?.addEventListener("click",async()=>{
+  const btn=$("stLoadBtn");if(btn.disabled)return;
+  btn.disabled=true;btn.textContent="查詢中…";
+  try{await loadInstallStats()}catch(e){
+    console.error("製作安裝統計表查詢失敗",e);
+    const empty=$("stEmpty");if(empty){empty.textContent="讀取失敗："+(e.message||String(e));empty.classList.remove("hidden")}
+  }finally{btn.disabled=false;btn.textContent="查詢"}
+});
 $("stShowAll")?.addEventListener("change",()=>loadInstallStats());
+$("stMonth")?.addEventListener("change",()=>{
+  if($("stShowAll"))$("stShowAll").checked=false;
+  loadInstallStats().catch(e=>console.error("安裝統計月份查詢失敗",e));
+});
 $("stMonth")?.addEventListener("change",()=>{
   if($("stMasterMonth"))$("stMasterMonth").value=$("stMonth").value;
   masterInstallRows=null;
