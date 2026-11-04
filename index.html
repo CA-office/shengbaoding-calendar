@@ -2310,6 +2310,19 @@ function stSameQuoteIdentity(row,draft){
   const caseB=String(draft.case_name||'').replace(/\s/g,'');
   return !!a && a===b && !!caseA && caseA===caseB;
 }
+// 從報價單案名或備註抓明確的樓層標記；不把地址門牌號誤認為樓層。
+function stFloorFromQuote(x,m){
+  for(const val of [m.floor,m.floor_no,m.level]){
+    if(val!=null && String(val).trim())return String(val).trim();
+  }
+  const parts=[m.case_name,x.contact_name,x.address,m.remark,m.memo]
+    .filter(Boolean).map(String);
+  for(const text of parts){
+    const hit=text.match(/(?:地下\\s*[一二三四五六七八九十\\d]+\\s*樓|B\\s*\\d+\\s*F?|(?:^|[^A-Za-z0-9])(?:\\d{1,2}|[一二三四五六七八九十]+)\\s*(?:F|樓|層)(?![A-Za-z0-9])|(?:^|[^A-Za-z0-9])RF(?![A-Za-z0-9]))/i);
+    if(hit)return hit[0].trim();
+  }
+  return "";
+}
 function statDraftFromQuote(x){
   const m=qMetaFromNote(x.note);
   const items=Array.isArray(x.items)?x.items:[];
@@ -2319,7 +2332,7 @@ function statDraftFromQuote(x){
     shipment_no:"", order_date:x.quote_date||"", install_date:m.install_date||"",
     case_name:m.case_name||x.contact_name||x.address||"", color_type:"",
     color_no:m.color_no||"", model:inferStatsModel(items), size_cm:size||0,
-    untaxed_amount:stCmUntaxedFromQuote(x)??0, note:"", floor:"", installers:"",
+    untaxed_amount:stCmUntaxedFromQuote(x)??0, note:"", floor:stFloorFromQuote(x,m), installers:"",
     long_share:0,kai_share:0,self_install_share:0,fu_share:0,caotun_share:0
   };
 }
@@ -2429,6 +2442,8 @@ async function syncOneQuoteToInstallStats(x){
       const next=draft[k]??null;
       if(String(existing[k]??"")!==String(next??""))patch[k]=next;
     }
+    // 已有人工填寫的樓層不覆蓋；只補齊尚未填寫的資料。
+    if(!String(existing.floor||"").trim() && draft.floor)patch.floor=draft.floor;
     if(!Object.keys(patch).length)return {status:"existing"};
     const {error:e}=await sb.from("sbd_install_stats").update(patch).eq("id",existing.id);
     return e?{status:"error",no:draft.job_no,message:e.message}:{status:"updated"};
