@@ -722,7 +722,7 @@ body:not(.admin-account) #otherExpensesView {display:none!important}
       <label>背牆（cm）<input id="qBackWall" type="text" placeholder="可輸入數字、英文、符號"></label>
       <input id="qTaxRate" type="hidden" value="5">
     </div>
-    <div class="quoteItemsWrap"><table class="quoteItems"><thead><tr><th>項數</th><th>名稱</th><th>加工尺寸 (CM)</th><th>總公分數</th><th>單位</th><th>單價</th><th>小計</th><th></th></tr></thead><tbody id="qItemsBody"></tbody></table></div>
+    <div class="quoteItemsWrap"><table class="quoteItems"><thead><tr><th>項數</th><th>名稱</th><th>加工尺寸 (CM)</th><th>總公分數</th><th>單位</th><th>單價</th><th>小計</th><th></th></tr></thead><tbody id="qItemsBody"></tbody><datalist id="quoteUnitOptions"><option value="cm"><option value="式"><option value="個"><option value="層"><option value="才"></datalist></table></div>
     <datalist id="qNameOptionsList"></datalist><datalist id="tcNameOptionsList"></datalist><div class="quoteManageTools"><button type="button" id="qAddItemBtn">＋ 新增項目</button><button type="button" id="qNameManageBtn">名稱選項管理</button><span class="hint">名稱可選下拉，也可直接輸入，例如：L型檯面: D60</span></div>
     <div class="quoteSummary"><span>合計</span><span id="qSubtotal">0</span><span>稅金5%</span><span id="qTax">0</span><span>總計</span><span id="qTotal">0</span></div>
     <div class="quoteActions"><button type="button" id="qSaveBtn" class="primary">儲存報價單</button><button type="button" id="qCancelEditBtn" class="hidden">取消修改</button></div>
@@ -958,7 +958,7 @@ body:not(.admin-account) #otherExpensesView {display:none!important}
 <h2>草屯｜區間銷售與成本（手動同步）</h2>
 <p style="color:#64748b">僅此成本銷售報表改採手動總額；原草屯報價單、採購單、明細與 Excel 功能全部保留。</p>
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px">
-<label>請款區間<select id="tcManualPeriod" style="width:100%;padding:9px"><option value="">選擇區間</option></select></label>
+<label>請款區間<select id="tcManualPeriod" style="width:100%;padding:9px"><option value="">選擇區間</option></select><input id="tcManualNewPeriod" type="text" inputmode="numeric" placeholder="新增區間：261026-261125" maxlength="13" style="width:100%;padding:8px;margin-top:6px" aria-label="自行輸入新請款區間（11/06 修正版）"><button type="button" id="tcManualAddPeriod" style="margin-top:6px;padding:8px 12px;background:#183450;color:white;border:0;border-radius:4px;cursor:pointer">＋新增區間</button><span style="margin-left:8px;color:#406080;font-size:12px">可輸入 261026-261125</span></label>
 <label>銷售額<input id="tcManualSales" type="number" min="0" step="1" placeholder="輸入銷售額" style="width:100%;padding:9px"></label>
 <label>填寫欄／備註<input id="tcManualNote" placeholder="輸入備註" style="width:100%;padding:9px"></label>
 <label>件數<input id="tcManualCount" type="number" min="0" step="1" placeholder="輸入件數" style="width:100%;padding:9px"></label>
@@ -973,7 +973,7 @@ body:not(.admin-account) #otherExpensesView {display:none!important}
 <h2>代安裝｜區間銷售與成本（手動同步）</h2>
 <p style="color:#64748b">僅此成本銷售報表改採手動總額；原代安裝案件、明細與 Excel 功能全部保留。</p>
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px">
-<label>請款區間<select id="agManualPeriod" style="width:100%;padding:9px"><option value="">選擇區間</option></select></label>
+<label>請款區間<select id="agManualPeriod" style="width:100%;padding:9px"><option value="">選擇區間</option></select><input id="agManualNewPeriod" type="text" inputmode="numeric" placeholder="新增區間：261026-261125" maxlength="13" style="width:100%;padding:8px;margin-top:6px" aria-label="自行輸入新請款區間（11/06 修正版）"><button type="button" id="agManualAddPeriod" style="margin-top:6px;padding:8px 12px;background:#183450;color:white;border:0;border-radius:4px;cursor:pointer">＋新增區間</button><span style="margin-left:8px;color:#406080;font-size:12px">可輸入 261026-261125</span></label>
 <label>銷售額<input id="agManualSales" type="number" min="0" step="1" placeholder="輸入銷售額" style="width:100%;padding:9px"></label>
 <label>填寫欄／備註<input id="agManualNote" placeholder="輸入備註" style="width:100%;padding:9px"></label>
 <label>件數<input id="agManualCount" type="number" min="0" step="1" placeholder="輸入件數" style="width:100%;padding:9px"></label>
@@ -1032,7 +1032,7 @@ body:not(.admin-account) #otherExpensesView {display:none!important}
 <section id="hfSimpleView" class="hidden" style="max-width:950px;margin:22px auto;padding:20px;background:#fff;border:1px solid #dce5ee;border-radius:12px">
 <h2>浤富｜區間銷售與成本</h2><p style="color:#64748b">自行輸入區間銷售額、件數與成本，儲存後同步成本銷售報表；不使用舊 PDF/JPG 或單號案件同步。</p>
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:12px">
-<label>請款區間<select id="hfSimplePeriod" style="width:100%;padding:9px"><option value="">選擇區間</option></select></label>
+<label>請款區間<select id="hfSimplePeriod" style="width:100%;padding:9px"><option value="">選擇區間</option></select><input id="hfSimpleNewPeriod" type="text" inputmode="numeric" placeholder="新增區間：261026-261125" maxlength="13" style="width:100%;padding:8px;margin-top:6px" aria-label="自行輸入新請款區間（11/06 修正版）"><button type="button" id="hfSimpleAddPeriod" style="margin-top:6px;padding:8px 12px;background:#183450;color:white;border:0;border-radius:4px;cursor:pointer">＋新增區間</button><span style="margin-left:8px;color:#406080;font-size:12px">可輸入 261026-261125</span></label>
 <label>銷售額<input id="hfSimpleSales" type="number" min="0" step="1" placeholder="輸入銷售總額" style="width:100%;padding:9px"></label>
 <label>填寫欄／備註<input id="hfSimpleNote" placeholder="例如：已核對 Excel" style="width:100%;padding:9px"></label>
 <label>件數<input id="hfSimpleCount" type="number" min="0" step="1" placeholder="輸入案件件數" style="width:100%;padding:9px"></label>
@@ -1354,7 +1354,7 @@ function showFeature(name){
   if(stats&&isAdminAccount()){(async()=>{await loadQuotesForStats();await syncAllQuotesToInstallStats();await loadInstallStats()})()}
   if(purchase&&isAdminAccount()){poRenderProjects();poRenderGroups();}
 }
-function addQuoteItem(item={}){const tr=document.createElement("tr");const totalCm=item.total_cm??item.qty??0;tr.innerHTML=`<td class="qidx"></td><td><input class="qname" list="qNameOptionsList" placeholder="選擇或直接輸入" value="${esc(fmtQName(item.name||item.description||""))}"></td><td><input class="qsize" value="${esc(item.process_size||"")}"></td><td><input class="qcm" type="number" min="0" step="0.01" value="${Number(totalCm||0)}"></td><td><select class="qunit"><option value=""></option><option value="cm" ${String(item.unit||"").toLowerCase()==="cm"?"selected":""}>cm</option><option value="式" ${String(item.unit||"")==="式"?"selected":""}>式</option><option value="個" ${String(item.unit||"")==="個"?"selected":""}>個</option><option value="層" ${String(item.unit||"")==="層"?"selected":""}>層</option><option value="才" ${String(item.unit||"")==="才"?"selected":""}>才</option></select></td><td><input class="qprice" type="number" min="0" step="0.01" value="${Number(item.price||0)}"></td><td class="qamount">0</td><td><button type="button" class="qremove">刪</button></td>`;$("qItemsBody").appendChild(tr);tr.querySelectorAll("input,select").forEach(i=>i.addEventListener("input",calcQuote));const qi=tr.querySelector(".qname");qi?.addEventListener("blur",()=>{qi.value=fmtQName(qi.value);calcQuote()});tr.querySelector(".qremove").addEventListener("click",()=>{tr.remove();renumberQuoteItems();calcQuote()});renumberQuoteItems();calcQuote()}
+function addQuoteItem(item={}){const tr=document.createElement("tr");const totalCm=item.total_cm??item.qty??0;tr.innerHTML=`<td class="qidx"></td><td><input class="qname" list="qNameOptionsList" placeholder="選擇或直接輸入" value="${esc(fmtQName(item.name||item.description||""))}"></td><td><input class="qsize" value="${esc(item.process_size||"")}"></td><td><input class="qcm" type="number" min="0" step="0.01" value="${Number(totalCm||0)}"></td><td><input class="qunit" list="quoteUnitOptions" placeholder="單位" autocomplete="off" value="${esc(item.unit||"")}" style="width:82px;min-width:65px"></td><td><input class="qprice" type="number" min="0" step="0.01" value="${Number(item.price||0)}"></td><td class="qamount">0</td><td><button type="button" class="qremove">刪</button></td>`;$("qItemsBody").appendChild(tr);tr.querySelectorAll("input,select").forEach(i=>i.addEventListener("input",calcQuote));const qi=tr.querySelector(".qname");qi?.addEventListener("blur",()=>{qi.value=fmtQName(qi.value);calcQuote()});tr.querySelector(".qremove").addEventListener("click",()=>{tr.remove();renumberQuoteItems();calcQuote()});renumberQuoteItems();calcQuote()}
 function renumberQuoteItems(){[...$("qItemsBody").children].forEach((tr,i)=>tr.querySelector(".qidx").textContent=i+1)}
 function getQuoteItems(){return [...$("qItemsBody").children].map(tr=>({name:fmtQName(tr.querySelector(".qname").value),process_size:tr.querySelector(".qsize").value.trim(),total_cm:Number(tr.querySelector(".qcm").value||0),unit:tr.querySelector(".qunit").value.trim(),price:Number(tr.querySelector(".qprice").value||0)})).filter(x=>x.name||x.process_size||x.total_cm||x.price)}
 function buildQuoteQuickNote(){
@@ -4168,7 +4168,7 @@ window.sbdHfManualTotals=fetchData;
 let saved={},editingPeriod=null,editingVersion=null;
 function show(){
  const select=el('hfSimplePeriod');if(!select)return;
- const periods=[...new Set(['260826-260925','260926-261025',...Object.keys(saved)])].sort();
+ const custom=el('hfSimpleNewPeriod')?.value.trim()||'';const periods=[...new Set(['260826-260925','260926-261025',...Object.keys(saved),...( /^\d{6}-\d{6}$/.test(custom)?[custom]:[])])].sort();
  const old=select.value;select.innerHTML='<option value="">選擇區間</option>'+periods.map(p=>`<option value="${p}">${p}</option>`).join('');
  if(periods.includes(old))select.value=old;
  const current=saved[select.value];
@@ -4213,7 +4213,20 @@ function bind(){
  const b=el('hfSimpleTabBtn');if(!b)return;
  b.classList.toggle('hidden',!isAdminAccount());
  b.addEventListener('click',()=>{document.querySelectorAll('#appPage main > section,#calendarView').forEach(x=>x.classList.add('hidden'));el('hfSimpleView').classList.remove('hidden');el('calendarControls')?.classList.add('hidden');document.querySelectorAll('.featureTabs button').forEach(x=>x.classList.remove('active'));b.classList.add('active');refresh()});
- el('hfSimplePeriod').addEventListener('change',()=>{editingPeriod=null;editingVersion=null;show()});el('hfSimpleSave').addEventListener('click',save);el('hfSimpleCancelEdit').addEventListener('click',()=>{editingPeriod=null;editingVersion=null;show()});
+ const addPeriod=()=>{
+  const input=el('hfSimpleNewPeriod');
+  const v=input.value.trim().replace(/[／/～~]/g,'-').replace(/\s/g,'');
+  if(!/^\d{6}-\d{6}$/.test(v)){el('hfSimpleStatus').textContent='請輸入完整區間，例如 261026-261125';input.focus();return;}
+  input.value=v;
+  show();
+  el('hfSimplePeriod').value=v;
+  el('hfSimplePeriod').dispatchEvent(new Event('change'));
+  el('hfSimpleStatus').textContent='已選擇新區間 '+v+'，輸入金額或件數後按儲存。';
+  el('hfSimpleSales').focus();
+};
+el('hfSimpleAddPeriod').addEventListener('click',addPeriod);
+el('hfSimpleNewPeriod').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addPeriod();}});
+el('hfSimplePeriod').addEventListener('change',()=>{editingPeriod=null;editingVersion=null;show()});el('hfSimpleSave').addEventListener('click',save);el('hfSimpleCancelEdit').addEventListener('click',()=>{editingPeriod=null;editingVersion=null;show()});
  document.querySelectorAll('.featureTabs button').forEach(x=>{if(x!==b)x.addEventListener('click',()=>el('hfSimpleView').classList.add('hidden'))});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();
@@ -4241,7 +4254,7 @@ window.sbdTcManualTotals=fetchData;
 let saved={},editingPeriod=null,editingVersion=null;
 function show(){
  const select=el('tcManualPeriod');if(!select)return;
- const periods=[...new Set(['260826-260925','260926-261025',...Object.keys(saved)])].sort();
+ const custom=el('tcManualNewPeriod')?.value.trim()||'';const periods=[...new Set(['260826-260925','260926-261025',...Object.keys(saved),...( /^\d{6}-\d{6}$/.test(custom)?[custom]:[])])].sort();
  const old=select.value;select.innerHTML='<option value="">選擇區間</option>'+periods.map(p=>`<option value="${p}">${p}</option>`).join('');
  if(periods.includes(old))select.value=old;
  const current=saved[select.value];
@@ -4285,7 +4298,20 @@ async function save(){
 function bind(){
  const section=el('tcManualTotals');if(!section)return;
  section.style.display=isAdminAccount()?'':'none';
- el('tcManualPeriod').addEventListener('change',()=>{editingPeriod=null;editingVersion=null;show()});
+ const addPeriod=()=>{
+  const input=el('tcManualNewPeriod');
+  const v=input.value.trim().replace(/[／/～~]/g,'-').replace(/\s/g,'');
+  if(!/^\d{6}-\d{6}$/.test(v)){el('tcManualStatus').textContent='請輸入完整區間，例如 261026-261125';input.focus();return;}
+  input.value=v;
+  show();
+  el('tcManualPeriod').value=v;
+  el('tcManualPeriod').dispatchEvent(new Event('change'));
+  el('tcManualStatus').textContent='已選擇新區間 '+v+'，輸入金額或件數後按儲存。';
+  el('tcManualSales').focus();
+};
+el('tcManualAddPeriod').addEventListener('click',addPeriod);
+el('tcManualNewPeriod').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addPeriod();}});
+el('tcManualPeriod').addEventListener('change',()=>{editingPeriod=null;editingVersion=null;show()});
  el('tcManualSave').addEventListener('click',save);
  document.getElementById('tcTabBtn')?.addEventListener('click',()=>refresh());
  refresh();
@@ -4316,7 +4342,7 @@ window.sbdAgencyManualTotals=fetchData;
 let saved={},editingPeriod=null,editingVersion=null;
 function show(){
  const select=el('agManualPeriod');if(!select)return;
- const periods=[...new Set(['260826-260925','260926-261025',...Object.keys(saved)])].sort();
+ const custom=el('agManualNewPeriod')?.value.trim()||'';const periods=[...new Set(['260826-260925','260926-261025',...Object.keys(saved),...( /^\d{6}-\d{6}$/.test(custom)?[custom]:[])])].sort();
  const old=select.value;select.innerHTML='<option value="">選擇區間</option>'+periods.map(p=>`<option value="${p}">${p}</option>`).join('');
  if(periods.includes(old))select.value=old;
  const current=saved[select.value];
@@ -4360,7 +4386,20 @@ async function save(){
 function bind(){
  const section=el('agManualTotals');if(!section)return;
  section.style.display=isAdminAccount()?'':'none';
- el('agManualPeriod').addEventListener('change',()=>{editingPeriod=null;editingVersion=null;show()});
+ const addPeriod=()=>{
+  const input=el('agManualNewPeriod');
+  const v=input.value.trim().replace(/[／/～~]/g,'-').replace(/\s/g,'');
+  if(!/^\d{6}-\d{6}$/.test(v)){el('agManualStatus').textContent='請輸入完整區間，例如 261026-261125';input.focus();return;}
+  input.value=v;
+  show();
+  el('agManualPeriod').value=v;
+  el('agManualPeriod').dispatchEvent(new Event('change'));
+  el('agManualStatus').textContent='已選擇新區間 '+v+'，輸入金額或件數後按儲存。';
+  el('agManualSales').focus();
+};
+el('agManualAddPeriod').addEventListener('click',addPeriod);
+el('agManualNewPeriod').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addPeriod();}});
+el('agManualPeriod').addEventListener('change',()=>{editingPeriod=null;editingVersion=null;show()});
  el('agManualSave').addEventListener('click',save);
  document.getElementById('tcTabBtn')?.addEventListener('click',()=>refresh());
  refresh();
