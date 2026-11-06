@@ -954,20 +954,6 @@ body:not(.admin-account) #otherExpensesView {display:none!important}
 </div><p id="pendingStatus" style="color:#65758a;font-size:13px">讀取中…</p><div style="overflow-x:auto"><table class="quoteList" style="width:29cm;min-width:29cm;table-layout:fixed"><colgroup><col style="width:4cm"><col style="width:3cm"><col style="width:3cm"><col style="width:6cm"><col style="width:10cm"><col style="width:3cm"></colgroup><thead><tr><th>日期</th><th>客戶</th><th>安裝日</th><th>案件內容</th><th>追蹤</th><th id="pendingActionHeader">操作</th></tr></thead><tbody id="pendingRows"></tbody></table></div></div></section>
 
 <section id="taichungPurchaseView" class="quoteWrap hidden">
-<div id="agManualTotals" class="quoteCard" style="margin:18px 0;padding:18px;border:1px solid #dce5ee;border-radius:12px">
-<h2>代安裝｜區間銷售與成本（手動同步）</h2>
-<p style="color:#64748b">僅此成本銷售報表改採手動總額；原代安裝案件、明細與 Excel 功能全部保留。</p>
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px">
-<label>請款區間<select id="agManualPeriod" style="width:100%;padding:9px"><option value="">選擇區間</option></select></label>
-<label>銷售額<input id="agManualSales" type="number" min="0" step="1" placeholder="輸入銷售額" style="width:100%;padding:9px"></label>
-<label>填寫欄／備註<input id="agManualNote" placeholder="輸入備註" style="width:100%;padding:9px"></label>
-<label>件數<input id="agManualCount" type="number" min="0" step="1" placeholder="輸入件數" style="width:100%;padding:9px"></label>
-<label>成本<input id="agManualCost" type="number" min="0" step="1" placeholder="輸入成本" style="width:100%;padding:9px"></label>
-</div>
-<div style="display:flex;align-items:center;gap:10px;margin:12px 0;flex-wrap:wrap"><button type="button" class="primary" id="agManualSave">儲存並同步成本銷售</button><span id="agManualStatus" style="color:#52687c"></span></div>
-<div id="agManualHistory"></div>
-</div>
-
 <div id="tcManualTotals" class="quoteCard" style="margin:18px 0;padding:18px;border:1px solid #dce5ee;border-radius:12px">
 <h2>草屯｜區間銷售與成本（手動同步）</h2>
 <p style="color:#64748b">僅此成本銷售報表改採手動總額；原草屯報價單、採購單、明細與 Excel 功能全部保留。</p>
@@ -980,6 +966,21 @@ body:not(.admin-account) #otherExpensesView {display:none!important}
 </div>
 <div style="display:flex;align-items:center;gap:10px;margin:12px 0;flex-wrap:wrap"><button type="button" class="primary" id="tcManualSave">儲存並同步成本銷售</button><span id="tcManualStatus" style="color:#52687c"></span></div>
 <div id="tcManualHistory"></div>
+</div>
+
+
+<div id="agManualTotals" class="quoteCard" style="margin:18px 0;padding:18px;border:1px solid #dce5ee;border-radius:12px">
+<h2>代安裝｜區間銷售與成本（手動同步）</h2>
+<p style="color:#64748b">僅此成本銷售報表改採手動總額；原代安裝案件、明細與 Excel 功能全部保留。</p>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px">
+<label>請款區間<select id="agManualPeriod" style="width:100%;padding:9px"><option value="">選擇區間</option></select></label>
+<label>銷售額<input id="agManualSales" type="number" min="0" step="1" placeholder="輸入銷售額" style="width:100%;padding:9px"></label>
+<label>填寫欄／備註<input id="agManualNote" placeholder="輸入備註" style="width:100%;padding:9px"></label>
+<label>件數<input id="agManualCount" type="number" min="0" step="1" placeholder="輸入件數" style="width:100%;padding:9px"></label>
+<label>成本<input id="agManualCost" type="number" min="0" step="1" placeholder="輸入成本" style="width:100%;padding:9px"></label>
+</div>
+<div style="display:flex;align-items:center;gap:10px;margin:12px 0;flex-wrap:wrap"><button type="button" class="primary" id="agManualSave">儲存並同步成本銷售</button><span id="agManualStatus" style="color:#52687c"></span></div>
+<div id="agManualHistory"></div>
 </div>
 
   <div class="purchaseCard">
@@ -2377,7 +2378,7 @@ function setStatForm(x={}){
   $("stSizeCm").value=x.size_cm??"";
   $("stUntaxedAmount").value=x.untaxed_amount??"";
   $("stNote").value=x.note||"";
-  $("stFloor").value=x.floor||"";
+  $("stFloor").value=stFloorNumber(x.floor)||x.floor||"";
   $("stInstallers").value=x.installers||"";
   syncInstallerPickerLabel();
   $("stLong").value=x.long_share??"";
@@ -2612,7 +2613,7 @@ function exportInstallStatsExcel(){
     x.model||"",
     x.size_cm===""?"":Number(x.size_cm||0),
     stDisplayUntaxed(x)===null?"":stDisplayUntaxed(x),
-    x.note||"",x.floor||"",x.installers||"",
+    x.note||"",stFloorNumber(x.floor)||x.floor||"",x.installers||"",
     x.long_share||"",x.kai_share||"",x.self_install_share||"",x.fu_share||"",x.caotun_share||""
   ]);
 
@@ -5195,12 +5196,26 @@ async function sync(){
   if(!order)continue;
   eligible++;
   const id='quote:'+String(q.id||q.quote_no);
-  if(items.some(x=>x.id===id))continue;
-  items.push({id,no:String(q.quote_no||order),name:[q.customer_name,meta.case_name||q.contact_name].filter(Boolean).join(' '),amount:Number(q.subtotal||0),period:defaultPeriod,sourceOrderNo:order});
+  // 只帶客戶名稱＋報價單案名；金額只取未稅合計 subtotal，絕不取含稅總計。
+  const customer=String(q.customer_name||'').trim();
+  const caseName=String(meta.case_name||q.contact_name||'').trim();
+  const displayName=[customer,caseName].filter(Boolean).join(' ');
+  const subtotal=Number(q.subtotal);
+  const existing=items.find(x=>x.id===id);
+  if(existing){
+    // 使用者已手動修改的案件不得被同步覆蓋。
+    if(existing.edited)continue;
+    existing.no=String(q.quote_no||order);
+    existing.name=displayName;
+    if(Number.isFinite(subtotal))existing.amount=subtotal;
+    existing.sourceOrderNo=order;
+    continue;
+  }
+  items.push({id,no:String(q.quote_no||order),name:displayName,amount:Number.isFinite(subtotal)?subtotal:0,period:defaultPeriod,sourceOrderNo:order});
   added++;
  }
  save();render();
- msg.textContent=`報價單共 ${quotes.length} 筆；有訂單編號 ${eligible} 筆；本次新增 ${added} 筆。已存在的案件不覆蓋，浤富手動成本銷售總額不變。`;
+ msg.textContent=`報價單共 ${quotes.length} 筆；有訂單編號 ${eligible} 筆；本次新增 ${added} 筆。已同步更新未經人工修改的既有案件；浤富手動成本銷售總額不變。`;
  }catch(e){msg.textContent='報價單同步失敗：'+e.message}
 }
 function downloadExcel(){
