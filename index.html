@@ -725,7 +725,7 @@ body:not(.admin-account) #otherExpensesView {display:none!important}
     <div class="quoteItemsWrap"><table class="quoteItems"><thead><tr><th>項數</th><th>名稱</th><th>加工尺寸 (CM)</th><th>總公分數</th><th>單位</th><th>單價</th><th>小計</th><th></th></tr></thead><tbody id="qItemsBody"></tbody><datalist id="quoteUnitOptions"><option value="cm"><option value="式"><option value="個"><option value="層"><option value="才"></datalist></table></div>
     <datalist id="qNameOptionsList"></datalist><datalist id="tcNameOptionsList"></datalist><div class="quoteManageTools"><button type="button" id="qAddItemBtn">＋ 新增項目</button><button type="button" id="qNameManageBtn">名稱選項管理</button><span class="hint">名稱可選下拉，也可直接輸入，例如：L型檯面: D60</span></div>
     <div class="quoteSummary"><span>合計</span><span id="qSubtotal">0</span><span>稅金5%</span><span id="qTax">0</span><span>總計</span><span id="qTotal">0</span></div>
-    <div class="quoteActions"><button type="button" id="qSaveBtn" class="primary">儲存報價單</button><button type="button" id="qCancelEditBtn" class="hidden">取消修改</button></div>
+    <div class="quoteActions"><button type="button" id="qSaveBtn" class="primary">儲存報價單</button><button type="button" id="qCancelEditBtn" class="hidden">取消修改</button></div><div id="qSaveStatus" role="status" aria-live="polite" style="margin-top:8px;font-size:13px"></div>
   </div>
   <div class="quotePreviewCard">
     <h2 class="quoteTitle">報價單預覽</h2>
@@ -1430,7 +1430,52 @@ function previewQuotePdf(){printQuote(currentQuoteDraft())}
 function previewQuoteExcel(){excelQuote(currentQuoteDraft())}
 function resetQuoteForm(){editingQuoteId=null;$("quoteFormTitle").textContent="新增報價單";$("qCaseName").value="";$("qNo").value=makeQuoteNo();$("qCustomer").value="";$("qDate").value=qDateDisplay(qToday());$("qInstallDate").value="";$("qContactPhone").value="";$("qInstallPeriod").value="";if($("qOrderNo"))$("qOrderNo").value="";$("qAddress").value="";$("qFileAddress").value="";$("qColorNo").value="";$("qProductName").value="";$("qFrontEdge").value="";$("qBackWall").value="";$("qItemsBody").innerHTML="";addQuoteItem();$("qCancelEditBtn").classList.add("hidden");calcQuote()}
 function nextQuoteNo(no){const v=String(no||"").trim();const m=v.match(/^(.*?)(\d+)$/);if(m){const n=String(Number(m[2])+1).padStart(m[2].length,"0");return m[1]+n}return makeQuoteNo()}
-async function saveQuote(){if(!["admin","editor"].includes(profile.role))return;let no=$("qNo").value.trim()||makeQuoteNo(),date=qDateStorage($("qDate").value)||qToday(),customer=$("qCustomer").value.trim(),items=getQuoteItems();const c=calcQuote(),meta=qMeta();let payload={quote_no:no,quote_date:date,customer_name:customer,contact_name:meta.case_name||null,phone:meta.contact_phone||null,address:$("qAddress").value.trim()||null,items,subtotal:c.sub,tax_rate:5,tax_amount:c.tax,total_amount:c.total,note:JSON.stringify(meta)};let r;if(editingQuoteId){r=await sb.from("sbd_quotes").update(payload).eq("id",editingQuoteId)}else{for(let i=0;i<100;i++){r=await sb.from("sbd_quotes").insert(payload);if(!r.error)break;const duplicate=r.error?.code==="23505"||/duplicate key|sbd_quotes_quote_no_key/i.test(r.error?.message||"");if(!duplicate)break;no=nextQuoteNo(no);payload.quote_no=no;$("qNo").value=no}}if(r.error){alert("報價單儲存失敗："+r.error.message);return}resetQuoteForm();await loadQuotes();if(typeof tcRefreshQuotesFromSupabase==='function'){try{await tcRefreshQuotesFromSupabase();}catch(e){console.error('報價單案件同步失敗',e);alert('報價單已儲存，但案件同步失敗：'+(e.message||e));}}if(profile?.role==="admin"){const saved=quoteRows.find(q=>String(q.quote_no||"")===String(no));if(saved)await syncOneQuoteToInstallStats(saved);await loadInstallStats()}}
+async function saveQuote(){
+ const btn=$("qSaveBtn");
+ if(btn?.dataset.saving==="1")return;
+ const status=$("qSaveStatus");
+ const show=(message,isError=false)=>{if(status){status.textContent=message;status.style.color=isError?"#c62828":"#17603b";status.classList.remove("hidden")}else if(isError)alert(message)};
+ if(!["admin","editor"].includes(profile?.role)){show("目前帳號沒有儲存報價單的權限",true);return}
+ if(!sb){show("雲端尚未連線，請重新登入後再試",true);return}
+ const originalText=btn?.textContent||"儲存報價單";
+ try{
+  if(btn){btn.dataset.saving="1";btn.disabled=true;btn.textContent="儲存中…"}
+  show("正在儲存報價單…");
+  let no=$("qNo").value.trim()||makeQuoteNo();
+  const date=qDateStorage($("qDate").value)||qToday(),customer=$("qCustomer").value.trim();
+  const items=getQuoteItems(),c=calcQuote(),meta=qMeta();
+  const payload={quote_no:no,quote_date:date,customer_name:customer,contact_name:meta.case_name||null,phone:meta.contact_phone||null,address:$("qAddress").value.trim()||null,items,subtotal:c.sub,tax_rate:5,tax_amount:c.tax,total_amount:c.total,note:JSON.stringify(meta)};
+  let r;
+  if(editingQuoteId)r=await sb.from("sbd_quotes").update(payload).eq("id",editingQuoteId);
+  else for(let i=0;i<100;i++){
+   r=await sb.from("sbd_quotes").insert(payload);
+   if(!r.error)break;
+   const duplicate=r.error?.code==="23505"||/duplicate key|sbd_quotes_quote_no_key/i.test(r.error?.message||"");
+   if(!duplicate)break;
+   no=nextQuoteNo(no);payload.quote_no=no;$("qNo").value=no;
+  }
+  if(r?.error)throw new Error(r.error.message||"雲端儲存失敗");
+  if(!r)throw new Error("雲端未回傳儲存結果");
+  show("報價單 "+no+" 已儲存");
+  resetQuoteForm();
+  try{await loadQuotes()}catch(e){console.error("報價單清單重新整理失敗",e)}
+  if(typeof tcRefreshQuotesFromSupabase==="function"){
+   try{await tcRefreshQuotesFromSupabase()}catch(e){console.error("報價單案件同步失敗",e)}
+  }
+  if(profile?.role==="admin"){
+   try{
+    const saved=quoteRows.find(q=>String(q.quote_no||"")===String(no));
+    if(saved&&typeof syncOneQuoteToInstallStats==="function")await syncOneQuoteToInstallStats(saved);
+    if(typeof loadInstallStats==="function")await loadInstallStats();
+   }catch(e){console.error("安裝統計同步失敗（報價單已儲存）",e)}
+  }
+ }catch(e){
+  console.error("報價單儲存失敗",e);
+  show("儲存失敗："+(e?.message||String(e)),true);
+ }finally{
+  if(btn){btn.dataset.saving="";btn.disabled=false;btn.textContent=originalText}
+ }
+}
 document.getElementById("quoteCustomerFilter")?.addEventListener("change",renderQuoteList);
 async function loadQuotes(){if(!["admin","editor"].includes(profile.role))return;const {data,error}=await sb.from("sbd_quotes").select("*").order("quote_no",{ascending:false}).order("created_at",{ascending:false});if(error){$("quoteEmpty").textContent="讀取報價單失敗："+error.message;$("quoteEmpty").classList.remove("hidden");return}quoteRows=data||[];quoteRows.sort((a,b)=>String(b.quote_no||"").localeCompare(String(a.quote_no||""),undefined,{numeric:true,sensitivity:"base"}));renderQuoteList();window.sbdQuoteRowsForTc=quoteRows.map(q=>{const m=qMetaFromNote(q.note);return {id:q.id,quote_no:q.quote_no,customer_name:q.customer_name,case_name:m.case_name||q.contact_name||"",order_no:m.order_no||"",subtotal:q.subtotal};});window.dispatchEvent(new Event("sbd-quotes-loaded"))}
 function renderQuoteList(){
