@@ -4203,7 +4203,7 @@ async function fetchData(){
  }
  // 使用現有 sbd_read_cost_report_sources 唯讀服務，無須另外部署專用函式。
  const {data,error}=await sb.rpc('sbd_read_cost_report_sources');
- if(error)throw Error('成本銷售唯讀服務讀取失敗：'+error.message);
+ if(error)throw Error('成本銷售唯讀服務讀取失敗（'+(error.code||'未知代碼')+'）：'+error.message+'。請先執行隨附的成本銷售唯讀權限 SQL。');
  if(!Array.isArray(data))throw Error('成本銷售唯讀服務回傳格式錯誤');
  const row=data.find(r=>r.data_key===KEY);
  if(!row)throw Error('唯讀服務未提供 '+KEY+'；請確認管理者已儲存此區間資料');
@@ -4290,7 +4290,7 @@ async function fetchData(){
  }
  // 使用現有 sbd_read_cost_report_sources 唯讀服務，無須另外部署專用函式。
  const {data,error}=await sb.rpc('sbd_read_cost_report_sources');
- if(error)throw Error('成本銷售唯讀服務讀取失敗：'+error.message);
+ if(error)throw Error('成本銷售唯讀服務讀取失敗（'+(error.code||'未知代碼')+'）：'+error.message+'。請先執行隨附的成本銷售唯讀權限 SQL。');
  if(!Array.isArray(data))throw Error('成本銷售唯讀服務回傳格式錯誤');
  const row=data.find(r=>r.data_key===KEY);
  if(!row)throw Error('唯讀服務未提供 '+KEY+'；請確認管理者已儲存此區間資料');
@@ -4379,7 +4379,7 @@ async function fetchData(){
  }
  // 使用現有 sbd_read_cost_report_sources 唯讀服務，無須另外部署專用函式。
  const {data,error}=await sb.rpc('sbd_read_cost_report_sources');
- if(error)throw Error('成本銷售唯讀服務讀取失敗：'+error.message);
+ if(error)throw Error('成本銷售唯讀服務讀取失敗（'+(error.code||'未知代碼')+'）：'+error.message+'。請先執行隨附的成本銷售唯讀權限 SQL。');
  if(!Array.isArray(data))throw Error('成本銷售唯讀服務回傳格式錯誤');
  const row=data.find(r=>r.data_key===KEY);
  if(!row)throw Error('唯讀服務未提供 '+KEY+'；請確認管理者已儲存此區間資料');
@@ -4505,7 +4505,7 @@ function sbdAgencyBackupAudit(current){
 // v142: Always fetch a fresh, explicitly authorized RPC snapshot on each report render.
 async function costReportRows(){
  const {data,error}=await sb.rpc('sbd_read_cost_report_sources');
- if(error)throw Error('唯讀報表服務讀取失敗：'+error.message);
+ if(error)throw Error('唯讀報表服務讀取失敗（'+(error.code||'未知代碼')+'）：'+error.message+'。請先執行隨附的成本銷售唯讀權限 SQL。');
  if(!Array.isArray(data))throw Error('唯讀報表資料格式錯誤');
  return data;
 }
