@@ -765,7 +765,7 @@ body:not(.admin-account) #otherExpensesView {display:none!important}
       </div>
     </div>
     <div id="qQuickNoteBody" class="quoteQuickNoteBody">
-      <textarea id="qQuickNoteText" readonly spellcheck="false"></textarea>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"><select id="qSavedNoteSelect" style="max-width:100%"><option value="">目前編輯中的報價單</option></select><button type="button" id="qSavedNoteDraft">目前編輯</button></div><textarea id="qQuickNoteText" readonly spellcheck="false"></textarea>
     </div>
   </div>
 </section>
@@ -1357,11 +1357,12 @@ function showFeature(name){
 function addQuoteItem(item={}){const tr=document.createElement("tr");const totalCm=item.total_cm??item.qty??0;tr.innerHTML=`<td class="qidx"></td><td><input class="qname" list="qNameOptionsList" placeholder="選擇或直接輸入" value="${esc(fmtQName(item.name||item.description||""))}"></td><td><input class="qsize" value="${esc(item.process_size||"")}"></td><td><input class="qcm" type="number" min="0" step="0.01" value="${Number(totalCm||0)}"></td><td><input class="qunit" list="quoteUnitOptions" placeholder="單位" autocomplete="off" value="${esc(item.unit||"")}" style="width:82px;min-width:65px"></td><td><input class="qprice" type="number" min="0" step="0.01" value="${Number(item.price||0)}"></td><td class="qamount">0</td><td><button type="button" class="qremove">刪</button></td>`;$("qItemsBody").appendChild(tr);tr.querySelectorAll("input,select").forEach(i=>i.addEventListener("input",calcQuote));const qi=tr.querySelector(".qname");qi?.addEventListener("blur",()=>{qi.value=fmtQName(qi.value);calcQuote()});tr.querySelector(".qremove").addEventListener("click",()=>{tr.remove();renumberQuoteItems();calcQuote()});renumberQuoteItems();calcQuote()}
 function renumberQuoteItems(){[...$("qItemsBody").children].forEach((tr,i)=>tr.querySelector(".qidx").textContent=i+1)}
 function getQuoteItems(){return [...$("qItemsBody").children].map(tr=>({name:fmtQName(tr.querySelector(".qname").value),process_size:tr.querySelector(".qsize").value.trim(),total_cm:Number(tr.querySelector(".qcm").value||0),unit:tr.querySelector(".qunit").value.trim(),price:Number(tr.querySelector(".qprice").value||0)})).filter(x=>x.name||x.process_size||x.total_cm||x.price)}
-function buildQuoteQuickNote(){
-  const installDate=String($("qInstallDate")?.value||"").replace(/-/g,"/");
+function buildQuoteQuickNote(saved=null){
+  const m=saved?qMetaFromNote(saved.note):null;
+  const installDate=String(saved?qDateDisplay(m.install_date||""):($("qInstallDate")?.value||"")).replace(/-/g,"/");
   const styles=new Map();
   let totalCm=0;
-  for(const item of getQuoteItems()){
+  for(const item of (saved?(Array.isArray(saved.items)?saved.items:[]):getQuoteItems())){
     const name=String(item.name||"").trim().normalize("NFKC");
     if(!name.includes("檯面")) continue;
     let type="";
@@ -1377,16 +1378,20 @@ function buildQuoteQuickNote(){
   const styleText=styles.size ? [...styles].map(([type,count])=>`${type}*${count}`).join("、")+`_長${Number(totalCm.toFixed(2))}` : "";
   return [
     `安裝日 : ${installDate}`,
-    `安裝時段 : ${$("qInstallPeriod")?.value||""}`,
-    `聯絡人電話 : ${$("qContactPhone")?.value.trim()||""}`,
-    `編號 : ${$("qNo")?.value.trim()||""}`,
-    `客戶 : ${$("qCustomer")?.value.trim()||""}`,
-    `顏色 : ${$("qColorNo")?.value.trim()||""}`,
+    `安裝時段 : ${(saved?(m.install_period||""):($("qInstallPeriod")?.value||""))}`,
+    `聯絡人電話 : ${(saved?(m.contact_phone||saved.phone||""):($("qContactPhone")?.value.trim()||""))}`,
+    `編號 : ${(saved?(saved.quote_no||""):($("qNo")?.value.trim()||""))}`,
+    `客戶 : ${(saved?(saved.customer_name||""):($("qCustomer")?.value.trim()||""))}`,
+    `顏色 : ${(saved?(m.color_no||""):($("qColorNo")?.value.trim()||""))}`,
     `檯面樣式 : ${styleText}`,
-    `地址 : ${$("qAddress")?.value.trim()||""}`
+    `地址 : ${(saved?(saved.address||""):($("qAddress")?.value.trim()||""))}`
   ].join("\n");
 }
-function refreshQuoteQuickNote(){const box=$("qQuickNoteText");if(box)box.value=buildQuoteQuickNote()}
+let qSavedNoteNo="";
+function renderSavedNotes(){const sel=$("qSavedNoteSelect");if(!sel)return;sel.replaceChildren(new Option("目前編輯中的報價單",""),...quoteRows.map(q=>new Option(`${q.quote_no}｜${q.customer_name||""}`,String(q.quote_no))));if(!quoteRows.some(q=>String(q.quote_no)===qSavedNoteNo))qSavedNoteNo="";sel.value=qSavedNoteNo;refreshQuoteQuickNote()}
+function refreshQuoteQuickNote(){const box=$("qQuickNoteText");const saved=quoteRows.find(q=>String(q.quote_no)===qSavedNoteNo);if(box)box.value=buildQuoteQuickNote(saved||null)}
+$("qSavedNoteSelect").addEventListener("change",e=>{qSavedNoteNo=e.target.value;refreshQuoteQuickNote()});
+$("qSavedNoteDraft").addEventListener("click",()=>{qSavedNoteNo="";renderSavedNotes()});
 function setQuoteQuickNoteOpen(open){
   const body=$("qQuickNoteBody"),toggle=$("qQuickNoteToggleBtn"),copy=$("qQuickNoteCopyBtn");
   if(!body)return;
@@ -1399,6 +1404,7 @@ document.addEventListener("DOMContentLoaded",()=>{setTimeout(()=>{try{setQuoteQu
 function openQuoteQuickNoteFromHeader(){
   if(!["admin","editor"].includes(profile?.role))return;
   showFeature("quote");
+  loadQuotes().catch(console.error);
   setTimeout(()=>{setQuoteQuickNoteOpen(true);$("quoteQuickNoteCard")?.scrollIntoView({behavior:"smooth",block:"start"})},80);
 }
 async function copyQuoteQuickNote(){
@@ -1463,7 +1469,8 @@ async function saveQuote(){
   }
   if(r?.error)throw new Error(r.error.message||"雲端儲存失敗");
   if(!r)throw new Error("雲端未回傳儲存結果");
-  show("報價單 "+no+" 已儲存");
+  show("報價單 "+no+" 已儲存，記事本已連動");
+  qSavedNoteNo=String(no);
   resetQuoteForm();
   try{await loadQuotes()}catch(e){console.error("報價單清單重新整理失敗",e)}
   if(typeof tcRefreshQuotesFromSupabase==="function"){
@@ -1484,7 +1491,7 @@ async function saveQuote(){
  }
 }
 document.getElementById("quoteCustomerFilter")?.addEventListener("change",renderQuoteList);
-async function loadQuotes(){if(!["admin","editor"].includes(profile.role))return;const {data,error}=await sb.from("sbd_quotes").select("*").order("quote_no",{ascending:false}).order("created_at",{ascending:false});if(error){$("quoteEmpty").textContent="讀取報價單失敗："+error.message;$("quoteEmpty").classList.remove("hidden");return}quoteRows=data||[];quoteRows.sort((a,b)=>String(b.quote_no||"").localeCompare(String(a.quote_no||""),undefined,{numeric:true,sensitivity:"base"}));renderQuoteList();window.sbdQuoteRowsForTc=quoteRows.map(q=>{const m=qMetaFromNote(q.note);return {id:q.id,quote_no:q.quote_no,customer_name:q.customer_name,case_name:m.case_name||q.contact_name||"",order_no:m.order_no||"",subtotal:q.subtotal};});window.dispatchEvent(new Event("sbd-quotes-loaded"))}
+async function loadQuotes(){if(!["admin","editor"].includes(profile.role))return;const {data,error}=await sb.from("sbd_quotes").select("*").order("quote_no",{ascending:false}).order("created_at",{ascending:false});if(error){$("quoteEmpty").textContent="讀取報價單失敗："+error.message;$("quoteEmpty").classList.remove("hidden");return}quoteRows=data||[];quoteRows.sort((a,b)=>String(b.quote_no||"").localeCompare(String(a.quote_no||""),undefined,{numeric:true,sensitivity:"base"}));renderQuoteList();renderSavedNotes();window.sbdQuoteRowsForTc=quoteRows.map(q=>{const m=qMetaFromNote(q.note);return {id:q.id,quote_no:q.quote_no,customer_name:q.customer_name,case_name:m.case_name||q.contact_name||"",order_no:m.order_no||"",subtotal:q.subtotal};});window.dispatchEvent(new Event("sbd-quotes-loaded"))}
 function renderQuoteList(){
  const body=$("quoteListBody"),sel=$("quoteCustomerFilter");
  const customerOf=q=>String(q.customer_name||"").trim();
@@ -1496,7 +1503,7 @@ function renderQuoteList(){
  }
  body.innerHTML="";
 $("quoteEmpty").classList.toggle("hidden",quoteRows.length>0);quoteRows.filter(x=>!sel?.value||customerOf(x)===sel.value).forEach(x=>{const m=qMetaFromNote(x.note),items=Array.isArray(x.items)?x.items:[],names=items.map(it=>fmtQName(it.name||it.description||"")).filter(Boolean).join("、"),installDate=m.install_date||x.quote_date||"",tr=document.createElement("tr"),del=profile.role==="admin"?`<button type="button" class="danger" data-act="delete" data-id="${x.id}">刪除</button>`:"",stats=profile.role==="admin"?`<button type="button" data-act="stats" data-id="${x.id}">製作安裝</button>`:"";tr.innerHTML=`<td><div class="quoteListBtns"><button type="button" data-act="edit" data-id="${x.id}">修改</button><button type="button" data-act="excel" data-id="${x.id}">Excel</button>${stats}${del}</div></td><td>${esc(x.quote_no||"")}</td><td>${esc(x.customer_name||"")}</td><td>${esc(m.case_name||x.contact_name||"")}</td><td>${esc(m.color_no||"")}</td><td>${esc(m.product_name||"")}</td><td>${esc(x.address||"")}</td><td>${esc(names)}</td>`;body.appendChild(tr)});body.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{const x=quoteRows.find(q=>String(q.id)===String(b.dataset.id));if(!x)return;if(b.dataset.act==="edit")editQuote(x);if(b.dataset.act==="pdf")printQuote(x);if(b.dataset.act==="excel")excelQuote(x);if(b.dataset.act==="stats")openStatsFromQuote(x);if(b.dataset.act==="delete")deleteQuote(x.id)}))}
-function editQuote(x){if(!["admin","editor"].includes(profile.role))return;const m=qMetaFromNote(x.note);editingQuoteId=x.id;$("quoteFormTitle").textContent="修改報價單";$("qCaseName").value=m.case_name||x.contact_name||"";$("qNo").value=x.quote_no||"";$("qCustomer").value=x.customer_name||"";$("qDate").value=qDateDisplay(x.quote_date||qToday());$("qInstallDate").value=qDateDisplay(m.install_date||"");$("qContactPhone").value=m.contact_phone||x.phone||"";$("qInstallPeriod").value=m.install_period||"";if($("qOrderNo"))$("qOrderNo").value=m.order_no||"";$("qAddress").value=x.address||"";$("qFileAddress").value=m.file_address||"";$("qColorNo").value=m.color_no||"";$("qProductName").value=m.product_name||"";$("qFrontEdge").value=m.front_edge||"";$("qBackWall").value=m.back_wall||"";$("qItemsBody").innerHTML="";(Array.isArray(x.items)?x.items:[]).forEach(addQuoteItem);if(!$("qItemsBody").children.length)addQuoteItem();$("qCancelEditBtn").classList.remove("hidden");calcQuote();requestAnimationFrame(()=>{const target=$("quoteFormTitle");target.scrollIntoView({behavior:"smooth",block:"start"});setTimeout(()=>{$("qCaseName")?.focus({preventScroll:true})},350)})}
+function editQuote(x){if(!["admin","editor"].includes(profile.role))return;qSavedNoteNo="";renderSavedNotes();const m=qMetaFromNote(x.note);editingQuoteId=x.id;$("quoteFormTitle").textContent="修改報價單";$("qCaseName").value=m.case_name||x.contact_name||"";$("qNo").value=x.quote_no||"";$("qCustomer").value=x.customer_name||"";$("qDate").value=qDateDisplay(x.quote_date||qToday());$("qInstallDate").value=qDateDisplay(m.install_date||"");$("qContactPhone").value=m.contact_phone||x.phone||"";$("qInstallPeriod").value=m.install_period||"";if($("qOrderNo"))$("qOrderNo").value=m.order_no||"";$("qAddress").value=x.address||"";$("qFileAddress").value=m.file_address||"";$("qColorNo").value=m.color_no||"";$("qProductName").value=m.product_name||"";$("qFrontEdge").value=m.front_edge||"";$("qBackWall").value=m.back_wall||"";$("qItemsBody").innerHTML="";(Array.isArray(x.items)?x.items:[]).forEach(addQuoteItem);if(!$("qItemsBody").children.length)addQuoteItem();$("qCancelEditBtn").classList.remove("hidden");calcQuote();requestAnimationFrame(()=>{const target=$("quoteFormTitle");target.scrollIntoView({behavior:"smooth",block:"start"});setTimeout(()=>{$("qCaseName")?.focus({preventScroll:true})},350)})}
 async function deleteQuote(id){if(profile.role!=="admin")return;if(!confirm("確定刪除這張報價單？"))return;const {error}=await sb.from("sbd_quotes").delete().eq("id",id);if(error){alert("刪除失敗："+error.message);return}await loadQuotes()}
 function quoteDownloadBase(x){
   const m=qMetaFromNote(x.note||"");
