@@ -765,7 +765,7 @@ body:not(.admin-account) #otherExpensesView {display:none!important}
       </div>
     </div>
     <div id="qQuickNoteBody" class="quoteQuickNoteBody">
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"><select id="qSavedNoteSelect" style="max-width:100%"><option value="">目前編輯中的報價單</option></select><button type="button" id="qSavedNoteDraft">目前編輯</button></div><textarea id="qQuickNoteText" readonly spellcheck="false"></textarea>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"><select id="qSavedNoteSelect" style="max-width:100%"><option value="">目前編輯中的報價單</option></select><button type="button" id="qSavedNoteDraft">目前編輯</button></div><textarea id="qQuickNoteText" readonly spellcheck="false"></textarea><button type="button" id="qSavedNoteSave" disabled>儲存記事本修改</button><span id="qSavedNoteStatus"></span>
     </div>
   </div>
 </section>
@@ -1359,7 +1359,6 @@ function renumberQuoteItems(){[...$("qItemsBody").children].forEach((tr,i)=>tr.q
 function getQuoteItems(){return [...$("qItemsBody").children].map(tr=>({name:fmtQName(tr.querySelector(".qname").value),process_size:tr.querySelector(".qsize").value.trim(),total_cm:Number(tr.querySelector(".qcm").value||0),unit:tr.querySelector(".qunit").value.trim(),price:Number(tr.querySelector(".qprice").value||0)})).filter(x=>x.name||x.process_size||x.total_cm||x.price)}
 function buildQuoteQuickNote(saved=null){
   const m=saved?qMetaFromNote(saved.note):null;
-  const installDate=String(saved?qDateDisplay(m.install_date||""):($("qInstallDate")?.value||"")).replace(/-/g,"/");
   const styles=new Map();
   let totalCm=0;
   for(const item of (saved?(Array.isArray(saved.items)?saved.items:[]):getQuoteItems())){
@@ -1377,8 +1376,6 @@ function buildQuoteQuickNote(saved=null){
   }
   const styleText=styles.size ? [...styles].map(([type,count])=>`${type}*${count}`).join("、")+`_長${Number(totalCm.toFixed(2))}` : "";
   return [
-    `安裝日 : ${installDate}`,
-    `安裝時段 : ${(saved?(m.install_period||""):($("qInstallPeriod")?.value||""))}`,
     `聯絡人電話 : ${(saved?(m.contact_phone||saved.phone||""):($("qContactPhone")?.value.trim()||""))}`,
     `編號 : ${(saved?(saved.quote_no||""):($("qNo")?.value.trim()||""))}`,
     `客戶 : ${(saved?(saved.customer_name||""):($("qCustomer")?.value.trim()||""))}`,
@@ -1387,11 +1384,18 @@ function buildQuoteQuickNote(saved=null){
     `地址 : ${(saved?(saved.address||""):($("qAddress")?.value.trim()||""))}`
   ].join("\n");
 }
-let qSavedNoteNo="";
-function renderSavedNotes(){const sel=$("qSavedNoteSelect");if(!sel)return;sel.replaceChildren(new Option("目前編輯中的報價單",""),...quoteRows.map(q=>new Option(`${q.quote_no}｜${q.customer_name||""}`,String(q.quote_no))));if(!quoteRows.some(q=>String(q.quote_no)===qSavedNoteNo))qSavedNoteNo="";sel.value=qSavedNoteNo;refreshQuoteQuickNote()}
-function refreshQuoteQuickNote(){const box=$("qQuickNoteText");const saved=quoteRows.find(q=>String(q.quote_no)===qSavedNoteNo);if(box)box.value=buildQuoteQuickNote(saved||null)}
-$("qSavedNoteSelect").addEventListener("change",e=>{qSavedNoteNo=e.target.value;refreshQuoteQuickNote()});
-$("qSavedNoteDraft").addEventListener("click",()=>{qSavedNoteNo="";renderSavedNotes()});
+let qSavedNoteNo="", qNoteDirty=false;
+function qNoteEligible(q){const m=qMetaFromNote(q.note);return (m.install_date||q.quote_date||"") >= "2026-12-01";}
+function qNoteWithoutInstall(text){return String(text??"").split(/\r?\n/).filter(line=>!/^\s*安裝(?:日(?:期)?|時段)\s*[:：]/.test(line)).join("\n")}
+function qNoteMerge(text,before,after){text=qNoteWithoutInstall(text);const old=before.split("\n"), next=after.split("\n");let lines=text.split("\n");next.forEach((line,i)=>{if(line===old[i])return;const key=line.split(" : ")[0];const at=lines.findIndex(x=>x.trim().startsWith(key+" :")||x.trim().startsWith(key+"：")||x.trim().startsWith(key+":"));if(at>=0)lines[at]=line;else lines.push(line)});return lines.join("\n")}
+function renderSavedNotes(){const sel=$("qSavedNoteSelect");if(!sel)return;const rows=quoteRows.filter(q=>qNoteEligible(q)&&typeof qMetaFromNote(q.note).quick_note_text==="string");sel.replaceChildren(new Option("目前編輯中的報價單",""),...rows.map(q=>new Option(`${q.quote_no}｜${q.customer_name||""}`,String(q.quote_no))));if(!rows.some(q=>String(q.quote_no)===qSavedNoteNo))qSavedNoteNo="";sel.value=qSavedNoteNo;refreshQuoteQuickNote()}
+function refreshQuoteQuickNote(){if(qNoteDirty)return;const box=$("qQuickNoteText"),saved=quoteRows.find(q=>String(q.quote_no)===qSavedNoteNo);const editable=!!saved&&qNoteEligible(saved);if(box){box.readOnly=!editable;box.value=editable?qNoteWithoutInstall(qMetaFromNote(saved.note).quick_note_text):buildQuoteQuickNote();}$("qSavedNoteSave").disabled=!editable;}
+$("qQuickNoteText").addEventListener("input",()=>{qNoteDirty=true;$("qSavedNoteStatus").textContent="尚未儲存"});
+$("qSavedNoteSave").onclick=async()=>{const q=quoteRows.find(x=>String(x.quote_no)===qSavedNoteNo);if(!q||!qNoteEligible(q))return;const btn=$("qSavedNoteSave");btn.disabled=true;try{const r=await sb.from("sbd_quotes").select("note").eq("id",q.id).single();if(r.error)throw r.error;const m=qMetaFromNote(r.data.note);m.quick_note_text=qNoteWithoutInstall($("qQuickNoteText").value);const note=JSON.stringify(m);const w=await sb.from("sbd_quotes").update({note}).eq("id",q.id).eq("note",r.data.note).select("id");if(w.error||!w.data?.length)throw new Error(w.error?.message||"資料已變更，請重新確認");q.note=note;qNoteDirty=false;$("qSavedNoteStatus").textContent="已儲存";}catch(e){alert("記事本儲存失敗："+e.message)}finally{btn.disabled=false}};
+function qNoteLeave(){if(qNoteDirty&&!confirm("記事本尚未儲存，確定放棄修改？"))return false;qNoteDirty=false;$("qSavedNoteStatus").textContent="";return true;}
+$("qSavedNoteSelect").addEventListener("change",e=>{if(!qNoteLeave()){e.target.value=qSavedNoteNo;return}qSavedNoteNo=e.target.value;refreshQuoteQuickNote()});
+$("qSavedNoteDraft").addEventListener("click",()=>{if(!qNoteLeave())return;qSavedNoteNo="";renderSavedNotes()});
+window.addEventListener("beforeunload",e=>{if(qNoteDirty){e.preventDefault();e.returnValue=""}});
 function setQuoteQuickNoteOpen(open){
   const body=$("qQuickNoteBody"),toggle=$("qQuickNoteToggleBtn"),copy=$("qQuickNoteCopyBtn");
   if(!body)return;
@@ -1459,8 +1463,10 @@ async function saveQuote(){
   const items=getQuoteItems(),c=calcQuote(),meta=qMeta();
   const payload={quote_no:no,quote_date:date,customer_name:customer,contact_name:meta.case_name||null,phone:meta.contact_phone||null,address:$("qAddress").value.trim()||null,items,subtotal:c.sub,tax_rate:5,tax_amount:c.tax,total_amount:c.total,note:JSON.stringify(meta)};
   let r;
-  if(editingQuoteId)r=await sb.from("sbd_quotes").update(payload).eq("id",editingQuoteId);
+  if(editingQuoteId){const old=await sb.from("sbd_quotes").select("*").eq("id",editingQuoteId).single();if(old.error)throw old.error;const prev=qMetaFromNote(old.data.note);const merged={...prev,...meta};if(qNoteEligible(old.data)&&qNoteEligible(payload)){const before=buildQuoteQuickNote(old.data),after=buildQuoteQuickNote(payload);merged.quick_note_text=qNoteMerge(typeof prev.quick_note_text==="string"?prev.quick_note_text:before,before,after);}payload.note=JSON.stringify(merged);r=await sb.from("sbd_quotes").update(payload).eq("id",editingQuoteId);}
+
   else for(let i=0;i<100;i++){
+   if(qNoteEligible(payload))payload.note=JSON.stringify({...meta,quick_note_text:buildQuoteQuickNote(payload)});
    r=await sb.from("sbd_quotes").insert(payload);
    if(!r.error)break;
    const duplicate=r.error?.code==="23505"||/duplicate key|sbd_quotes_quote_no_key/i.test(r.error?.message||"");
@@ -1469,7 +1475,7 @@ async function saveQuote(){
   }
   if(r?.error)throw new Error(r.error.message||"雲端儲存失敗");
   if(!r)throw new Error("雲端未回傳儲存結果");
-  show("報價單 "+no+" 已儲存，記事本已連動");
+  show("報價單 "+no+" 已儲存");
   qSavedNoteNo=String(no);
   resetQuoteForm();
   try{await loadQuotes()}catch(e){console.error("報價單清單重新整理失敗",e)}
