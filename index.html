@@ -1359,15 +1359,22 @@ function renumberQuoteItems(){[...$("qItemsBody").children].forEach((tr,i)=>tr.q
 function getQuoteItems(){return [...$("qItemsBody").children].map(tr=>({name:fmtQName(tr.querySelector(".qname").value),process_size:tr.querySelector(".qsize").value.trim(),total_cm:Number(tr.querySelector(".qcm").value||0),unit:tr.querySelector(".qunit").value.trim(),price:Number(tr.querySelector(".qprice").value||0)})).filter(x=>x.name||x.process_size||x.total_cm||x.price)}
 function buildQuoteQuickNote(){
   const installDate=String($("qInstallDate")?.value||"").replace(/-/g,"/");
-  const names=[...$("qItemsBody").querySelectorAll(".qname")].map(x=>fmtQName(x.value).trim()).filter(Boolean);
-  const styles=[...new Set(names.map(v=>{
-    const t=String(v||"").trim();
-    if(/^一字/.test(t)) return "一字";
-    if(/^中島/.test(t)) return "中島";
-    if(/^L型/i.test(t)||/^L字/i.test(t)) return "L型";
-    if(/^R角/i.test(t)) return "R角";
-    return t.split(/[：:]/)[0].replace(/型?檯面.*$/,"" ).trim()||t.slice(0,2);
-  }).filter(Boolean))];
+  const styles=new Map();
+  let totalCm=0;
+  for(const item of getQuoteItems()){
+    const name=String(item.name||"").trim().normalize("NFKC");
+    if(!name.includes("檯面")) continue;
+    let type="";
+    if(/^一字/.test(name)) type="一字";
+    else if(/^L[型字]/i.test(name)) type="L型";
+    else if(/^ㄇ[型字]/.test(name)) type="ㄇ字";
+    else if(/^中島/.test(name)) type="中島";
+    else if(/^R角/i.test(name)) type="R角";
+    if(!type) continue;
+    styles.set(type,(styles.get(type)||0)+1);
+    totalCm+=Number(item.total_cm)||0;
+  }
+  const styleText=styles.size ? [...styles].map(([type,count])=>`${type}*${count}`).join("、")+`_長${Number(totalCm.toFixed(2))}` : "";
   return [
     `安裝日 : ${installDate}`,
     `安裝時段 : ${$("qInstallPeriod")?.value||""}`,
@@ -1375,7 +1382,7 @@ function buildQuoteQuickNote(){
     `編號 : ${$("qNo")?.value.trim()||""}`,
     `客戶 : ${$("qCustomer")?.value.trim()||""}`,
     `顏色 : ${$("qColorNo")?.value.trim()||""}`,
-    `檯面樣式 : ${styles.join("、")}`,
+    `檯面樣式 : ${styleText}`,
     `地址 : ${$("qAddress")?.value.trim()||""}`
   ].join("\n");
 }
