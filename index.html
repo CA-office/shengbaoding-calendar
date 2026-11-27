@@ -727,6 +727,18 @@ body:not(.admin-account) #otherExpensesView {display:none!important}
     <div class="quoteSummary"><span>合計</span><span id="qSubtotal">0</span><span>稅金5%</span><span id="qTax">0</span><span>總計</span><span id="qTotal">0</span></div>
     <div class="quoteActions"><button type="button" id="qSaveBtn" class="primary">儲存報價單</button><button type="button" id="qCancelEditBtn" class="hidden">取消修改</button></div><div id="qSaveStatus" role="status" aria-live="polite" style="margin-top:8px;font-size:13px"></div>
   </div>
+  <div class="quoteCard" id="quoteQuickNoteCard">
+    <div class="quoteQuickNoteHead">
+      <h2 class="quoteTitle">記事本</h2>
+      <div class="quoteQuickNoteActions">
+        <button type="button" id="qQuickNoteToggleBtn">收合記事本</button>
+        <button type="button" id="qQuickNoteCopyBtn" class="primary">複製內容</button>
+      </div>
+    </div>
+    <div id="qQuickNoteBody" class="quoteQuickNoteBody">
+      <textarea id="qQuickNoteText" readonly spellcheck="false"></textarea>
+    </div>
+  </div>
   <div class="quotePreviewCard">
     <h2 class="quoteTitle">報價單預覽</h2>
     <div class="officialQuote">
@@ -756,18 +768,6 @@ body:not(.admin-account) #otherExpensesView {display:none!important}
     <div id="quoteEmpty" class="quoteEmpty hidden">目前沒有報價單</div>
   </div>
 
-  <div class="quoteCard" id="quoteQuickNoteCard">
-    <div class="quoteQuickNoteHead">
-      <h2 class="quoteTitle">記事本</h2>
-      <div class="quoteQuickNoteActions">
-        <button type="button" id="qQuickNoteToggleBtn">收合記事本</button>
-        <button type="button" id="qQuickNoteCopyBtn" class="primary">複製內容</button>
-      </div>
-    </div>
-    <div id="qQuickNoteBody" class="quoteQuickNoteBody">
-      <textarea id="qQuickNoteText" readonly spellcheck="false"></textarea>
-    </div>
-  </div>
 </section>
 
 
