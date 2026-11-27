@@ -1357,25 +1357,31 @@ function showFeature(name){
 function addQuoteItem(item={}){const tr=document.createElement("tr");const totalCm=item.total_cm??item.qty??0;tr.innerHTML=`<td class="qidx"></td><td><input class="qname" list="qNameOptionsList" placeholder="選擇或直接輸入" value="${esc(fmtQName(item.name||item.description||""))}"></td><td><input class="qsize" value="${esc(item.process_size||"")}"></td><td><input class="qcm" type="number" min="0" step="0.01" value="${Number(totalCm||0)}"></td><td><input class="qunit" list="quoteUnitOptions" placeholder="單位" autocomplete="off" value="${esc(item.unit||"")}" style="width:82px;min-width:65px"></td><td><input class="qprice" type="number" min="0" step="0.01" value="${Number(item.price||0)}"></td><td class="qamount">0</td><td><button type="button" class="qremove">刪</button></td>`;$("qItemsBody").appendChild(tr);tr.querySelectorAll("input,select").forEach(i=>i.addEventListener("input",calcQuote));const qi=tr.querySelector(".qname");qi?.addEventListener("blur",()=>{qi.value=fmtQName(qi.value);calcQuote()});tr.querySelector(".qremove").addEventListener("click",()=>{tr.remove();renumberQuoteItems();calcQuote()});renumberQuoteItems();calcQuote()}
 function renumberQuoteItems(){[...$("qItemsBody").children].forEach((tr,i)=>tr.querySelector(".qidx").textContent=i+1)}
 function getQuoteItems(){return [...$("qItemsBody").children].map(tr=>({name:fmtQName(tr.querySelector(".qname").value),process_size:tr.querySelector(".qsize").value.trim(),total_cm:Number(tr.querySelector(".qcm").value||0),unit:tr.querySelector(".qunit").value.trim(),price:Number(tr.querySelector(".qprice").value||0)})).filter(x=>x.name||x.process_size||x.total_cm||x.price)}
+function quoteQuickNoteCountertop(items){
+  const counts=new Map(); let length=0;
+  for(const item of items){
+    const name=String(item.name||"").normalize("NFKC").trim();
+    if(!/檯面|台面/.test(name)) continue;
+    const match=name.match(/^(一字|中島|L型|L字|U型|U字|R角)/i);
+    if(!match) continue;
+    let type=match[1];
+    if(/^L/i.test(type)) type="L型";
+    if(/^U/i.test(type)) type="U型";
+    if(/^R/i.test(type)) type="R角";
+    counts.set(type,(counts.get(type)||0)+1);
+    const cm=Number(item.total_cm||0);
+    if(Number.isFinite(cm)) length+=cm;
+  }
+  return counts.size ? [...counts].map(([type,count])=>`${type}*${count}`).join("、")+`_長${Math.round(length*100)/100}` : "";
+}
 function buildQuoteQuickNote(){
-  const installDate=String($("qInstallDate")?.value||"").replace(/-/g,"/");
-  const names=[...$("qItemsBody").querySelectorAll(".qname")].map(x=>fmtQName(x.value).trim()).filter(Boolean);
-  const styles=[...new Set(names.map(v=>{
-    const t=String(v||"").trim();
-    if(/^一字/.test(t)) return "一字";
-    if(/^中島/.test(t)) return "中島";
-    if(/^L型/i.test(t)||/^L字/i.test(t)) return "L型";
-    if(/^R角/i.test(t)) return "R角";
-    return t.split(/[：:]/)[0].replace(/型?檯面.*$/,"" ).trim()||t.slice(0,2);
-  }).filter(Boolean))];
+  const styles=quoteQuickNoteCountertop(getQuoteItems());
   return [
-    `安裝日 : ${installDate}`,
-    `安裝時段 : ${$("qInstallPeriod")?.value||""}`,
     `聯絡人電話 : ${$("qContactPhone")?.value.trim()||""}`,
     `編號 : ${$("qNo")?.value.trim()||""}`,
     `客戶 : ${$("qCustomer")?.value.trim()||""}`,
     `顏色 : ${$("qColorNo")?.value.trim()||""}`,
-    `檯面樣式 : ${styles.join("、")}`,
+    `檯面樣式 : ${styles}`,
     `地址 : ${$("qAddress")?.value.trim()||""}`
   ].join("\n");
 }
